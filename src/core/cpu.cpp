@@ -1,15 +1,16 @@
 #include "cpu.hpp"
 
+#include "../util/util.hpp"
+
 #include <fstream>
 #include <iostream>
 
 CPU::CPU(const std::shared_ptr<Bus>& bus) : bus(bus){
     initLookup();
-    initCPU();
 }
 
 // TODO: Add better error checking
-bool CPU::load(const std::string& filePath, uint16_t location, uint16_t fileOffset){
+bool CPU::load(const std::string& filePath, uint16_t location, uint16_t len, uint16_t fileOffset){
     static const int MEMORY_SIZE = 0x10000;
     std::ifstream f(filePath);
     if(!f){
@@ -18,10 +19,12 @@ bool CPU::load(const std::string& filePath, uint16_t location, uint16_t fileOffs
     std::string content((std::istreambuf_iterator<char>(f)), (std::istreambuf_iterator<char>()));
 
     // TODO: check size of file
-    for(int i = 0; (i + fileOffset < (int)content.length()) && (i + location < MEMORY_SIZE); i++){
+    for(int i = 0; i < len && (i + fileOffset < (int)content.length()) && (i + location < MEMORY_SIZE); i++){
         bus->write(i + location, content[i + fileOffset]);
     }
 
+    initCPU();
+    
     return true;
 }
 
@@ -38,7 +41,7 @@ void CPU::executeCycle(){
         const AddressingMode& mode = currentOpcode.addressingMode;
         const AddressingMode::ReturnType& operand = (this->*mode.getOperand)();
 
-        printDebug(index);
+        // printDebug();
         
         (this->*inst.execute)(operand);
 
@@ -65,6 +68,16 @@ void CPU::executeNextInstruction(){
     executeCycle();
 }
 
+// Reset (Copied from https://www.masswerk.at/6502/6502_instruction_set.html)
+// An active-low reset line allows to hold the processor in a known disabled
+// state, while the system is initialized. As the reset line goes high, the
+// processor performs a start sequence of 7 cycles, at the end of which the
+// program counter (PC) is read from the address provided in the 16-bit reset
+// vector at $FFFC (LB-HB). Then, at the eighth cycle, the processor transfers
+// control by performing a JMP to the provided address.
+// Any other initializations are left to the thus executed program. (Notably,
+// instructions exist for the initialization and loading of all registers, but
+// for the program counter, which is provided by the reset vector at $FFFC.)
 void CPU::reset(){
     // Reset program counter
     pc = read16BitData(RESET_VECTOR);
@@ -85,7 +98,7 @@ void CPU::reset(){
 // The break instruction (BRK) behaves like a NMI, but will push the value of PC+2 onto the stack to be used as the return address. Also, as with any software initiated transfer of the status register to the stack, the break flag will be found set on the respective value pushed onto the stack. Then, control is transferred to the address in the NMI-vector at $FFFE.
 // In any way, the interrupt disable flag is set to inhibit any further IRQ as control is transferred to the interrupt handler specified by the respective interrupt vector.
 // The RTI instruction restores the status register from the stack and behaves otherwise like the JSR instruction. (The break flag is always ignored as the status is read from the stack, as it isn't a real processor flag anyway.)
-void CPU::IRQ(){
+bool CPU::IRQ(){
     if(!getFlag(INTERRUPT)){
         setFlag(INTERRUPT, 1);
         setFlag(BREAK, 0);
@@ -95,10 +108,13 @@ void CPU::IRQ(){
 
         pc = read16BitData(IRQ_BRK_VECTOR);
         shouldAdvancePC = false;
+
+        // IRQ takes 7 cycles
+        remainingCycles = 7;
+        return true;
     }
 
-    // IRQ takes 7 cycles
-    remainingCycles = 7;
+    return false;
 }
 
 void CPU::NMI(){
@@ -115,8 +131,36 @@ void CPU::NMI(){
     remainingCycles = 8;
 }
 
+uint16_t CPU::getPC() const{
+    return pc;
+}
+uint8_t CPU::getA() const{
+    return a;
+}
+uint8_t CPU::getX() const{
+    return x;
+}
+uint8_t CPU::getY() const{
+    return y;
+}
+uint8_t CPU::getSR() const{
+    return sr;
+}
+uint8_t CPU::getSP() const{
+    return sp;
+}
+bool CPU::getFlag(Flags flag) const{
+    return (sr >> flag) & 1;
+}
+uint8_t CPU::getRemainingCycles() const{
+    return remainingCycles;
+}
+int64_t CPU::getTotalCycles() const{
+    return totalCycles;
+}
+
 void CPU::initCPU(){
-    // TODO: Temporarily hardcoding the reset vector so it works with nestest.nes
+    // TODO: Temporarily hardcoding the reset vector so it works with nestest.nes, remove
     write16BitData(RESET_VECTOR, 0xC000);
     
     // Init registers
@@ -379,10 +423,6 @@ void CPU::initLookup(){
     lookup[0xFE] = Opcode{instINC, modeABX, 7};
 }
 
-bool CPU::getFlag(Flags flag) const{
-    return (sr >> flag) & 1;
-}
-
 void CPU::setFlag(Flags flag, bool value){
     if(value){
         sr |= (1 << flag);
@@ -419,21 +459,30 @@ void CPU::push8BitDataToStack(uint8_t data){
 
 uint8_t CPU::pop8BitDataFromStack(){
     // Since the stack grows backwards, we need to read from sp + 1
-    uint8_t data = bus->read(STACK_OFFSET + sp + 1);
+    // uint8_t data = bus->read(STACK_OFFSET + sp + 1);
+    uint8_t data = bus->read(STACK_OFFSET + ((sp + 1) & 0xFF));
     sp++;
     return data;
 }
 
 void CPU::push16BitDataToStack(uint16_t data){
-    // Since the stack grows backwards, we need to write the most signifigant bit to sp - 1
-    write16BitData(STACK_OFFSET + sp - 1, data);
+    // Since the stack grows backwards, we need to write the least signifigant bit to sp - 1
+    // write16BitData(STACK_OFFSET + sp - 1, data);
+    uint8_t lo = data & 0xFF;
+    uint8_t hi = (data >> 8) & 0xFF;
+    bus->write(STACK_OFFSET + ((sp - 1) & 0xFF), lo);
+    bus->write(STACK_OFFSET + sp, hi);
     sp -= 2;
 }
 
 uint16_t CPU::pop16BitDataFromStack(){
     // Since the stack grows backwards, we need to read from sp + 1
-    uint16_t data = read16BitData(STACK_OFFSET + sp + 1);
+    // uint16_t data = read16BitData(STACK_OFFSET + sp + 1);
+    uint8_t lo = bus->read(STACK_OFFSET + ((sp + 1) & 0xFF));
+    uint8_t hi = bus->read(STACK_OFFSET + ((sp + 2) & 0xFF));
     sp += 2;
+
+    uint16_t data = ((uint16_t)hi << 8) | lo;
     return data;
 } 
 
@@ -571,23 +620,6 @@ CPU::AddressingMode::ReturnType CPU::ZPY() const{
     return {address, bus->read(address), 0};
 }
 
-// Helper functions for disassembly
-std::string toHexString8(uint8_t x){
-    const static std::string hexDigits = "0123456789ABCDEF";
-    std::string output(2, '0');
-    output[1] = hexDigits[x & 0xF];
-    output[0] = hexDigits[(x >> 4) & 0xF];
-    return output;
-}
-std::string toHexString16(uint16_t x){
-    const static std::string hexDigits = "0123456789ABCDEF";
-    std::string output(4, '0');
-    output[3] = hexDigits[x & 0xF];
-    output[2] = hexDigits[(x >> 4) & 0xF];
-    output[1] = hexDigits[(x >> 8) & 0xF];
-    output[0] = hexDigits[(x >> 12) & 0xF];
-    return output;
-}
 
 // Definitions for instruction functions
 // Descriptions from https://www.masswerk.at/6502/6502_instruction_set.html
@@ -1384,12 +1416,20 @@ std::string CPU::strZPY(uint16_t address) const{
     return "$" + toHexString8(bus->read(address + 1)) + ",Y";
 }
 
-std::string CPU::toString(const Opcode& opcode, uint16_t address) const{
+std::string CPU::toString(uint16_t address) const{
+    uint8_t index = bus->read(address);
+    const Opcode& opcode = lookup[index];
     return opcode.instruction.name + " " + (this->*opcode.addressingMode.toString)(address);
 }
 
+const CPU::Opcode& CPU::getOpcode(uint16_t address) const{
+    uint8_t index = bus->read(address);
+    return lookup[index];
+}
+
 // Prints in a format that closely resembles the nestest.nes log found here: http://nickmass.com/images/nestest.nes
-void CPU::printDebug(uint8_t index){
+void CPU::printDebug() const{
+    uint8_t index = bus->read(pc);
     const Opcode& currentOpcode = lookup[index];
     const Instruction& inst = currentOpcode.instruction;
     const AddressingMode& mode = currentOpcode.addressingMode;
@@ -1404,7 +1444,7 @@ void CPU::printDebug(uint8_t index){
             std::cout << "   ";
         }
     }
-    std::string str = toString(currentOpcode, pc);
+    std::string str = toString(pc);
     std::string gap(32 - (int)str.length(), ' ');
     std::cout << " " << str << gap;
 

@@ -1,3 +1,11 @@
-.vscode/
 .DS_Store
+.vscode/
+
+*.stash
+Makefile
+
+bin/
+obj/
+moc/
+
 a.out

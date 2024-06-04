@@ -11,17 +11,16 @@
 class CPU{
 public:
     CPU(const std::shared_ptr<Bus>& bus);
-    bool load(const std::string& filePath, uint16_t location, uint16_t fileOffset);
+    bool load(const std::string& filePath, uint16_t location, uint16_t len, uint16_t fileOffset);
     
     void executeCycle();
     void executeNextInstruction();
 
     // Reset/interrupts
     void reset();
-    void IRQ();
+    bool IRQ();
     void NMI();
 
-private:
     // Data structures
     enum Flags{
         CARRY,
@@ -54,6 +53,23 @@ private:
         uint8_t numDefaultCycles;
     };
 
+    // Getters for internal variables
+    uint16_t getPC() const;
+    uint8_t getA() const;
+    uint8_t getX() const;
+    uint8_t getY() const;
+    uint8_t getSP() const;
+    uint8_t getSR() const;
+    bool getFlag(Flags flag) const;
+    uint8_t getRemainingCycles() const;
+    int64_t getTotalCycles() const;
+
+    // Printing and debugging
+    void printDebug() const;
+    std::string toString(uint16_t address) const;
+    const Opcode& getOpcode(uint16_t address) const;
+
+private:
     // Constants
     static const uint16_t NMI_VECTOR = 0xFFFA;
     static const uint16_t RESET_VECTOR = 0xFFFC;
@@ -81,7 +97,6 @@ private:
     void initLookup();
     
     // Flags
-    bool getFlag(Flags flag) const;
     void setFlag(Flags flag, bool value);
     void setNZFlags(uint8_t x);
 
@@ -181,10 +196,6 @@ private:
     std::string strZPG(uint16_t address) const;
     std::string strZPX(uint16_t address) const;
     std::string strZPY(uint16_t address) const;
-
-    // Printing and debugging
-    void printDebug(uint8_t index);
-    std::string toString(const Opcode& opcode, uint16_t address) const;
 };
 
 #endif // CPU_HPP
