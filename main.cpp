@@ -1,10 +1,8 @@
 #include "cpu.hpp"
-#include <iostream>
-
-#include <fstream>
+#include "bus.hpp"
 
 int main(int argc, char* argv[]){
-    CPU cpu{};
+    CPU cpu(std::make_shared<Bus>());
 
     std::string nesTest = "nestest.nes";
     cpu.load(nesTest, 0x8000, 0x10);

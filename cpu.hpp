@@ -1,44 +1,28 @@
 #ifndef CPU_HPP
 #define CPU_HPP
 
-#include "memory.hpp"
+#include "bus.hpp"
 
 #include <stdint.h>
 #include <optional>
 #include <string>
+#include <memory>
 
 class CPU{
 public:
-    CPU();
-    void reset();
+    CPU(const std::shared_ptr<Bus>& bus);
+    bool load(const std::string& filePath, uint16_t location, uint16_t fileOffset);
+    
     void executeCycle();
     void executeNextInstruction();
 
-    // Interrupts
+    // Reset/interrupts
+    void reset();
     void IRQ();
     void NMI();
 
-    bool load(const std::string& filePath, uint16_t location, uint16_t fileOffset);
-    void printDebug(uint8_t index);
-
 private:
-    uint16_t pc; // program counter
-    uint8_t a; // accumulator
-    uint8_t x; // x register
-    uint8_t y; // y register
-    uint8_t sr; // status register
-    uint8_t sp; // stack poitner
-
-    static const uint16_t STACK_OFFSET = 0x100;
-
-    static const uint16_t NMI_VECTOR = 0xFFFA;
-    static const uint16_t RESET_VECTOR = 0xFFFC;
-    static const uint16_t IRQ_BRK_VECTOR = 0xFFFE;
-
-    void initCPU();
-
-    Memory memory;
-
+    // Data structures
     enum Flags{
         CARRY,
         ZERO,
@@ -49,14 +33,6 @@ private:
         OVERFLOW,
         NEGATIVE
     };
-    bool getFlag(Flags flag) const;
-    void setFlag(Flags flag, bool value);
-    void setNZFlags(uint8_t x);
-
-    uint8_t remainingCycles;
-    int64_t totalCycles;
-    bool shouldAdvancePC;
-
     struct AddressingMode{
         struct ReturnType{
             std::optional<uint16_t> address;
@@ -67,7 +43,56 @@ private:
         ReturnType (CPU::*getOperand)() const;
         std::string (CPU::*toString)(uint16_t address) const;
     };
+    struct Instruction{
+        std::string name;
+        void (CPU::*execute)(const AddressingMode::ReturnType& operand);
+        bool mightNeedExtraCycle = 0;
+    };
+    struct Opcode{
+        Instruction instruction;
+        AddressingMode addressingMode;
+        uint8_t numDefaultCycles;
+    };
 
+    // Constants
+    static const uint16_t NMI_VECTOR = 0xFFFA;
+    static const uint16_t RESET_VECTOR = 0xFFFC;
+    static const uint16_t IRQ_BRK_VECTOR = 0xFFFE;
+    static const uint16_t STACK_OFFSET = 0x100;
+    static const uint16_t MAX_NUM_OPCODES = 0x100;
+
+    // CPU state variables
+    uint16_t pc; // program counter
+    uint8_t a; // accumulator
+    uint8_t x; // x register
+    uint8_t y; // y register
+    uint8_t sr; // status register
+    uint8_t sp; // stack pointer
+    
+    // Helper variables
+    uint8_t remainingCycles;
+    int64_t totalCycles;
+    bool shouldAdvancePC;
+    std::shared_ptr<Bus> bus;
+    std::array<Opcode, MAX_NUM_OPCODES> lookup;
+
+    // Initialization
+    void initCPU();
+    void initLookup();
+    
+    // Flags
+    bool getFlag(Flags flag) const;
+    void setFlag(Flags flag, bool value);
+    void setNZFlags(uint8_t x);
+
+    // Reading/writing data
+    uint16_t read16BitData(uint16_t address) const;
+    void write16BitData(uint16_t address, uint16_t data);
+    void push8BitDataToStack(uint8_t data);
+    uint8_t pop8BitDataFromStack();
+    void push16BitDataToStack(uint16_t data);
+    uint16_t pop16BitDataFromStack();
+    
     // Addressing mode functions
     AddressingMode::ReturnType ACC() const;
     AddressingMode::ReturnType ABS() const;
@@ -82,27 +107,6 @@ private:
     AddressingMode::ReturnType ZPG() const;
     AddressingMode::ReturnType ZPX() const;
     AddressingMode::ReturnType ZPY() const;
-
-    // Addressing mode string functions (used for disassembly)
-    std::string strACC(uint16_t address) const;
-    std::string strABS(uint16_t address) const;
-    std::string strABX(uint16_t address) const;
-    std::string strABY(uint16_t address) const;
-    std::string strIMM(uint16_t address) const;
-    std::string strIMP(uint16_t address) const;
-    std::string strIND(uint16_t address) const;
-    std::string strIZX(uint16_t address) const;
-    std::string strIZY(uint16_t address) const;
-    std::string strREL(uint16_t address) const;
-    std::string strZPG(uint16_t address) const;
-    std::string strZPX(uint16_t address) const;
-    std::string strZPY(uint16_t address) const;
-    
-    struct Instruction{
-        std::string name;
-        void (CPU::*execute)(const AddressingMode::ReturnType& operand);
-        bool mightNeedExtraCycle = 0;
-    };
 
     // Instruction functions
     void ADC(const AddressingMode::ReturnType& operand);
@@ -163,25 +167,24 @@ private:
     void TYA(const AddressingMode::ReturnType& operand);
     void UNI(const AddressingMode::ReturnType& operand); // Handles unimplemented instructions
 
-    struct Opcode{
-        Instruction instruction;
-        AddressingMode addressingMode;
-        uint8_t numDefaultCycles;
-    };
+    // Addressing mode string functions (used for disassembly)
+    std::string strACC(uint16_t address) const;
+    std::string strABS(uint16_t address) const;
+    std::string strABX(uint16_t address) const;
+    std::string strABY(uint16_t address) const;
+    std::string strIMM(uint16_t address) const;
+    std::string strIMP(uint16_t address) const;
+    std::string strIND(uint16_t address) const;
+    std::string strIZX(uint16_t address) const;
+    std::string strIZY(uint16_t address) const;
+    std::string strREL(uint16_t address) const;
+    std::string strZPG(uint16_t address) const;
+    std::string strZPX(uint16_t address) const;
+    std::string strZPY(uint16_t address) const;
+
+    // Printing and debugging
+    void printDebug(uint8_t index);
     std::string toString(const Opcode& opcode, uint16_t address) const;
-
-    const static int MAX_NUM_OPCODES = 0x100;
-    std::array<Opcode, MAX_NUM_OPCODES> lookup;
-    void initLookup();
-
-    uint16_t read16BitData(uint16_t address) const;
-    void write16BitData(uint16_t address, uint16_t data);
-
-    void push8BitDataToStack(uint8_t data);
-    uint8_t pop8BitDataFromStack();
-
-    void push16BitDataToStack(uint16_t data);
-    uint16_t pop16BitDataFromStack();
 };
 
 #endif // CPU_HPP

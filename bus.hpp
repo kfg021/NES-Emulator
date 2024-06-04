@@ -4,10 +4,10 @@
 #include <stdint.h>
 #include <array>
 
-class Memory{
+class Bus{
 public:
     static const int MEMORY_SIZE = 1 << 16;
-    Memory();
+    Bus();
     void clear();
     uint8_t read(uint16_t address) const;
     void write(uint16_t address, uint8_t value);
