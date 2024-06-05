@@ -3,6 +3,10 @@
 #include <fstream>
 #include <filesystem>
 
+Cartridge::Cartridge(){
+    valid = false;
+}
+
 Cartridge::Cartridge(const std::string& filePath){
     valid = loadINESFile(filePath);
 }
@@ -126,6 +130,6 @@ void Cartridge::writeToCHR(uint16_t preMappedAddr, uint8_t data){
     }
 }
 
-bool Cartridge::isValid(){
+bool Cartridge::isValid() const{
     return valid;
 }

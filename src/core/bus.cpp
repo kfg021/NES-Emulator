@@ -1,11 +1,28 @@
 #include "bus.hpp"
 
- Bus::Bus(const std::shared_ptr<Cartridge>& cartridge) :
-    cartridge(cartridge){
-    ram = {};
+ Bus::Bus(){
+    cpu = std::make_unique<CPU>();
+    cpu->setBus(std::weak_ptr<Bus>(this));
+
+    // ppu = std::make_unique<PPU>();
+    // ppu->setBus(std::shared_ptr<Bus>(this));
+ }
+
+void Bus::reset(){
+    cpu->initCPU();
 }
 
-uint8_t Bus::read(uint16_t address) const{
+bool Bus::loadROM(const std::string& filePath){
+    cartridge = std::make_unique<Cartridge>(filePath);
+    if(!cartridge->isValid()){
+        return false;
+    }
+
+    reset();
+    return true;
+}
+
+uint8_t Bus::read(uint16_t address){
     if(RAM_ADDRESSABLE_RANGE.contains(address)){
         return ram[address & 0x7FF];
     }

@@ -8,10 +8,12 @@
 #include <string>
 #include <memory>
 
+class Bus;
+
 class CPU{
 public:
     CPU();
-    void setBus(const std::shared_ptr<Bus>& bus);
+    void setBus(const std::weak_ptr<Bus>& bus);
     void initCPU();
     
     void executeCycle();
@@ -27,7 +29,7 @@ public:
         CARRY,
         ZERO,
         INTERRUPT,
-        DECIMAL, // Unimplemented
+        DECIMAL, // Unimplemented - not used on the NES
         BREAK,
         UNUSED,
         OVERFLOW,
@@ -90,7 +92,7 @@ private:
     uint8_t remainingCycles;
     int64_t totalCycles;
     bool shouldAdvancePC;
-    std::shared_ptr<Bus> bus;
+    std::weak_ptr<Bus> bus;
     std::array<Opcode, MAX_NUM_OPCODES> lookup;
 
     // Initialization

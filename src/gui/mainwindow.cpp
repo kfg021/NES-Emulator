@@ -7,30 +7,18 @@
 
 MainWindow::MainWindow(QWidget* parent): QMainWindow(parent){
     std::string nesTest = "/Users/kennangumbs/Desktop/NES/nestest.nes";
-
-    std::shared_ptr<Cartridge> cartridge = std::make_shared<Cartridge>(nesTest);
-    if(!cartridge->isValid()){
+    
+    std::shared_ptr<Bus> bus = std::make_shared<Bus>();
+    if(!bus->loadROM(nesTest)){
         qFatal("Could not load file");
     }
-    std::shared_ptr<Bus> bus = std::make_shared<Bus>(cartridge);
-    std::shared_ptr<CPU> cpu = std::make_shared<CPU>();
-    cpu->setBus(bus);
-    cpu->initCPU();
-
-    // static const uint16_t len = 0xC000 - 0x8000;
-    // bool load1 = cpu->load(nesTest, 0x8000, len, 0x10);
-    // bool load2 = cpu->load(nesTest, 0xC000, len, 0x10);
-
-    // if(!(load1 && load2)){
-    //     qFatal("Could not load file");
-    // }
 
     setWindowTitle("NES Emulator");
 
     gameWindow = new GameWindow();
     gameWindow->setFixedSize(GAME_WIDTH, GAME_HEIGHT);
 
-    debugWindow = new DebugWindow(nullptr, cpu, cartridge);
+    debugWindow = new DebugWindow(nullptr, bus);
     debugWindow->setFixedSize(DEBUG_WIDTH, GAME_HEIGHT);
 
     QHBoxLayout* layout = new QHBoxLayout();

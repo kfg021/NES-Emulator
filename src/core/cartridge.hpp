@@ -12,8 +12,9 @@
 
 class Cartridge{
 public:
+    Cartridge();
     Cartridge(const std::string& filePath);
-    bool isValid();
+    bool isValid() const;
 
     std::optional<uint8_t> readFromPRG(uint16_t preMappedAddr);
     void writeToPRG(uint16_t preMappedAddr, uint8_t data);

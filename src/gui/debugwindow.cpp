@@ -9,10 +9,9 @@
 #include <Qstring>
 #include <QColor>
 
-DebugWindow::DebugWindow(QWidget* parent, const std::shared_ptr<CPU>& cpu, const std::shared_ptr<Cartridge>& cartridge) :
+DebugWindow::DebugWindow(QWidget* parent, const std::shared_ptr<Bus>& bus) :
     QWidget(parent), 
-    cpu(cpu),
-    cartridge(cartridge){
+    bus(bus){
 }
 
 void DebugWindow::paintEvent(QPaintEvent* event){
@@ -36,7 +35,7 @@ void DebugWindow::paintEvent(QPaintEvent* event){
 
     QString flagNames = "NV-BDIZC";
     for(int i = 0; i < 8; i++){
-        uint8_t sr = cpu->getSR();
+        uint8_t sr = bus->cpu->getSR();
         uint8_t flag = 7-i;
         if((sr >> flag) & 1){
             painter.setPen(Qt::green);
@@ -49,11 +48,11 @@ void DebugWindow::paintEvent(QPaintEvent* event){
         painter.drawText(START_X + (flagStr.size() + i) * letterWidth, START_Y, flagStatusStr);
     }
 
-    std::string pcStr = "PC:        $"  + toHexString16(cpu->getPC());
-    std::string aStr  = "A:         $"  + toHexString8(cpu->getA());
-    std::string xStr  = "X:         $"  + toHexString8(cpu->getX());
-    std::string yStr  = "Y:         $"  + toHexString8(cpu->getY());
-    std::string spStr = "SP:        $"  + toHexString8(cpu->getSP());
+    std::string pcStr = "PC:        $"  + toHexString16(bus->cpu->getPC());
+    std::string aStr  = "A:         $"  + toHexString8(bus->cpu->getA());
+    std::string xStr  = "X:         $"  + toHexString8(bus->cpu->getX());
+    std::string yStr  = "Y:         $"  + toHexString8(bus->cpu->getY());
+    std::string spStr = "SP:        $"  + toHexString8(bus->cpu->getSP());
 
     painter.setPen(defaultColor);
     painter.drawText(START_X, START_Y + LETTER_HEIGHT * 2, QString(pcStr.c_str()));
@@ -67,12 +66,12 @@ void DebugWindow::paintEvent(QPaintEvent* event){
     }
 
     painter.setPen(Qt::cyan);
-    painter.drawText(START_X, START_Y + LETTER_HEIGHT * (8 + NUM_INSTS), toString(cpu->getPC()));
+    painter.drawText(START_X, START_Y + LETTER_HEIGHT * (8 + NUM_INSTS), toString(bus->cpu->getPC()));
     painter.setPen(defaultColor);
 
-    uint16_t nextPC = cpu->getPC();
+    uint16_t nextPC = bus->cpu->getPC();
     for(int i = 0; i < NUM_INSTS; i++){
-        const CPU::Opcode& op = cpu->getOpcode(nextPC);
+        const CPU::Opcode& op = bus->cpu->getOpcode(nextPC);
         nextPC += op.addressingMode.instructionSize;
         painter.drawText(START_X, START_Y + LETTER_HEIGHT * (9 + NUM_INSTS + i), toString(nextPC));
     }
@@ -80,8 +79,8 @@ void DebugWindow::paintEvent(QPaintEvent* event){
 
 
 void DebugWindow::executeInstruction(){
-    QString currentInst = toString(cpu->getPC());
-    cpu->executeNextInstruction();
+    QString currentInst = toString(bus->cpu->getPC());
+    bus->cpu->executeNextInstruction();
 
     if(prevInsts.size() == NUM_INSTS){
         prevInsts.pop_back();
@@ -92,25 +91,25 @@ void DebugWindow::executeInstruction(){
 }
 
 void DebugWindow::reset(){
-    cpu->reset();
+    bus->cpu->reset();
     prevInsts.clear();
     update();
 }
 
 void DebugWindow::IRQ(){
-    if(cpu->IRQ()){
+    if(bus->cpu->IRQ()){
         prevInsts.clear();
         update();
     }
 }
 
 void DebugWindow::NMI(){
-    cpu->NMI();
+    bus->cpu->NMI();
     prevInsts.clear();
     update();
 }
 
 QString DebugWindow::toString(uint16_t addr){
-    std::string text = "$" + toHexString16(addr) + ": " +  cpu->toString(addr);
+    std::string text = "$" + toHexString16(addr) + ": " +  bus->cpu->toString(addr);
     return QString(text.c_str());
 }

@@ -14,7 +14,7 @@ class DebugWindow : public QWidget{
     Q_OBJECT
 
 public:
-    DebugWindow(QWidget* parent, const std::shared_ptr<CPU>& cpu, const std::shared_ptr<Cartridge>& cartridge);
+    DebugWindow(QWidget* parent, const std::shared_ptr<Bus>& bus);
     void executeInstruction();
     void reset();
     void IRQ();
@@ -26,8 +26,7 @@ protected:
 private:
     const static int NUM_INSTS = 12;
 
-    std::shared_ptr<CPU> cpu;
-    std::shared_ptr<Cartridge> cartridge;
+    std::shared_ptr<Bus> bus;
 
     QTimer* updateTimer;
     QVector<QString> prevInsts;
