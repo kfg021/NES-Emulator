@@ -9,7 +9,10 @@
 #include <Qstring>
 #include <QColor>
 
-DebugWindow::DebugWindow(QWidget* parent, const std::shared_ptr<CPU>& cpu) : QWidget(parent), cpu(cpu) {
+DebugWindow::DebugWindow(QWidget* parent, const std::shared_ptr<CPU>& cpu, const std::shared_ptr<Cartridge>& cartridge) :
+    QWidget(parent), 
+    cpu(cpu),
+    cartridge(cartridge){
 }
 
 void DebugWindow::paintEvent(QPaintEvent* event){

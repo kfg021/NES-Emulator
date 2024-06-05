@@ -28,8 +28,6 @@ protected:
 private:
     GameWindow* gameWindow;
     DebugWindow* debugWindow;
-
-    std::shared_ptr<CPU> cpu;
 };
 
 #endif // MAINWINDOW_HPP

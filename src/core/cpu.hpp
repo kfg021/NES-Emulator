@@ -10,8 +10,9 @@
 
 class CPU{
 public:
-    CPU(const std::shared_ptr<Bus>& bus);
-    bool load(const std::string& filePath, uint16_t location, uint16_t len, uint16_t fileOffset);
+    CPU();
+    void setBus(const std::shared_ptr<Bus>& bus);
+    void initCPU();
     
     void executeCycle();
     void executeNextInstruction();
@@ -93,7 +94,6 @@ private:
     std::array<Opcode, MAX_NUM_OPCODES> lookup;
 
     // Initialization
-    void initCPU();
     void initLookup();
     
     // Flags

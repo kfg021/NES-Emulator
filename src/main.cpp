@@ -1,6 +1,6 @@
 // CONSOLE APPLICATION
 // To test: 
-// 1) g++ src/main.cpp src/core/bus.cpp src/core/cpu.cpp src/util/util.cpp
+// 1) src/core/bus.cpp src/core/cpu.cpp src/core/cartridge.cpp src/core/mapper/mapper.cpp src/core/mapper/mapper0.cpp src/main.cpp src/util/util.cpp
 // 2) ./a.out > out.txt
 // 3) diff out.txt nestestedit.log | awk -F, '/^[0-9]/ { print $1; exit }'
 // 4) It should print 5004 (first encountered illegal opcode)
@@ -10,19 +10,24 @@
 // #include <iostream>
 
 // int main(int argc, char* argv[]){
-//     CPU cpu(std::make_shared<Bus>());
+//     std::string nesTest = "/Users/kennangumbs/Desktop/NES/nestest.nes";
 
-//     std::string nesTest = "nestest.nes";
-//     static const int len = 0xC000 - 0x8000;
-//     cpu.load(nesTest, 0x8000, len, 0x10);
-//     cpu.load(nesTest, 0xC000, len, 0x10);
+//     std::shared_ptr<Cartridge> cartridge = std::make_shared<Cartridge>(nesTest);
+//     if(!cartridge->isValid()){
+//         return 1;
+//     }
+        
+//     std::shared_ptr<Bus> bus = std::make_shared<Bus>(cartridge);
+//     std::shared_ptr<CPU> cpu = std::make_shared<CPU>();
+//     cpu->setBus(bus);
+//     cpu->initCPU();
 
 //     for(int i = 0; i < 10000; i++){
-//         while(cpu.getRemainingCycles()){
-//             cpu.executeCycle();
+//         while(cpu->getRemainingCycles()){
+//             cpu->executeCycle();
 //         }
-//         cpu.printDebug();
-//         cpu.executeCycle();
+//         cpu->printDebug();
+//         cpu->executeCycle();
 //     }
 
 //     return 0;

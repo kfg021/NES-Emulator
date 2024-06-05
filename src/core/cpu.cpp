@@ -5,27 +5,29 @@
 #include <fstream>
 #include <iostream>
 
-CPU::CPU(const std::shared_ptr<Bus>& bus) : bus(bus){
+CPU::CPU(){
     initLookup();
 }
 
-// TODO: Add better error checking
-bool CPU::load(const std::string& filePath, uint16_t location, uint16_t len, uint16_t fileOffset){
-    static const int MEMORY_SIZE = 0x10000;
-    std::ifstream f(filePath);
-    if(!f){
-        return false;
-    }
-    std::string content((std::istreambuf_iterator<char>(f)), (std::istreambuf_iterator<char>()));
+void CPU::initCPU(){
+    // TODO: REMOVE, manually setting the reset vector for nestest.nes 
+    write16BitData(RESET_VECTOR, 0xC000);
 
-    // TODO: check size of file
-    for(int i = 0; i < len && (i + fileOffset < (int)content.length()) && (i + location < MEMORY_SIZE); i++){
-        bus->write(i + location, content[i + fileOffset]);
-    }
+    // Init registers
+    a = 0;
+    x = 0;
+    y = 0;
+    sp = 0;
+    sr = 0;
+    setFlag(UNUSED, 1);
 
-    initCPU();
-    
-    return true;
+    totalCycles = 0;
+
+    reset();
+}
+
+void CPU::setBus(const std::shared_ptr<Bus>& bus){
+    this->bus = bus;
 }
 
 void CPU::executeCycle(){
@@ -157,23 +159,6 @@ uint8_t CPU::getRemainingCycles() const{
 }
 int64_t CPU::getTotalCycles() const{
     return totalCycles;
-}
-
-void CPU::initCPU(){
-    // TODO: Temporarily hardcoding the reset vector so it works with nestest.nes, remove
-    write16BitData(RESET_VECTOR, 0xC000);
-    
-    // Init registers
-    a = 0;
-    x = 0;
-    y = 0;
-    sp = 0;
-    sr = 0;
-    setFlag(UNUSED, 1);
-
-    totalCycles = 0;
-
-    reset();
 }
 
 void CPU::initLookup(){
@@ -1427,7 +1412,7 @@ const CPU::Opcode& CPU::getOpcode(uint16_t address) const{
     return lookup[index];
 }
 
-// Prints in a format that closely resembles the nestest.nes log found here: http://nickmass.com/images/nestest.nes
+// Prints in a format that closely resembles the nestest.nes log found here: https://www.qmtpro.com/~nes/misc/nestest.log
 void CPU::printDebug() const{
     uint8_t index = bus->read(pc);
     const Opcode& currentOpcode = lookup[index];
