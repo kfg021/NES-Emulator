@@ -2,10 +2,10 @@
 
  Bus::Bus(){
     cpu = std::make_unique<CPU>();
-    cpu->setBus(std::weak_ptr<Bus>(this));
-
-    // ppu = std::make_unique<PPU>();
-    // ppu->setBus(std::shared_ptr<Bus>(this));
+    cpu->setBus(this);
+    
+    ppu = std::make_unique<PPU>();
+    ppu->setBus(this);
  }
 
 void Bus::reset(){

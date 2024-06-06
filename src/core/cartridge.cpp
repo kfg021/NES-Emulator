@@ -68,13 +68,26 @@ bool Cartridge::loadINESFile(const std::string& filePath){
     uint8_t mapperIdHi = (header.flag7 >> 4) & 0x0F;
     uint8_t mapperId = (mapperIdHi << 4) | mapperIdLo;
 
+    bool isTrainer = (header.flag6 >> 2) & 1;
+
+    if(isTrainer){
+        const static uint16_t TRAINER_SIZE = 0x200;
+
+        // TODO: Maybe we should put the trainer data somewhere...
+        file.ignore(TRAINER_SIZE);
+        
+        if(!file){
+            // File is too small to contain trainer
+            return false;
+        }
+    }
+
     // TODO: parse more fields
     // Yes:
     //      iNES version
     // Maybe:
     //      Nametable arrangement
     //      Alternate nametable layout
-    //      Trainer
 
     mapper = Mapper::createMapper(mapperId, header.prgRomChunks, header.chrRomChunks);
     if(mapper == nullptr){

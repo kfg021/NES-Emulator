@@ -26,7 +26,7 @@ void CPU::initCPU(){
     reset();
 }
 
-void CPU::setBus(const std::weak_ptr<Bus>& bus){
+void CPU::setBus(Bus* bus){
     this->bus = bus;
 }
 

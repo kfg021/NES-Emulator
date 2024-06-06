@@ -10,10 +10,10 @@ class Bus;
 class PPU{
 public:
     PPU();
-    void setBus(const std::shared_ptr<Bus>& bus);
+    void setBus(Bus* bus);
 
 private:
-    std::shared_ptr<Bus> bus;
+    Bus* bus;
 };
 
 #endif // PPU_HPP

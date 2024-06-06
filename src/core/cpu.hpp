@@ -13,7 +13,7 @@ class Bus;
 class CPU{
 public:
     CPU();
-    void setBus(const std::weak_ptr<Bus>& bus);
+    void setBus(Bus* bus);
     void initCPU();
     
     void executeCycle();
@@ -92,8 +92,10 @@ private:
     uint8_t remainingCycles;
     int64_t totalCycles;
     bool shouldAdvancePC;
-    std::weak_ptr<Bus> bus;
     std::array<Opcode, MAX_NUM_OPCODES> lookup;
+    
+    // Pointer to the Bus instance that the CPU is attached to. The CPU is not responsible for clearing this memory as it will get deleted when the Bus goes out of scope
+    Bus* bus;
 
     // Initialization
     void initLookup();
