@@ -24,7 +24,7 @@ protected:
     void paintEvent(QPaintEvent* event) override;
     
 private:
-    const static int NUM_INSTS = 12;
+    static constexpr int NUM_INSTS = 12;
 
     std::shared_ptr<Bus> bus;
 

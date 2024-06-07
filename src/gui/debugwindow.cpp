@@ -6,7 +6,7 @@
 #include <QTimer>
 #include <QFont>
 #include <QFontDatabase>
-#include <Qstring>
+#include <QString>
 #include <QColor>
 
 DebugWindow::DebugWindow(QWidget* parent, const std::shared_ptr<Bus>& bus) :
@@ -14,12 +14,10 @@ DebugWindow::DebugWindow(QWidget* parent, const std::shared_ptr<Bus>& bus) :
     bus(bus){
 }
 
-void DebugWindow::paintEvent(QPaintEvent* event){
-    Q_UNUSED(event);
-
-    const static int LETTER_HEIGHT = 20;
-    const static int START_X = 10;
-    const static int START_Y = 20;
+void DebugWindow::paintEvent(QPaintEvent* /*event*/){
+    static constexpr int LETTER_HEIGHT = 20;
+    static constexpr int START_X = 10;
+    static constexpr int START_Y = 20;
 
     QPainter painter(this);
     QColor defaultColor = painter.pen().color();

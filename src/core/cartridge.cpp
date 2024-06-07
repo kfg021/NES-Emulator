@@ -58,7 +58,7 @@ bool Cartridge::loadINESFile(const std::string& filePath){
         return false;
     }
     
-    const static std::array<char, 4> correctName = {'N', 'E', 'S', '\x1A'};
+    static constexpr std::array<char, 4> correctName = {'N', 'E', 'S', '\x1A'};
     if(header.name != correctName){
         // Name given in file is incorrect
         return false;
@@ -71,7 +71,7 @@ bool Cartridge::loadINESFile(const std::string& filePath){
     bool isTrainer = (header.flag6 >> 2) & 1;
 
     if(isTrainer){
-        const static uint16_t TRAINER_SIZE = 0x200;
+        static constexpr uint16_t TRAINER_SIZE = 0x200;
 
         // TODO: Maybe we should put the trainer data somewhere...
         file.ignore(TRAINER_SIZE);

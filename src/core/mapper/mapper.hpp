@@ -8,6 +8,8 @@
 class Mapper{
 public:
     Mapper(uint8_t prgRomChunks, uint8_t chrRomChunks);
+    virtual ~Mapper() = default;
+    
     static std::unique_ptr<Mapper> createMapper(uint8_t id, uint8_t prgRomChunks, uint8_t chrRomChunks);
 
     virtual std::optional<uint32_t> mapToPRGRead(uint16_t cpuAddress) = 0;

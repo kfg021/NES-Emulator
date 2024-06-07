@@ -6,8 +6,8 @@ Mapper0::Mapper0(uint8_t prgRomChunks, uint8_t chrRomChunks)
     : Mapper(prgRomChunks, chrRomChunks){
 }
 
-static const MemoryRange PRG_RANGE{0x8000, 0xFFFF};
-static const MemoryRange CHR_RANGE{0x0000, 0x1FFF};
+static constexpr MemoryRange PRG_RANGE{0x8000, 0xFFFF};
+static constexpr MemoryRange CHR_RANGE{0x0000, 0x1FFF};
 
 std::optional<uint32_t> Mapper0::mapToPRGRead(uint16_t cpuAddress){
     if(PRG_RANGE.contains(cpuAddress)){

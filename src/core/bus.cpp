@@ -8,17 +8,19 @@
     ppu->setBus(this);
  }
 
-void Bus::reset(){
+void Bus::initDevices(){
+    ram = {};
     cpu->initCPU();
 }
 
 bool Bus::loadROM(const std::string& filePath){
-    cartridge = std::make_unique<Cartridge>(filePath);
+    cartridge = std::make_shared<Cartridge>(filePath);
     if(!cartridge->isValid()){
         return false;
     }
+    ppu->setCartridge(cartridge);
 
-    reset();
+    initDevices();
     return true;
 }
 
@@ -27,7 +29,13 @@ uint8_t Bus::read(uint16_t address){
         return ram[address & 0x7FF];
     }
     else if(PPU_ADDRESSABLE_RANGE.contains(address)){
-        return 0; // TODO: implement PPU
+        std::optional<uint8_t> data = ppu->read(address & 0x7);
+        if(data.has_value()){
+            return data.value();
+        }
+        else{
+            return 0; // TODO: what happens when read fails?
+        }
     }
     else if(APU_ADDRESSABLE_RANGE.contains(address)){
         return 0; // TODO: implement APU
@@ -48,13 +56,12 @@ void Bus::write(uint16_t address, uint8_t value){
         ram[address & 0x7FF] = value;
     }
     else if(PPU_ADDRESSABLE_RANGE.contains(address)){
-        // TODO: implement PPU
+        ppu->write(address & 0x7, value); // TODO: what happens when write fails?
     }
     else if(APU_ADDRESSABLE_RANGE.contains(address)){
         // TODO: implement APU
     }
     else{ // if(CARTRIDGE_ADDRESSABLE_RANGE.contains(address))
-        cartridge->writeToPRG(address, value);
-        // TODO: what happens when write fails?
+        cartridge->writeToPRG(address, value); // TODO: what happens when write fails?
     }
 }

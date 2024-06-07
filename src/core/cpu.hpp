@@ -74,11 +74,11 @@ public:
 
 private:
     // Constants
-    static const uint16_t NMI_VECTOR = 0xFFFA;
-    static const uint16_t RESET_VECTOR = 0xFFFC;
-    static const uint16_t IRQ_BRK_VECTOR = 0xFFFE;
-    static const uint16_t STACK_OFFSET = 0x100;
-    static const uint16_t MAX_NUM_OPCODES = 0x100;
+    static constexpr uint16_t NMI_VECTOR = 0xFFFA;
+    static constexpr uint16_t RESET_VECTOR = 0xFFFC;
+    static constexpr uint16_t IRQ_BRK_VECTOR = 0xFFFE;
+    static constexpr uint16_t STACK_OFFSET = 0x100;
+    static constexpr uint16_t MAX_NUM_OPCODES = 0x100;
 
     // CPU state variables
     uint16_t pc; // program counter

@@ -18,9 +18,9 @@ class MainWindow : public QMainWindow{
 public:
     MainWindow(QWidget* parent = nullptr);
 
-    static const int GAME_WIDTH = 256 * 3;
-    static const int GAME_HEIGHT = 240 * 3;
-    static const int DEBUG_WIDTH = 300;
+    static constexpr int GAME_WIDTH = 256 * 3;
+    static constexpr int GAME_HEIGHT = 240 * 3;
+    static constexpr int DEBUG_WIDTH = 300;
 
 protected:
     void keyPressEvent(QKeyEvent* event) override;

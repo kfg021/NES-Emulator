@@ -10,7 +10,7 @@ CPU::CPU(){
 }
 
 void CPU::initCPU(){
-    // TODO: REMOVE, manually setting the reset vector for nestest.nes 
+    // // TODO: REMOVE, manually setting the reset vector for nestest.nes 
     write16BitData(RESET_VECTOR, 0xC000);
 
     // Init registers
@@ -798,7 +798,7 @@ void CPU::BPL(const AddressingMode::ReturnType& operand){
 // Push PC+2, push SR
 //  N	Z	C	I	D	V
 //  -	-	-	1	-	-
-void CPU::BRK(const AddressingMode::ReturnType& operand){
+void CPU::BRK(const AddressingMode::ReturnType& /*operand*/){
     setFlag(INTERRUPT, 1);
     
     push16BitDataToStack(pc + 2);
@@ -850,7 +850,7 @@ void CPU::BVS(const AddressingMode::ReturnType& operand){
 // 0 -> C
 //  N	Z	C	I	D	V
 //  -	-	0	-	-	-
-void CPU::CLC(const AddressingMode::ReturnType& operand){
+void CPU::CLC(const AddressingMode::ReturnType& /*operand*/){
     setFlag(CARRY, 0);
 }
 
@@ -859,7 +859,7 @@ void CPU::CLC(const AddressingMode::ReturnType& operand){
 // 0 -> D
 //  N	Z	C	I	D	V
 //  -	-	-	-	0	-
-void CPU::CLD(const AddressingMode::ReturnType& operand){
+void CPU::CLD(const AddressingMode::ReturnType& /*operand*/){
     setFlag(DECIMAL, 0);
 }
 
@@ -868,7 +868,7 @@ void CPU::CLD(const AddressingMode::ReturnType& operand){
 // 0 -> I
 //  N	Z	C	I	D	V
 //  -	-	-	0	-	-
-void CPU::CLI(const AddressingMode::ReturnType& operand){
+void CPU::CLI(const AddressingMode::ReturnType& /*operand*/){
     setFlag(INTERRUPT, 0);
 }
 
@@ -877,7 +877,7 @@ void CPU::CLI(const AddressingMode::ReturnType& operand){
 // 0 -> V
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	0
-void CPU::CLV(const AddressingMode::ReturnType& operand){
+void CPU::CLV(const AddressingMode::ReturnType& /*operand*/){
     setFlag(OVERFLOW, 0);
 }
 
@@ -933,7 +933,7 @@ void CPU::DEC(const AddressingMode::ReturnType& operand){
 // X - 1 -> X
 //  N	Z	C	I	D	V
 //  +	+	-	-	-	-
-void CPU::DEX(const AddressingMode::ReturnType& operand){
+void CPU::DEX(const AddressingMode::ReturnType& /*operand*/){
     x--;
     setNZFlags(x);
 }
@@ -943,7 +943,7 @@ void CPU::DEX(const AddressingMode::ReturnType& operand){
 // Y - 1 -> Y
 //  N	Z	C	I	D	V
 //  +	+	-	-	-	-
-void CPU::DEY(const AddressingMode::ReturnType& operand){
+void CPU::DEY(const AddressingMode::ReturnType& /*operand*/){
     y--;
     setNZFlags(y);
 }
@@ -976,7 +976,7 @@ void CPU::INC(const AddressingMode::ReturnType& operand){
 // X + 1 -> X
 //  N	Z	C	I	D	V
 //  +	+	-	-	-	-
-void CPU::INX(const AddressingMode::ReturnType& operand){
+void CPU::INX(const AddressingMode::ReturnType& /*operand*/){
     x++;
     setNZFlags(x);
 }
@@ -985,7 +985,7 @@ void CPU::INX(const AddressingMode::ReturnType& operand){
 // Y + 1 -> Y
 //  N	Z	C	I	D	V
 //  +	+	-	-	-	-
-void CPU::INY(const AddressingMode::ReturnType& operand){
+void CPU::INY(const AddressingMode::ReturnType& /*operand*/){
     y++;
     setNZFlags(y);
 }
@@ -1081,7 +1081,7 @@ void CPU::LSR(const AddressingMode::ReturnType& operand){
 // ---
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	-
-void CPU::NOP(const AddressingMode::ReturnType& operand){
+void CPU::NOP(const AddressingMode::ReturnType& /*operand*/){
 }
 
 // ORA
@@ -1100,7 +1100,7 @@ void CPU::ORA(const AddressingMode::ReturnType& operand){
 // Push A
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	-
-void CPU::PHA(const AddressingMode::ReturnType& operand){
+void CPU::PHA(const AddressingMode::ReturnType& /*operand*/){
     push8BitDataToStack(a);
 }
 
@@ -1111,7 +1111,7 @@ void CPU::PHA(const AddressingMode::ReturnType& operand){
 // Push SR
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	-
-void CPU::PHP(const AddressingMode::ReturnType& operand){
+void CPU::PHP(const AddressingMode::ReturnType& /*operand*/){
     setFlag(BREAK, 1);
     push8BitDataToStack(sr);
     setFlag(BREAK, 0);
@@ -1122,7 +1122,7 @@ void CPU::PHP(const AddressingMode::ReturnType& operand){
 // Pull A
 //  N	Z	C	I	D	V
 //  +	+	-	-	-	-
-void CPU::PLA(const AddressingMode::ReturnType& operand){
+void CPU::PLA(const AddressingMode::ReturnType& /*operand*/){
     a = pop8BitDataFromStack();
     setNZFlags(a);
 }
@@ -1134,7 +1134,7 @@ void CPU::PLA(const AddressingMode::ReturnType& operand){
 // Pull SR
 //  N	Z	C	I	D	V
 //  from stack
-void CPU::PLP(const AddressingMode::ReturnType& operand){
+void CPU::PLP(const AddressingMode::ReturnType& /*operand*/){
     sr = pop8BitDataFromStack();
     setFlag(BREAK, 0);
     setFlag(UNUSED, 1);
@@ -1198,7 +1198,7 @@ void CPU::ROR(const AddressingMode::ReturnType& operand){
 // Pull SR, pull PC
 //  N	Z	C	I	D	V
 //  from stack
-void CPU::RTI(const AddressingMode::ReturnType& operand){
+void CPU::RTI(const AddressingMode::ReturnType& /*operand*/){
     sr = pop8BitDataFromStack();
     setFlag(BREAK, 0);
     setFlag(UNUSED, 1);
@@ -1211,7 +1211,7 @@ void CPU::RTI(const AddressingMode::ReturnType& operand){
 // Pull PC, PC+1 -> PC
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	-
-void CPU::RTS(const AddressingMode::ReturnType& operand){
+void CPU::RTS(const AddressingMode::ReturnType& /*operand*/){
     pc = pop16BitDataFromStack() + 1;
     shouldAdvancePC = false;
 }
@@ -1241,7 +1241,7 @@ void CPU::SBC(const AddressingMode::ReturnType& operand){
 // 1 -> C
 // N	Z	C	I	D	V
 // -	-	1	-	-	-
-void CPU::SEC(const AddressingMode::ReturnType& operand){
+void CPU::SEC(const AddressingMode::ReturnType& /*operand*/){
     setFlag(CARRY, 1);
 }
 
@@ -1250,7 +1250,7 @@ void CPU::SEC(const AddressingMode::ReturnType& operand){
 // 1 -> D
 // N	Z	C	I	D	V
 // -	-	-	-	1	-
-void CPU::SED(const AddressingMode::ReturnType& operand){
+void CPU::SED(const AddressingMode::ReturnType& /*operand*/){
     setFlag(DECIMAL, 1);
 }
 
@@ -1259,7 +1259,7 @@ void CPU::SED(const AddressingMode::ReturnType& operand){
 // 1 -> I
 // N	Z	C	I	D	V
 // -	-	-	1	-	-
-void CPU::SEI(const AddressingMode::ReturnType& operand){
+void CPU::SEI(const AddressingMode::ReturnType& /*operand*/){
     setFlag(INTERRUPT, 1);
 }
 
@@ -1298,7 +1298,7 @@ void CPU::STY(const AddressingMode::ReturnType& operand){
 // A -> X
 //  N	Z	C	I	D	V
 //  +	+	-	-	-	-
-void CPU::TAX(const AddressingMode::ReturnType& operand){
+void CPU::TAX(const AddressingMode::ReturnType& /*operand*/){
     x = a;
     setNZFlags(x);
 }
@@ -1308,7 +1308,7 @@ void CPU::TAX(const AddressingMode::ReturnType& operand){
 // A -> Y
 //  N	Z	C	I	D	V
 //  +	+	-	-	-	-
-void CPU::TAY(const AddressingMode::ReturnType& operand){
+void CPU::TAY(const AddressingMode::ReturnType& /*operand*/){
     y = a;
     setNZFlags(y);
 }
@@ -1318,7 +1318,7 @@ void CPU::TAY(const AddressingMode::ReturnType& operand){
 // SP -> X
 //  N	Z	C	I	D	V
 //  +	+	-	-	-	-
-void CPU::TSX(const AddressingMode::ReturnType& operand){
+void CPU::TSX(const AddressingMode::ReturnType& /*operand*/){
     x = sp;
     setNZFlags(x);
 }
@@ -1328,7 +1328,7 @@ void CPU::TSX(const AddressingMode::ReturnType& operand){
 // X -> A
 //  N	Z	C	I	D	V
 //  +	+	-	-	-	-
-void CPU::TXA(const AddressingMode::ReturnType& operand){
+void CPU::TXA(const AddressingMode::ReturnType& /*operand*/){
     a = x;
     setNZFlags(a);
 }
@@ -1338,7 +1338,7 @@ void CPU::TXA(const AddressingMode::ReturnType& operand){
 // X -> SP
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	-
-void CPU::TXS(const AddressingMode::ReturnType& operand){
+void CPU::TXS(const AddressingMode::ReturnType& /*operand*/){
     sp = x;
 }
 
@@ -1347,19 +1347,19 @@ void CPU::TXS(const AddressingMode::ReturnType& operand){
 // Y -> A
 // N	Z	C	I	D	V
 // +	+	-	-	-	-
-void CPU::TYA(const AddressingMode::ReturnType& operand){
+void CPU::TYA(const AddressingMode::ReturnType& /*operand*/){
     a = y;
     setNZFlags(a);
 }
 
 // UNI
 // Unimplemented Instruction
-void CPU::UNI(const AddressingMode::ReturnType& operand){
+void CPU::UNI(const AddressingMode::ReturnType& /*operand*/){
     // TODO: handle illegal opcodes
 }
 
 // Addressing mode string function definitions
-std::string CPU::strACC(uint16_t address) const{
+std::string CPU::strACC(uint16_t /*address*/) const{
     return "A";
 }
 std::string CPU::strABS(uint16_t address) const{
@@ -1374,7 +1374,7 @@ std::string CPU::strABY(uint16_t address) const{
 std::string CPU::strIMM(uint16_t address) const{
     return "#$" + toHexString8(bus->read(address + 1));
 }
-std::string CPU::strIMP(uint16_t address) const{
+std::string CPU::strIMP(uint16_t /*address*/) const{
     return "";
 }
 std::string CPU::strIND(uint16_t address) const{
@@ -1416,9 +1416,7 @@ const CPU::Opcode& CPU::getOpcode(uint16_t address) const{
 void CPU::printDebug() const{
     uint8_t index = bus->read(pc);
     const Opcode& currentOpcode = lookup[index];
-    const Instruction& inst = currentOpcode.instruction;
     const AddressingMode& mode = currentOpcode.addressingMode;
-    const AddressingMode::ReturnType& operand = (this->*mode.getOperand)();
 
     std::cout << toHexString16(pc) << "  ";
     for(int i = 0; i < 3; i++){

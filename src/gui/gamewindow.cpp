@@ -5,9 +5,7 @@
 GameWindow::GameWindow(QWidget* parent) : QWidget(parent){
 }
 
-void GameWindow::paintEvent(QPaintEvent* event){
-    Q_UNUSED(event);
-
+void GameWindow::paintEvent(QPaintEvent* /*event*/){
     QPainter painter(this);
     painter.fillRect(rect(), Qt::blue);
 }

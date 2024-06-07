@@ -24,8 +24,8 @@ public:
 private:
     bool loadINESFile(const std::string& filePath);
 
-    static const uint16_t PRG_ROM_CHUNK_SIZE = 0x4000;
-    static const uint16_t CHR_ROM_CHUNK_SIZE = 0x2000;
+    static constexpr uint16_t PRG_ROM_CHUNK_SIZE = 0x4000;
+    static constexpr uint16_t CHR_ROM_CHUNK_SIZE = 0x2000;
 
     std::vector<uint8_t> prgRom;
     std::vector<uint8_t> chrRom;

@@ -25,8 +25,6 @@ src/gui/mainwindow.cpp \
 src/util/util.cpp \
 src/main.cpp
 
-CONFIG += warn_off
-
 DESTDIR = bin
 OBJECTS_DIR = obj
 MOC_DIR = moc
