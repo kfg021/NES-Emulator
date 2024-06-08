@@ -32,7 +32,7 @@ MainWindow::MainWindow(QWidget* parent): QMainWindow(parent){
 
 void MainWindow::keyPressEvent(QKeyEvent* event){
     if(event->key() == Qt::Key_Space){
-        debugWindow->executeInstruction();
+        debugWindow->stepIfInDebugMode();
     }
     else if(event->key() == Qt::Key_R){
         debugWindow->reset();
@@ -42,5 +42,16 @@ void MainWindow::keyPressEvent(QKeyEvent* event){
     }
     else if(event->key() == Qt::Key_N){
         debugWindow->NMI();
+    }
+    else if(event->key() == Qt::Key_C){
+        debugWindow->toggleDebugMode();
+    }
+    else if(event->key() == Qt::Key_Left){
+        debugWindow->colorPallete = (debugWindow->colorPallete - 1) & 7;
+        debugWindow->update();
+    }
+    else if(event->key() == Qt::Key_Right){
+        debugWindow->colorPallete = (debugWindow->colorPallete + 1) & 7;
+        debugWindow->update();
     }
 }

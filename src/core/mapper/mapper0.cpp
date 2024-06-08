@@ -9,7 +9,7 @@ Mapper0::Mapper0(uint8_t prgRomChunks, uint8_t chrRomChunks)
 static constexpr MemoryRange PRG_RANGE{0x8000, 0xFFFF};
 static constexpr MemoryRange CHR_RANGE{0x0000, 0x1FFF};
 
-std::optional<uint32_t> Mapper0::mapToPRGRead(uint16_t cpuAddress){
+std::optional<uint32_t> Mapper0::mapToPRGView(uint16_t cpuAddress) const{
     if(PRG_RANGE.contains(cpuAddress)){
         if(prgRomChunks == 1){
             return cpuAddress & 0x3FFF;
@@ -23,11 +23,18 @@ std::optional<uint32_t> Mapper0::mapToPRGRead(uint16_t cpuAddress){
         return std::nullopt;
     }
 }
+
+std::optional<uint32_t> Mapper0::mapToPRGRead(uint16_t cpuAddress){
+    return mapToPRGView(cpuAddress);
+}
+
 std::optional<uint32_t> Mapper0::mapToPRGWrite(uint16_t cpuAddress){
     // TODO: Figure out if mapper 0 should actually have PRG RAM
-    return mapToPRGRead(cpuAddress);
+    return mapToPRGView(cpuAddress);
 }
-std::optional<uint32_t> Mapper0::mapToCHRRead(uint16_t ppuAddress){
+
+
+std::optional<uint32_t> Mapper0::mapToCHRView(uint16_t ppuAddress) const{
     if(CHR_RANGE.contains(ppuAddress)){
         return ppuAddress;
     }
@@ -35,6 +42,11 @@ std::optional<uint32_t> Mapper0::mapToCHRRead(uint16_t ppuAddress){
         return std::nullopt;
     }
 }
+
+std::optional<uint32_t> Mapper0::mapToCHRRead(uint16_t ppuAddress){
+    return mapToCHRView(ppuAddress);
+}
+
 std::optional<uint32_t> Mapper0::mapToCHRWrite(uint16_t ppuAddress){
     if(CHR_RANGE.contains(ppuAddress) && chrRomChunks == 0){
         // If chrRomChunks == 0, we assume we have CHR RAM

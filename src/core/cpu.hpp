@@ -8,16 +8,18 @@
 #include <string>
 #include <memory>
 
+// TODO: Add data view in addition to read, fix const
+
 class Bus;
 
 class CPU{
 public:
-    CPU();
+    CPU() = default;
     void setBus(Bus* bus);
     void initCPU();
     
     void executeCycle();
-    void executeNextInstruction();
+    // void executeNextInstruction();
 
     // Reset/interrupts
     void reset();
@@ -42,7 +44,7 @@ public:
             bool mightNeedExtraCycle = 0;
         };
         uint8_t instructionSize;
-        ReturnType (CPU::*getOperand)() const;
+        ReturnType (CPU::*getOperand)();
         std::string (CPU::*toString)(uint16_t address) const;
     };
     struct Instruction{
@@ -92,40 +94,42 @@ private:
     uint8_t remainingCycles;
     int64_t totalCycles;
     bool shouldAdvancePC;
-    std::array<Opcode, MAX_NUM_OPCODES> lookup;
+    static const std::array<Opcode, MAX_NUM_OPCODES> lookup;
     
     // Pointer to the Bus instance that the CPU is attached to. The CPU is not responsible for clearing this memory as it will get deleted when the Bus goes out of scope
     Bus* bus;
 
     // Initialization
-    void initLookup();
+    static std::array<Opcode, MAX_NUM_OPCODES> initLookup();
     
     // Flags
     void setFlag(Flags flag, bool value);
     void setNZFlags(uint8_t x);
 
     // Reading/writing data
-    uint16_t read16BitData(uint16_t address) const;
+    uint16_t view16BitData(uint16_t address) const;
+    uint16_t read16BitData(uint16_t address);
     void write16BitData(uint16_t address, uint16_t data);
+    
     void push8BitDataToStack(uint8_t data);
     uint8_t pop8BitDataFromStack();
     void push16BitDataToStack(uint16_t data);
     uint16_t pop16BitDataFromStack();
     
     // Addressing mode functions
-    AddressingMode::ReturnType ACC() const;
-    AddressingMode::ReturnType ABS() const;
-    AddressingMode::ReturnType ABX() const;
-    AddressingMode::ReturnType ABY() const;
-    AddressingMode::ReturnType IMM() const;
-    AddressingMode::ReturnType IMP() const;
-    AddressingMode::ReturnType IND() const;
-    AddressingMode::ReturnType IZX() const;
-    AddressingMode::ReturnType IZY() const;
-    AddressingMode::ReturnType REL() const;
-    AddressingMode::ReturnType ZPG() const;
-    AddressingMode::ReturnType ZPX() const;
-    AddressingMode::ReturnType ZPY() const;
+    AddressingMode::ReturnType ACC();
+    AddressingMode::ReturnType ABS();
+    AddressingMode::ReturnType ABX();
+    AddressingMode::ReturnType ABY();
+    AddressingMode::ReturnType IMM();
+    AddressingMode::ReturnType IMP();
+    AddressingMode::ReturnType IND();
+    AddressingMode::ReturnType IZX();
+    AddressingMode::ReturnType IZY();
+    AddressingMode::ReturnType REL();
+    AddressingMode::ReturnType ZPG();
+    AddressingMode::ReturnType ZPX();
+    AddressingMode::ReturnType ZPY();
 
     // Instruction functions
     void ADC(const AddressingMode::ReturnType& operand);

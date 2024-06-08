@@ -20,11 +20,17 @@ public:
     bool loadROM(const std::string& filePath);
     void initDevices();
 
+    uint8_t view(uint16_t address) const;
     uint8_t read(uint16_t address);
     void write(uint16_t address, uint8_t value);
 
     std::unique_ptr<CPU> cpu;
     std::unique_ptr<PPU> ppu;
+
+    uint64_t totalCycles;
+    bool nmiRequest;
+
+    void executeCycle();
 
 private:
     static constexpr MemoryRange RAM_ADDRESSABLE_RANGE{0x0000, 0x1FFF};

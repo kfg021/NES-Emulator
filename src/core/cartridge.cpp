@@ -112,6 +112,16 @@ bool Cartridge::loadINESFile(const std::string& filePath){
     return true;
 }
 
+std::optional<uint8_t> Cartridge::viewPRG(uint16_t preMappedAddr) const{
+    std::optional<uint32_t> mappedAddr = mapper->mapToPRGView(preMappedAddr);
+    if(mappedAddr.has_value()){
+        return prgRom[mappedAddr.value()];
+    }
+    else{
+        return std::nullopt;
+    }
+}
+
 std::optional<uint8_t> Cartridge::readFromPRG(uint16_t preMappedAddr){
     std::optional<uint32_t> mappedAddr = mapper->mapToPRGRead(preMappedAddr);
     if(mappedAddr.has_value()){
@@ -127,6 +137,18 @@ void Cartridge::writeToPRG(uint16_t preMappedAddr, uint8_t data){
         prgRom[mappedAddr.value()] = data;
     }
 }
+
+
+std::optional<uint8_t> Cartridge::viewCHR(uint16_t preMappedAddr) const{
+    std::optional<uint32_t> mappedAddr = mapper->mapToCHRView(preMappedAddr);
+    if(mappedAddr.has_value()){
+        return chrRom[mappedAddr.value()];
+    }
+    else{
+        return std::nullopt;
+    }
+}
+
 std::optional<uint8_t> Cartridge::readFromCHR(uint16_t preMappedAddr){
     std::optional<uint32_t> mappedAddr = mapper->mapToCHRRead(preMappedAddr);
     if(mappedAddr.has_value()){
