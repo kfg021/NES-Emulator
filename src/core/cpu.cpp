@@ -1381,7 +1381,7 @@ std::string CPU::strABY(uint16_t address) const{
     return "$" + toHexString16(view16BitData(address + 1)) + ",Y";
 }
 std::string CPU::strIMM(uint16_t address) const{
-    return "#$" + toHexString8(bus->read(address + 1));
+    return "#$" + toHexString8(bus->view(address + 1));
 }
 std::string CPU::strIMP(uint16_t /*address*/) const{
     return "";
@@ -1390,47 +1390,47 @@ std::string CPU::strIND(uint16_t address) const{
     return "($" + toHexString16(view16BitData(address + 1)) + ")";
 }
 std::string CPU::strIZX(uint16_t address) const{
-    return "($" + toHexString8(bus->read(address + 1)) + ",X)";
+    return "($" + toHexString8(bus->view(address + 1)) + ",X)";
 }
 std::string CPU::strIZY(uint16_t address) const{
-    return "($" + toHexString8(bus->read(address + 1)) + "),Y";
+    return "($" + toHexString8(bus->view(address + 1)) + "),Y";
 }
 std::string CPU::strREL(uint16_t address) const{
-    uint8_t relAddress = bus->read(address + 1);
+    uint8_t relAddress = bus->view(address + 1);
     uint16_t newAddress = address + 2 + (int8_t)relAddress;
     return "$" + toHexString16(newAddress);
 }
 std::string CPU::strZPG(uint16_t address) const{
-    return "$" + toHexString8(bus->read(address + 1));
+    return "$" + toHexString8(bus->view(address + 1));
 }
 std::string CPU::strZPX(uint16_t address) const{
-    return "$" + toHexString8(bus->read(address + 1)) + ",X";
+    return "$" + toHexString8(bus->view(address + 1)) + ",X";
 }
 std::string CPU::strZPY(uint16_t address) const{
-    return "$" + toHexString8(bus->read(address + 1)) + ",Y";
+    return "$" + toHexString8(bus->view(address + 1)) + ",Y";
 }
 
 std::string CPU::toString(uint16_t address) const{
-    uint8_t index = bus->read(address);
+    uint8_t index = bus->view(address);
     const Opcode& opcode = lookup[index];
     return opcode.instruction.name + " " + (this->*opcode.addressingMode.toString)(address);
 }
 
 const CPU::Opcode& CPU::getOpcode(uint16_t address) const{
-    uint8_t index = bus->read(address);
+    uint8_t index = bus->view(address);
     return lookup[index];
 }
 
 // Prints in a format that closely resembles the nestest.nes log found here: https://www.qmtpro.com/~nes/misc/nestest.log
 void CPU::printDebug() const{
-    uint8_t index = bus->read(pc);
+    uint8_t index = bus->view(pc);
     const Opcode& currentOpcode = lookup[index];
     const AddressingMode& mode = currentOpcode.addressingMode;
 
     std::cout << toHexString16(pc) << "  ";
     for(int i = 0; i < 3; i++){
         if(i < mode.instructionSize){
-            std::cout << toHexString8(bus->read(pc + i)) << " ";
+            std::cout << toHexString8(bus->view(pc + i)) << " ";
         }
         else{
             std::cout << "   ";
