@@ -4,9 +4,9 @@
 #include "bus.hpp"
 
 #include <stdint.h>
-#include <optional>
 #include <string>
 #include <memory>
+#include <variant>
 
 // TODO: Add data view in addition to read, fix const
 
@@ -39,8 +39,14 @@ public:
     };
     struct AddressingMode{
         struct ReturnType{
-            std::optional<uint16_t> address;
-            std::optional<uint8_t> data;
+            // This is the variable that will be populated after we determine the instruction's addressing mode.
+            // Addressing modes can either return a 16-bit address, an 8-bit data value, or nothing (in the case of IMP).
+            // These three options are captured in the below std::variant
+            const std::variant<uint16_t, uint8_t, std::monostate> addressingModeOutput;
+
+            bool hasAddress() const;
+            bool hasData() const;
+
             bool mightNeedExtraCycle = 0;
         };
         uint8_t instructionSize;
@@ -57,6 +63,10 @@ public:
         AddressingMode addressingMode;
         uint8_t numDefaultCycles;
     };
+
+    uint16_t getAddress(const AddressingMode::ReturnType& operand) const;
+    uint8_t getDataView(const AddressingMode::ReturnType& operand) const;
+    uint8_t getDataRead(const AddressingMode::ReturnType& operand);
 
     // Getters for internal variables
     uint16_t getPC() const;

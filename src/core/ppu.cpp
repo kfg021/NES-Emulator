@@ -122,7 +122,7 @@ void PPU::write(uint8_t ppuRegister, uint8_t value){
         // But because of the way the code is structured, calls to write also call read.
         // So vramAddress already gets incremented by 1 before we write.
         // So we need to subtract before we use it, then add it back. 
-        vramAddress -= (control.vramAddressIncrement ? 32 : 1);
+        // vramAddress -= (control.vramAddressIncrement ? 32 : 1);
         
         ppuWrite(vramAddress & 0x3FFF, value);
         vramAddress += (control.vramAddressIncrement ? 32 : 1);

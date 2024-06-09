@@ -40,8 +40,6 @@ void CPU::executeCycle(){
         const Instruction& inst = currentOpcode.instruction;
         const AddressingMode& mode = currentOpcode.addressingMode;
         const AddressingMode::ReturnType& operand = (this->*mode.getOperand)();
-
-        // printDebug();
         
         (this->*inst.execute)(operand);
 
@@ -58,15 +56,6 @@ void CPU::executeCycle(){
     remainingCycles--;
     totalCycles++;
 }
-
-// void CPU::executeNextInstruction(){
-//     while(remainingCycles > 0){
-//         executeCycle();
-//     }
-
-//     // This final cycle acutally executes the instruction
-//     executeCycle();
-// }
 
 // Reset (description from from https://www.masswerk.at/6502/6502_instruction_set.html)
 // An active-low reset line allows to hold the processor in a known disabled
@@ -410,6 +399,48 @@ std::array<CPU::Opcode, CPU::MAX_NUM_OPCODES> CPU::initLookup(){
     return lookup;
 }
 
+bool CPU::AddressingMode::ReturnType::hasAddress() const{
+    const uint16_t* address = std::get_if<uint16_t>(&addressingModeOutput);
+    return address != nullptr;
+}
+
+bool CPU::AddressingMode::ReturnType::hasData() const{
+    const uint8_t* data = std::get_if<uint8_t>(&addressingModeOutput);
+    return data != nullptr;
+}
+
+uint16_t CPU::getAddress(const AddressingMode::ReturnType& operand) const{
+    // For instrutions that require an address, the addressing modes provide us with it directly.
+    // So this std::get call should never throw an exception.
+    return std::get<uint16_t>(operand.addressingModeOutput);
+}
+
+uint8_t CPU::getDataRead(const AddressingMode::ReturnType& operand){
+    // Some addressing modes (i.e. IMM) return us with data directly, while others (i.e. ZPX) give us the address that the data resides in.
+    // So we first check if the data is present within operand, and if not, we read it from the bus.
+    const uint8_t* data = std::get_if<uint8_t>(&operand.addressingModeOutput);
+    if(data != nullptr){
+        return *data;
+    }
+    else{
+        uint16_t address = std::get<uint16_t>(operand.addressingModeOutput);
+        return bus->read(address);
+    }
+}
+
+uint8_t CPU::getDataView(const AddressingMode::ReturnType& operand) const{
+    // Same code as getDataRead(), but we call bus->view() instead of bus->read().
+    // This function is used when we want to look under the hood of the console without changing its state (i.e. debugging information)
+    const uint8_t* data = std::get_if<uint8_t>(&operand.addressingModeOutput);
+    if(data != nullptr){
+        return *data;
+    }
+    else{
+        uint16_t address = std::get<uint16_t>(operand.addressingModeOutput);
+        return bus->view(address);
+    }
+}
+
 void CPU::setFlag(Flags flag, bool value){
     if(value){
         sr |= (1 << flag);
@@ -453,7 +484,6 @@ void CPU::push8BitDataToStack(uint8_t data){
 
 uint8_t CPU::pop8BitDataFromStack(){
     // Since the stack grows backwards, we need to read from sp + 1
-    // uint8_t data = bus->read(STACK_OFFSET + sp + 1);
     uint8_t data = bus->read(STACK_OFFSET + ((sp + 1) & 0xFF));
     sp++;
     return data;
@@ -461,7 +491,6 @@ uint8_t CPU::pop8BitDataFromStack(){
 
 void CPU::push16BitDataToStack(uint16_t data){
     // Since the stack grows backwards, we need to write the least signifigant bit to sp - 1
-    // write16BitData(STACK_OFFSET + sp - 1, data);
     uint8_t lo = data & 0xFF;
     uint8_t hi = (data >> 8) & 0xFF;
     bus->write(STACK_OFFSET + ((sp - 1) & 0xFF), lo);
@@ -490,14 +519,14 @@ bool isPageChange(uint16_t address1, uint16_t address2){
 // Accumulator
 // These instructions have register A (the accumulator) as the target. Examples are LSR A and ROL A.
 CPU::AddressingMode::ReturnType CPU::ACC(){
-    return {std::nullopt, a, 0};
+    return {a, 0};
 }
 
 // Absolute
 // Absolute addressing specifies the memory location explicitly in the two bytes following the opcode. So JMP $4032 will set the PC to $4032. The hex for this is 4C 32 40. The 6502 is a little endian machine, so any 16 bit (2 byte) value is stored with the LSB first. All instructions that use absolute addressing are 3 bytes.
 CPU::AddressingMode::ReturnType CPU::ABS(){
     uint16_t address = read16BitData(pc + 1);
-    return {address, bus->read(address), 0};
+    return {address, 0};
 }
 
 // Absolute Indexed X
@@ -505,7 +534,7 @@ CPU::AddressingMode::ReturnType CPU::ABS(){
 CPU::AddressingMode::ReturnType CPU::ABX(){
     uint16_t oldAddress = read16BitData(pc + 1);
     uint16_t newAddress = oldAddress + x;
-    return {newAddress, bus->read(newAddress), isPageChange(oldAddress, newAddress)};
+    return {newAddress, isPageChange(oldAddress, newAddress)};
 }
 
 // Absolute Indexed Y
@@ -513,19 +542,19 @@ CPU::AddressingMode::ReturnType CPU::ABX(){
 CPU::AddressingMode::ReturnType CPU::ABY(){
     uint16_t oldAddress = read16BitData(pc + 1);
     uint16_t newAddress = oldAddress + y;
-    return {newAddress, bus->read(newAddress), isPageChange(oldAddress, newAddress)};
+    return {newAddress, isPageChange(oldAddress, newAddress)};
 }
 
 // Immediate
 // These instructions have their data defined as the next byte after the opcode. ORA #$B2 will perform a logical (also called bitwise) of the value B2 with the accumulator. Remember that in assembly when you see a # sign, it indicates an immediate value. If $B2 was written without a #, it would indicate an address or offset.
 CPU::AddressingMode::ReturnType CPU::IMM(){
-    return {std::nullopt, bus->read(pc + 1), 0};
+    return {bus->read(pc + 1), 0};
 }
 
 // Implied
 // In an implied instruction, the data and/or destination is mandatory for the instruction. For example, the CLC instruction is implied, it is going to clear the processor's Carry flag.
 CPU::AddressingMode::ReturnType CPU::IMP(){
-    return {std::nullopt, std::nullopt, 0};
+    return {std::monostate{}, 0};
 }
 
 // Indirect
@@ -546,7 +575,7 @@ CPU::AddressingMode::ReturnType CPU::IND(){
         address = read16BitData(pointer);
     }   
     
-    return {address, std::nullopt, 0};
+    return {address, 0};
 }
 
 // Indexed Indirect X
@@ -561,7 +590,7 @@ CPU::AddressingMode::ReturnType CPU::IZX(){
     uint8_t hi = bus->read((pointer + 1) & 0xFF);
     uint16_t address = ((uint16_t)hi << 8) | lo;
 
-    return {address, bus->read(address), 0};
+    return {address, 0};
 }
 
 // Indirect Indexed Y
@@ -577,7 +606,7 @@ CPU::AddressingMode::ReturnType CPU::IZY(){
     uint16_t oldAddress = ((uint16_t)hi << 8) | lo;
 
     uint16_t newAddress = oldAddress + y;
-    return {newAddress, bus->read(newAddress), isPageChange(oldAddress, newAddress)};
+    return {newAddress, isPageChange(oldAddress, newAddress)};
 }
 
 // Relative
@@ -587,31 +616,30 @@ CPU::AddressingMode::ReturnType CPU::REL(){
     
     // Relative addressing is done from the end of the instruction, so we need to add 2 to this address.
     uint16_t newAddress = pc + 2 + (int8_t)offset; 
-    
-    return {newAddress, std::nullopt, isPageChange(pc + 2, newAddress)};
+    return {newAddress, isPageChange(pc + 2, newAddress)};
 }
 
 // Zero-Page
 // Zero-Page is an addressing mode that is only capable of addressing the first 256 bytes of the CPU's memory map. You can think of it as absolute addressing for the first 256 bytes. The instruction LDA $35 will put the value stored in memory location $35 into A. The advantage of zero-page are two - the instruction takes one less byte to specify, and it executes in less CPU cycles. Most programs are written to store the most frequently used variables in the first 256 memory locations so they can take advantage of zero page addressing.
 CPU::AddressingMode::ReturnType CPU::ZPG(){
-    uint8_t address = bus->read(pc + 1);
-    return {address, bus->read(address), 0};
+    uint16_t address = bus->read(pc + 1);
+    return {address, 0};
 }
 
 // Zero-Page Indexed X
 // This works just like absolute indexed, but the target address is limited to the first 0xFF bytes.
 // The target address will wrap around and will always be in the zero page. If the instruction is LDA $C0,X, and X is $60, then the target address will be $20. $C0+$60 = $120, but the carry is discarded in the calculation of the target address.
 CPU::AddressingMode::ReturnType CPU::ZPX(){
-    uint8_t address = bus->read(pc + 1) + x;
-    return {address, bus->read(address), 0};
+    uint16_t address = (bus->read(pc + 1) + x) & 0xFF;
+    return {address, 0};
 }
 
 // Zero-Page Indexed Y
 // This works just like absolute indexed, but the target address is limited to the first 0xFF bytes.
 // The target address will wrap around and will always be in the zero page. If the instruction is LDA $C0,X, and X is $60, then the target address will be $20. $C0+$60 = $120, but the carry is discarded in the calculation of the target address.
 CPU::AddressingMode::ReturnType CPU::ZPY(){
-    uint8_t address = bus->read(pc + 1) + y;
-    return {address, bus->read(address), 0};
+    uint16_t address = (bus->read(pc + 1) + y) & 0xFF;
+    return {address, 0};
 }
 
 
@@ -624,7 +652,7 @@ CPU::AddressingMode::ReturnType CPU::ZPY(){
 //  N	Z	C	I	D	V
 //  +	+	+	-	-	+
 void CPU::ADC(const AddressingMode::ReturnType& operand){
-    uint8_t data = operand.data.value();
+    uint8_t data = getDataRead(operand);
     uint16_t fullSum = (uint16_t)a + data + getFlag(CARRY);
     
     setFlag(CARRY, fullSum > 0xFF);
@@ -643,7 +671,7 @@ void CPU::ADC(const AddressingMode::ReturnType& operand){
 //  N	Z	C	I	D	V
 //  +	+	-	-	-	-
 void CPU::AND(const AddressingMode::ReturnType& operand){
-    uint8_t data = operand.data.value();
+    uint8_t data = getDataRead(operand);
     a &= data;
 
     setNZFlags(a);
@@ -656,11 +684,11 @@ void CPU::AND(const AddressingMode::ReturnType& operand){
 //  +	+	+	-	-	-
 void CPU::ASL(const AddressingMode::ReturnType& operand){
     uint16_t shift;
-    if(operand.address.has_value()){
-        uint8_t data = operand.data.value();
-        shift = (uint16_t)data << 1;
+    if(operand.hasAddress()){
+        uint16_t addr = getAddress(operand);
+        uint8_t data = getDataRead(operand);
 
-        uint16_t addr = operand.address.value();
+        shift = (uint16_t)data << 1;
         bus->write(addr, (uint8_t)shift);
     } 
     else{
@@ -680,7 +708,7 @@ void CPU::ASL(const AddressingMode::ReturnType& operand){
 //  -	-	-	-	-	-
 void CPU::BCC(const AddressingMode::ReturnType& operand){
     if(!getFlag(CARRY)){
-        pc = operand.address.value();
+        pc = getAddress(operand);
         shouldAdvancePC = false;
         remainingCycles++;
         
@@ -697,7 +725,7 @@ void CPU::BCC(const AddressingMode::ReturnType& operand){
 //  -	-	-	-	-	-
 void CPU::BCS(const AddressingMode::ReturnType& operand){
     if(getFlag(CARRY)){
-        pc = operand.address.value();
+        pc = getAddress(operand);
         shouldAdvancePC = false;
         remainingCycles++;
 
@@ -714,7 +742,7 @@ void CPU::BCS(const AddressingMode::ReturnType& operand){
 //  -	-	-	-	-	-
 void CPU::BEQ(const AddressingMode::ReturnType& operand){
     if(getFlag(ZERO)){
-        pc = operand.address.value();
+        pc = getAddress(operand);
         shouldAdvancePC = false;
         remainingCycles++;
 
@@ -735,7 +763,7 @@ void CPU::BEQ(const AddressingMode::ReturnType& operand){
 //  N	Z	C	I	D	V
 //  M7	+	-	-	-	M6
 void CPU::BIT(const AddressingMode::ReturnType& operand){
-    uint8_t data = operand.data.value();
+    uint8_t data = getDataRead(operand);
     
     setFlag(ZERO, (a & data) == 0);
     setFlag(NEGATIVE, (data >> 7) & 1);
@@ -749,7 +777,7 @@ void CPU::BIT(const AddressingMode::ReturnType& operand){
 //  -	-	-	-	-	-
 void CPU::BMI(const AddressingMode::ReturnType& operand){
     if(getFlag(NEGATIVE)){
-        pc = operand.address.value();
+        pc = getAddress(operand);
         shouldAdvancePC = false;
         remainingCycles++;
 
@@ -766,7 +794,7 @@ void CPU::BMI(const AddressingMode::ReturnType& operand){
 //  -	-	-	-	-	-
 void CPU::BNE(const AddressingMode::ReturnType& operand){
     if(!getFlag(ZERO)){
-        pc = operand.address.value();
+        pc = getAddress(operand);
         shouldAdvancePC = false;
         remainingCycles++;
 
@@ -783,7 +811,7 @@ void CPU::BNE(const AddressingMode::ReturnType& operand){
 //  -	-	-	-	-	-
 void CPU::BPL(const AddressingMode::ReturnType& operand){
     if(!getFlag(NEGATIVE)){
-        pc = operand.address.value();
+        pc = getAddress(operand);
         shouldAdvancePC = false;
         remainingCycles++;
 
@@ -827,7 +855,7 @@ void CPU::BRK(const AddressingMode::ReturnType& /*operand*/){
 //  -	-	-	-	-	-
 void CPU::BVC(const AddressingMode::ReturnType& operand){
     if(!getFlag(OVERFLOW)){
-        pc = operand.address.value();
+        pc = getAddress(operand);
         shouldAdvancePC = false;
         remainingCycles++;
 
@@ -844,7 +872,7 @@ void CPU::BVC(const AddressingMode::ReturnType& operand){
 //  -	-	-	-	-	-
 void CPU::BVS(const AddressingMode::ReturnType& operand){
     if(getFlag(OVERFLOW)){
-        pc = operand.address.value();
+        pc = getAddress(operand);
         shouldAdvancePC = false;
         remainingCycles++;
         
@@ -895,7 +923,7 @@ void CPU::CLV(const AddressingMode::ReturnType& /*operand*/){
 //  N	Z	C	I	D	V
 //  +	+	+	-	-	-
 void CPU::CMP(const AddressingMode::ReturnType& operand){
-    uint8_t data = operand.data.value();
+    uint8_t data = getDataRead(operand);
     uint16_t cmp = (uint16_t)a - data;
     setFlag(CARRY, a >= data);
     setNZFlags(cmp);
@@ -907,7 +935,7 @@ void CPU::CMP(const AddressingMode::ReturnType& operand){
 //  N	Z	C	I	D	V
 //  +	+	+	-	-	-
 void CPU::CPX(const AddressingMode::ReturnType& operand){
-    uint8_t data = operand.data.value();
+    uint8_t data = getDataRead(operand);
     uint16_t cmp = (uint16_t)x - data;
     setFlag(CARRY, x >= data);
     setNZFlags(cmp);
@@ -919,7 +947,7 @@ void CPU::CPX(const AddressingMode::ReturnType& operand){
 //  N	Z	C	I	D	V
 //  +	+	+	-	-	-
 void CPU::CPY(const AddressingMode::ReturnType& operand){
-    uint8_t data = operand.data.value();
+    uint8_t data = getDataRead(operand);
     uint16_t cmp = (uint16_t)y - data;
     setFlag(CARRY, y >= data);
     setNZFlags(cmp);
@@ -931,7 +959,7 @@ void CPU::CPY(const AddressingMode::ReturnType& operand){
 //  N	Z	C	I	D	V
 //  +	+	-	-	-	-
 void CPU::DEC(const AddressingMode::ReturnType& operand){
-    uint16_t addr = operand.address.value();
+    uint16_t addr = getAddress(operand);
     uint8_t newData = bus->read(addr) - 1;
     bus->write(addr, newData);
     setNZFlags(newData);
@@ -963,7 +991,7 @@ void CPU::DEY(const AddressingMode::ReturnType& /*operand*/){
 //  N	Z	C	I	D	V
 //  +	+	-	-	-	-
 void CPU::EOR(const AddressingMode::ReturnType& operand){
-    uint8_t data = operand.data.value();
+    uint8_t data = getDataRead(operand);
     a ^= data;
     setNZFlags(a);
 }
@@ -974,7 +1002,7 @@ void CPU::EOR(const AddressingMode::ReturnType& operand){
 //  N	Z	C	I	D	V
 //  +	+	-	-	-	-
 void CPU::INC(const AddressingMode::ReturnType& operand){
-    uint16_t addr = operand.address.value();
+    uint16_t addr = getAddress(operand);
     uint8_t newData = bus->read(addr) + 1;
     bus->write(addr, newData);
     setNZFlags(newData);
@@ -1006,7 +1034,7 @@ void CPU::INY(const AddressingMode::ReturnType& /*operand*/){
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	-
 void CPU::JMP(const AddressingMode::ReturnType& operand){
-    uint16_t addr = operand.address.value();
+    uint16_t addr = getAddress(operand);
     pc = addr;
     shouldAdvancePC = false;
 }
@@ -1020,7 +1048,7 @@ void CPU::JMP(const AddressingMode::ReturnType& operand){
 //  -	-	-	-	-	-
 void CPU::JSR(const AddressingMode::ReturnType& operand){
     push16BitDataToStack(pc + 2);
-    uint16_t addr = operand.address.value();
+    uint16_t addr = getAddress(operand);
     pc = addr;
     shouldAdvancePC = false;
 }
@@ -1031,7 +1059,7 @@ void CPU::JSR(const AddressingMode::ReturnType& operand){
 //  N	Z	C	I	D	V
 //  +	+	-	-	-	-
 void CPU::LDA(const AddressingMode::ReturnType& operand){
-    uint8_t data = operand.data.value();
+    uint8_t data = getDataRead(operand);
     a = data;
     setNZFlags(a);
 }
@@ -1042,7 +1070,7 @@ void CPU::LDA(const AddressingMode::ReturnType& operand){
 //  N	Z	C	I	D	V
 //  +	+	-	-	-	-
 void CPU::LDX(const AddressingMode::ReturnType& operand){
-    uint8_t data = operand.data.value();
+    uint8_t data = getDataRead(operand);
     x = data;
     setNZFlags(x);
 }
@@ -1053,7 +1081,7 @@ void CPU::LDX(const AddressingMode::ReturnType& operand){
 //  N	Z	C	I	D	V
 //  +	+	-	-	-	-
 void CPU::LDY(const AddressingMode::ReturnType& operand){
-    uint8_t data = operand.data.value();
+    uint8_t data = getDataRead(operand);
     y = data;
     setNZFlags(y);
 }
@@ -1064,12 +1092,13 @@ void CPU::LDY(const AddressingMode::ReturnType& operand){
 //  N	Z	C	I	D	V
 //  0	+	+	-	-	-
 void CPU::LSR(const AddressingMode::ReturnType& operand){
-    if(operand.address.has_value()){
-        uint8_t data = operand.data.value();
+    if(operand.hasAddress()){
+        uint16_t addr = getAddress(operand);
+        uint8_t data = getDataRead(operand);
+        
         setFlag(CARRY, data & 1);
+        
         data >>= 1;
-
-        uint16_t addr = operand.address.value();
         bus->write(addr, data);
 
         setNZFlags(data);
@@ -1099,7 +1128,7 @@ void CPU::NOP(const AddressingMode::ReturnType& /*operand*/){
 //  N	Z	C	I	D	V
 //  +	+	-	-	-	-
 void CPU::ORA(const AddressingMode::ReturnType& operand){
-    uint8_t data = operand.data.value();
+    uint8_t data = getDataRead(operand);
     a |= data;
     setNZFlags(a);
 }
@@ -1156,11 +1185,11 @@ void CPU::PLP(const AddressingMode::ReturnType& /*operand*/){
 //  +	+	+	-	-	-
 void CPU::ROL(const AddressingMode::ReturnType& operand){
     uint16_t shift;
-    if(operand.address.has_value()){
-        uint8_t data = operand.data.value();
+    if(operand.hasAddress()){
+        uint16_t addr = getAddress(operand);
+        uint8_t data = getDataRead(operand);
+        
         shift = ((uint16_t)data << 1) | getFlag(CARRY);
-
-        int16_t addr = operand.address.value();
         bus->write(addr, (uint8_t)shift);
     }
     else{
@@ -1181,12 +1210,12 @@ void CPU::ROL(const AddressingMode::ReturnType& operand){
 //  +	+	+	-	-	-
 void CPU::ROR(const AddressingMode::ReturnType& operand){
     uint8_t shift;
-    if(operand.address.has_value()){
-        uint8_t data = operand.data.value();
+    if(operand.hasAddress()){
+        uint16_t addr = getAddress(operand);
+        uint8_t data = getDataRead(operand);
+
         shift = (getFlag(CARRY) << 7) | (data >> 1);
         setFlag(CARRY, data & 1);
-        
-        uint16_t addr = operand.address.value();
         bus->write(addr, shift);
     }
     else{
@@ -1232,7 +1261,7 @@ void CPU::RTS(const AddressingMode::ReturnType& /*operand*/){
 //  +	+	+	-	-	+
 void CPU::SBC(const AddressingMode::ReturnType& operand){
     // SBC becomes equivalent to ADC after we flip the bits of data
-    uint8_t data = operand.data.value() ^ 0xFF;
+    uint8_t data = getDataRead(operand) ^ 0xFF;
     uint16_t fullSum = (uint16_t)a + data + getFlag(CARRY);
     
     setFlag(CARRY, fullSum > 0xFF);
@@ -1278,7 +1307,7 @@ void CPU::SEI(const AddressingMode::ReturnType& /*operand*/){
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	-
 void CPU::STA(const AddressingMode::ReturnType& operand){
-    uint16_t addr = operand.address.value();
+    uint16_t addr = getAddress(operand);
     bus->write(addr, a);
 }
 
@@ -1288,7 +1317,7 @@ void CPU::STA(const AddressingMode::ReturnType& operand){
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	-
 void CPU::STX(const AddressingMode::ReturnType& operand){
-    uint16_t addr = operand.address.value();
+    uint16_t addr = getAddress(operand);
     bus->write(addr, x);
 }
 
@@ -1298,7 +1327,7 @@ void CPU::STX(const AddressingMode::ReturnType& operand){
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	-
 void CPU::STY(const AddressingMode::ReturnType& operand){
-    uint16_t addr = operand.address.value();
+    uint16_t addr = getAddress(operand);
     bus->write(addr, y);
 }
 
