@@ -1,5 +1,7 @@
 #include "ppu.hpp"
 
+#include <iostream> // temp
+
 const std::array<uint32_t, PPU::NUM_SCREEN_COLORS> PPU::SCREEN_COLORS = initScreenColors();
 
 // Screen colors taken from https://www.nesdev.org/wiki/PPU_palettes
@@ -14,6 +16,10 @@ std::array<uint32_t, PPU::NUM_SCREEN_COLORS> PPU::initScreenColors(){
     return screenColors;
 }
 
+const PPU::Display& PPU::getDisplay() const{
+    return finishedDisplay;
+}
+
 void PPU::setBus(Bus* bus){
     this->bus = bus;
 }
@@ -22,13 +28,36 @@ void PPU::setCartridge(std::shared_ptr<Cartridge>& cartridge){
     this->cartridge = cartridge;
 }
 
+// TODO: call on reset, probably
 void PPU::initPPU(){
     control = 0;
     mask = 0;
+    status = 0;
+
     ppuBusData = 0;
     vramAddress = 0;
-    workingAddress = 0;
+    temporaryVramAddress = 0;
+    addressLatch = 0;
     palleteRam = {};
+    
+    scanline = 0;
+    cycle = 0;
+    frame = 0;
+
+    currentPatternTableTileLo = 0;
+    currentPatternTableTileHi = 0;
+    currentAttributeTableLo = 0;
+    currentAttributeTableHi = 0;
+    nextNameTableByte = 0;
+    nextPatternTableTileLo = 0;
+    nextPatternTableTileHi = 0;
+    nextAttributeTableLo = 0;
+    nextAttributeTableHi = 0;
+    fineX = 0;
+
+    nameTable = {};
+    workingDisplay = {};
+    finishedDisplay = {};
 }
 
 uint8_t PPU::view(uint8_t ppuRegister) const{
@@ -42,8 +71,13 @@ uint8_t PPU::view(uint8_t ppuRegister) const{
         uint8_t data = ppuBusData;
 
         // pallete addresses get returned immediately
-        if(PALLETE_RAM_RANGE.contains(vramAddress & 0x3FFF)){
-            data = ppuView(vramAddress & 0x3FFF);
+        if(PALLETE_RAM_RANGE.contains(vramAddress.toWord() & 0x3FFF)){
+            data = ppuView(vramAddress.toWord() & 0x3FFF);
+        }
+        
+        data &= 0x3F;
+        if(mask.greyscale){
+            data &= 0x30;
         }
 
         return data;
@@ -55,10 +89,7 @@ uint8_t PPU::view(uint8_t ppuRegister) const{
 
 uint8_t PPU::read(uint8_t ppuRegister){
     if(ppuRegister == PPUSTATUS){
-        status.vBlankStarted = 1; // TODO: temp to get pattern table to render
-
         uint8_t data = status.toByte();
-
         status.vBlankStarted = 0;
         addressLatch = 0;
         return data;
@@ -69,17 +100,22 @@ uint8_t PPU::read(uint8_t ppuRegister){
     else if(ppuRegister == PPUDATA){
         uint8_t data = ppuBusData;
         
-        ppuBusData = ppuRead(vramAddress & 0x3FFF);
+        ppuBusData = ppuRead(vramAddress.toWord() & 0x3FFF);
         
         // open bus is the bottom 5 bits of the bus
         status.openBus = ppuBusData & 0x1F;
 
         // pallete addresses get returned immediately
-        if(PALLETE_RAM_RANGE.contains(vramAddress & 0x3FFF)){
+        if(PALLETE_RAM_RANGE.contains(vramAddress.toWord() & 0x3FFF)){
             data = ppuBusData;
         }
         
-        vramAddress += (control.vramAddressIncrement ? 32 : 1);
+        data &= 0x3F;
+        if(mask.greyscale){
+            data &= 0x30;
+        }
+        
+        vramAddress = vramAddress.toWord() + (control.vramAddressIncrement ? 32 : 1);
 
         return data;
     }
@@ -91,6 +127,8 @@ uint8_t PPU::read(uint8_t ppuRegister){
 void PPU::write(uint8_t ppuRegister, uint8_t value){
     if(ppuRegister == PPUCTRL){
         control.setFromByte(value);
+        temporaryVramAddress.nametableX = control.nametableX;
+		temporaryVramAddress.nametableY = control.nametableY;
     }
     else if(ppuRegister == PPUMASK){
         mask.setFromByte(value);
@@ -102,51 +140,102 @@ void PPU::write(uint8_t ppuRegister, uint8_t value){
 
     }
     else if(ppuRegister == PPUSCROLL){
-
+        if(addressLatch == 0){
+            fineX = value & 0x7;
+            temporaryVramAddress.coarseX = value >> 3;
+        }
+        else{
+            temporaryVramAddress.fineY = value & 0x7;
+			temporaryVramAddress.coarseY = value >> 3;
+        }
+        addressLatch ^= 1;
     }
     else if(ppuRegister == PPUADDR){
         if(addressLatch == 0){ 
-            workingAddress &= 0x00FF;
-            workingAddress |= value << 8;
+            temporaryVramAddress = temporaryVramAddress.toWord() & 0x00FF;
+            temporaryVramAddress = temporaryVramAddress.toWord() | (value << 8);
         }
         else{
-            workingAddress &= 0xFF00;
-            workingAddress |= value;
+            temporaryVramAddress = temporaryVramAddress.toWord() & 0xFF00;
+            temporaryVramAddress = temporaryVramAddress.toWord() | value;
 
-            vramAddress = workingAddress;
+            vramAddress = temporaryVramAddress;
         }
         addressLatch ^= 1;
     }
     else if(ppuRegister == PPUDATA){
-        // TODO: Fix this. The below code should not be here.
-        // But because of the way the code is structured, calls to write also call read.
-        // So vramAddress already gets incremented by 1 before we write.
-        // So we need to subtract before we use it, then add it back. 
-        // vramAddress -= (control.vramAddressIncrement ? 32 : 1);
-        
-        ppuWrite(vramAddress & 0x3FFF, value);
-        vramAddress += (control.vramAddressIncrement ? 32 : 1);
+        ppuWrite(vramAddress.toWord() & 0x3FFF, value);
+  
+        vramAddress = vramAddress.toWord() + (control.vramAddressIncrement ? 32 : 1);
     }
 }
 
-uint8_t PPU::getPalleteRamIndex(uint16_t address) const{
+uint8_t PPU::getPalleteRamIndex(uint16_t address, bool read) const{
     address &= 0x1F;
     
-    // address mirroring to handle background tiles
-    if(address == 0x10 || address == 0x14 || address == 0x18 || address == 0x1C){
-        address &= 0x0F;
+    // Address mirroring to handle background tiles
+    // When we are reading from the pallete ram, we consider every 4th tile to be equivalent to the background pixel
+    // But, it turns out that these pallete ram indices can actually be set (setting them just has no effect)
+    if(read){
+        if((address & 0x3) == 0){
+            address = 0;
+        }
+    }
+    else{
+        if(address == 0x10 || address == 0x14 || address == 0x18 || address == 0x1C){
+            address &= 0x0F;
+        }
     }
 
     return address;
 }
 
+uint16_t PPU::getNameTableIndex(uint16_t address) const{
+    // Nametable address is 12 bits
+    address &= 0xFFF;
+
+    static constexpr MemoryRange NAMETABLE_QUAD_1{0x000, 0x3FF};
+    static constexpr MemoryRange NAMETABLE_QUAD_2{0x400, 0x7FF};
+    static constexpr MemoryRange NAMETABLE_QUAD_3{0x800, 0xBFF};
+    // static constexpr MemoryRange NAMETABLE_QUAD_4{0xC00, 0xFFF};
+
+    if(cartridge->getMirrorMode() == Cartridge::MirrorMode::HORIZONTAL){
+        if(NAMETABLE_QUAD_1.contains(address)){
+            return address;
+        }
+        else if(NAMETABLE_QUAD_2.contains(address)){
+            return address - 0x400;
+        }
+        else if(NAMETABLE_QUAD_3.contains(address)){
+            return address - 0x400;
+        }
+        else{ // if(NAMETABLE_QUAD_4.contains(address))
+            return address - 0x800;
+        }
+    }
+    else if(cartridge->getMirrorMode() == Cartridge::MirrorMode::VERTICAL){
+        if(NAMETABLE_QUAD_1.contains(address) || NAMETABLE_QUAD_2.contains(address)){
+            return address;
+        }
+        else{ // if(NAMETABLE_QUAD_3.contains(address) || NAMETABLE_QUAD_4.contains(address))
+            return address - 0x800;
+        }
+    }
+    else{
+        return 0;
+    }
+}
+
 uint8_t PPU::ppuView(uint16_t address) const{
-    if(CARTRIDGE_RANGE.contains(address)){
+    if(PATTERN_TABLE_RANGE.contains(address)){
         std::optional<uint8_t> data = cartridge->viewCHR(address);
         return data.value_or(0);
     }
+    else if(NAMETABLE_RANGE.contains(address)){
+        return nameTable[getNameTableIndex(address)];
+    }
     else if(PALLETE_RAM_RANGE.contains(address)){
-        return palleteRam[getPalleteRamIndex(address)];
+        return palleteRam[getPalleteRamIndex(address, true)];
     }
     else{
         return 0;
@@ -154,12 +243,15 @@ uint8_t PPU::ppuView(uint16_t address) const{
 }
 
 uint8_t PPU::ppuRead(uint16_t address){
-    if(CARTRIDGE_RANGE.contains(address)){
+    if(PATTERN_TABLE_RANGE.contains(address)){
         std::optional<uint8_t> data = cartridge->readFromCHR(address);
         return data.value_or(0);
     }
+    else if(NAMETABLE_RANGE.contains(address)){
+        return nameTable[getNameTableIndex(address)];
+    }
     else if(PALLETE_RAM_RANGE.contains(address)){
-        return palleteRam[getPalleteRamIndex(address)];
+        return palleteRam[getPalleteRamIndex(address, true)];
     }
     else{
         return 0;
@@ -167,14 +259,16 @@ uint8_t PPU::ppuRead(uint16_t address){
 }
 
 void PPU::ppuWrite(uint16_t address, uint8_t value){
-    if(CARTRIDGE_RANGE.contains(address)){
+    if(PATTERN_TABLE_RANGE.contains(address)){
         cartridge->writeToCHR(address, value);
     }
+    else if(NAMETABLE_RANGE.contains(address)){
+        nameTable[getNameTableIndex(address)] = value;
+    }
     else if(PALLETE_RAM_RANGE.contains(address)){
-        palleteRam[getPalleteRamIndex(address)] = value;
+        palleteRam[getPalleteRamIndex(address, false)] = value;
     }
     else{
-        // ...
     }
 }
 
@@ -206,17 +300,243 @@ PPU::PatternTable PPU::getPatternTable(bool tableNumber, uint8_t palleteNumber) 
     return table;
 }
 
+// PPU Rendering overview (descriptions from https://www.nesdev.org/wiki/PPU_rendering, see https://www.nesdev.org/w/images/default/4/4f/Ppu.svg for diagram)
+// Line-by-line timing
+// The PPU renders 262 scanlines per frame. Each scanline lasts for 341 PPU clock cycles (113.667 CPU clock cycles; 1 CPU cycle = 3 PPU cycles), with each clock cycle producing one pixel. The line numbers given here correspond to how the internal PPU frame counters count lines.
+// The information in this section is summarized in the diagram in the next section.
+// The timing below is for NTSC PPUs. PPUs for 50 Hz TV systems differ:
+// Dendy PPUs render 51 post-render scanlines instead of 1
+// PAL NES PPUs render 70 vblank scanlines instead of 20, and they additionally run 3.2 PPU cycles per CPU cycle, or 106.5625 CPU clock cycles per scanline.
 void PPU::executeCycle(){
-    // TODO: eventually implement scanlines, set vertical blank, and handle NMI
-    // if(control.nmiEnabled){
-    //     bus->nmiRequest = true;
-    // }
+    if(scanline >= -1 && scanline < 240){
+        // Pre-render scanline (-1 or 261)
+        // This is a dummy scanline, whose sole purpose is to fill the shift registers with the data for the first two tiles of the next scanline. Although no pixels are rendered for this scanline, the PPU still makes the same memory accesses it would for a regular scanline, using whatever the current value of the PPU's V register is, and for the sprite fetches, whatever data is currently in secondary OAM (e.g., the results from scanline 239's sprite evaluation from the previous frame).
+        // This scanline varies in length, depending on whether an even or an odd frame is being rendered. For odd frames, the cycle at the end of the scanline is skipped (this is done internally by jumping directly from (339,261) to (0,0), replacing the idle tick at the beginning of the first visible scanline with the last tick of the last dummy nametable fetch). For even frames, the last cycle occurs normally. This is done to compensate for some shortcomings with the way the PPU physically outputs its video signal, the end result being a crisper image when the screen isn't scrolling. However, this behavior can be bypassed by keeping rendering disabled until after this scanline has passed, which results in an image with a "dot crawl" effect similar to, but not exactly like, what's seen in interlaced video.
+        // During pixels 280 through 304 of this scanline, the vertical scroll bits are reloaded if rendering is enabled.
+        if(scanline == -1){
+            if(cycle == 1){
+                status.vBlankStarted = 0;
+                status.sprite0Hit = 0;
+                status.spriteOverflow = 0;
+            }
+
+            if(cycle >= 280 && cycle <= 304){
+                if (mask.showBackground || mask.showSprites){
+                    vramAddress.fineY = temporaryVramAddress.fineY;
+                    vramAddress.nametableY = temporaryVramAddress.nametableY;
+                    vramAddress.coarseY = temporaryVramAddress.coarseY;
+                }
+            }
+        }
+
+        if((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 336)){ // if((cycle >= 1 && cycle <= 257) || (cycle >= 321 && cycle <= 336)){
+            if (mask.showBackground){
+                currentPatternTableTileLo <<= 1;
+                currentPatternTableTileHi <<= 1;
+
+                currentAttributeTableLo <<= 1;
+                currentAttributeTableHi <<= 1;
+            }
+
+            int cycleMod = cycle % 8;
+            if(cycleMod == 1){
+                updatePatternTable();
+                updateAttributeTable();
+
+                nextNameTableByte = ppuRead(0x2000 + (vramAddress.toWord() & 0x0FFF));
+            }
+            else if(cycleMod == 3){  
+                uint16_t offset = 
+                    (vramAddress.nametableY << 11) |
+                    (vramAddress.nametableX << 10) |
+                    ((vramAddress.coarseY >> 2) << 3) |
+                    (vramAddress.coarseX >> 2);
+                uint8_t nextAttributeTableByte = ppuRead(0x23C0 + offset);
+
+                // Extract the correct 2 bit portion of the attribute table byte
+                if (vramAddress.coarseY & 0x02){
+                    nextAttributeTableByte >>= 4;
+                }
+				if (vramAddress.coarseX & 0x02){
+                    nextAttributeTableByte >>= 2;
+                }
+                nextAttributeTableLo = nextAttributeTableByte & 0x1;
+				nextAttributeTableHi = nextAttributeTableByte & 0x2;
+            }
+            else if(cycleMod == 5){
+                uint16_t address = 
+                    (control.backgroundPatternTable << 12) |
+                    (nextNameTableByte << 4) |
+                    vramAddress.fineY;
+                nextPatternTableTileLo = ppuRead(address);
+            }
+            else if(cycleMod == 7){
+               uint16_t address = 
+                    (control.backgroundPatternTable << 12) |
+                    (nextNameTableByte << 4) |
+                    vramAddress.fineY;
+                nextPatternTableTileHi = ppuRead(address + 8);
+            }
+            else if(cycleMod == 0){
+                if(mask.showBackground || mask.showSprites){
+                    incrementCoarseX();
+                }
+            }
+        }
+       
+       if(cycle == 256){
+            if(mask.showBackground || mask.showSprites){
+                incrementY();
+            }
+        }
+
+        if(cycle == 257){
+            updatePatternTable();
+            updateAttributeTable();
+
+            if (mask.showBackground || mask.showSprites){
+                vramAddress.nametableX = temporaryVramAddress.nametableX;
+                vramAddress.coarseX = temporaryVramAddress.coarseX;
+            }
+        }
+        
+        if(cycle == 337 || cycle == 339){
+            nextNameTableByte = ppuRead(0x2000 + (vramAddress.toWord() & 0x0FFF));
+        }
+
+        // if(scanline == -1 && cycle >= 280 && cycle <= 304){
+        //     if (mask.showBackground || mask.showSprites){
+        //         vramAddress.fineY = temporaryVramAddress.fineY;
+        //         vramAddress.nametableY = temporaryVramAddress.nametableY;
+        //         vramAddress.coarseY = temporaryVramAddress.coarseY;
+        //     }
+        // }
+    }
+    
+    if(scanline == 240){
+    }
+    
+    if(scanline == 241){
+        if(cycle == 1){
+            status.vBlankStarted = 1;
+
+            finishedDisplay = workingDisplay;
+
+            if(control.nmiEnabled){
+                bus->nmiRequest = true;
+            }
+        }
+    }
+
+    if(scanline >= 0 && scanline < 240 && (cycle-1) >= 0 && (cycle-1) < 256){
+        // Render the current pixel if it is within the bounds of the screen
+
+        uint8_t backgroundPatternTable = 0;
+        uint8_t backgroundAttributeTable = 0;
+        if(mask.showBackground){    
+            if(mask.showBackgroundLeft || cycle >= 9){
+                uint8_t shift = 15 - fineX;
+                
+                bool backgroundPatternTableLo = (currentPatternTableTileLo >> shift) & 1;
+                bool backgroundPatternTableHi = (currentPatternTableTileHi >> shift) & 1;
+                backgroundPatternTable = (backgroundPatternTableHi << 1) | backgroundPatternTableLo;
+
+                bool backgroundAttributeTableLo = (currentAttributeTableLo >> shift) & 1;
+                bool backgroundAttributeTableHi = (currentAttributeTableHi >> shift) & 1;
+                backgroundAttributeTable = (backgroundAttributeTableHi << 1) | backgroundAttributeTableLo;
+            }
+        }
+        
+        uint16_t addr = PALLETE_RAM_RANGE.lo + (backgroundAttributeTable << 2) + backgroundPatternTable;
+        uint32_t color = SCREEN_COLORS[ppuRead(addr) & 0x3F];
+        workingDisplay[scanline][cycle - 1] = color;
+    }
+
+    // Skip a cycle for odd frame
+    if(mask.showBackground || mask.showSprites){
+        if(scanline == -1 && cycle == 339 && !(frame & 1)){
+            cycle++;
+        }
+    }
+
+    // Advance the cycle/scanline
+    cycle++;
+    if(cycle > 340){
+        cycle = 0;
+        scanline++;
+        if(scanline > 260){
+            scanline = -1;
+        }
+        else if(scanline == 0){
+            frame++;
+        }
+    }
+}
+
+void PPU::updatePatternTable(){
+    currentPatternTableTileLo &= 0xFF00;
+    currentPatternTableTileLo |= nextPatternTableTileLo;
+
+    currentPatternTableTileHi &= 0xFF00;
+    currentPatternTableTileHi |= nextPatternTableTileHi;
+}
+
+void PPU::updateAttributeTable(){
+    currentAttributeTableLo &= 0xFF00;
+    if(nextAttributeTableLo){
+        currentAttributeTableLo |= 0xFF;
+    }
+
+    currentAttributeTableHi &= 0xFF00;
+    if(nextAttributeTableHi){
+        currentAttributeTableHi |= 0xFF;
+    }
+}
+
+// The code for these functions is based on pseudocode from https://www.nesdev.org/wiki/PPU_scrolling
+void PPU::incrementCoarseX(){
+    uint16_t v = vramAddress.toWord();
+    
+    if ((v & 0x001F) == 31){ // if coarse X == 31
+        v &= ~0x001F; // coarse X = 0
+        v ^= 0x0400; // switch horizontal nametable
+    }       
+    else{
+        v += 1; // increment coarse X
+    }
+
+    vramAddress.setFromWord(v);
+}
+
+void PPU::incrementY(){
+    uint16_t v = vramAddress.toWord();
+
+    if ((v & 0x7000) != 0x7000){ // if fine Y < 7
+        v += 0x1000; // increment fine Y
+    }  
+    else{
+        v &= ~0x7000; // fine Y = 0            
+        int y = (v & 0x03E0) >> 5; // let y = coarse Y 
+        if (y == 29){
+            y = 0; // coarse Y = 0                    
+            v ^= 0x0800; // switch vertical nametable
+        }               
+        else if (y == 31){
+            y = 0; // coarse Y = 0, nametable not switched
+        }                      
+        else{
+            y += 1; // increment coarse Y
+        }                  
+        v = (v & ~0x03E0) | (y << 5); // put coarse Y back into v
+    }   
+
+    vramAddress.setFromWord(v);
 }
 
 std::array<uint32_t, 0x20> PPU::getPalleteRamColors() const{
     std::array<uint32_t, 0x20> result;
     for(int i = 0; i < 0x20; i++){
-        uint8_t index = getPalleteRamIndex(i);
+        uint8_t index = getPalleteRamIndex(i, true);
         result[i] = SCREEN_COLORS[palleteRam[index] & 0x3F];
     }
     return result;
@@ -229,7 +549,8 @@ PPU::Control::Control(uint8_t data){
 
 uint8_t PPU::Control::toByte() const{
     uint8_t data = 
-        baseNameTableAddress |
+        nametableX |
+        (nametableY << 1) |
         (vramAddressIncrement << 2) |
         (spritePatternTable << 3) |
         (backgroundPatternTable << 4) |
@@ -241,13 +562,14 @@ uint8_t PPU::Control::toByte() const{
 }
 
 void PPU::Control::setFromByte(uint8_t data){
-    baseNameTableAddress = data & 0b11;
-    vramAddressIncrement = (data >> 2) & 1;
-    spritePatternTable = (data >> 3) & 1;
-    backgroundPatternTable = (data >> 4) & 1;
-    spriteSize = (data >> 5) & 1;
-    ppuSelect = (data >> 6) & 1;
-    nmiEnabled = (data >> 7) & 1;
+    nametableX = data & 0x1;
+    nametableY = (data >> 1) & 0x1;
+    vramAddressIncrement = (data >> 2) & 0x1;
+    spritePatternTable = (data >> 3) & 0x1;
+    backgroundPatternTable = (data >> 4) & 0x1;
+    spriteSize = (data >> 5) & 0x1;
+    ppuSelect = (data >> 6) & 0x1;
+    nmiEnabled = (data >> 7) & 0x1;
 }
 
 
@@ -265,19 +587,18 @@ uint8_t PPU::Mask::toByte() const{
         (emphRed << 5) |
         (emphGreen << 6) |
         (emphBlue << 7);
-    
     return data;
 }
 
 void PPU::Mask::setFromByte(uint8_t data) {
-    greyscale = data & 1;
-    showBackgroundLeft = (data >> 1) & 1;
-    showSpritesLeft = (data >> 2) & 1;
-    showBackground = (data >> 3) & 1;
-    showSprites = (data >> 4) & 1;
-    emphRed = (data >> 5) & 1;
-    emphGreen = (data >> 6) & 1;
-    emphBlue = (data >> 7) & 1;
+    greyscale = data & 0x1;
+    showBackgroundLeft = (data >> 1) & 0x1;
+    showSpritesLeft = (data >> 2) & 0x1;
+    showBackground = (data >> 3) & 0x1;
+    showSprites = (data >> 4) & 0x1;
+    emphRed = (data >> 5) & 0x1;
+    emphGreen = (data >> 6) & 0x1;
+    emphBlue = (data >> 7) & 0x1;
 }
 
 
@@ -291,13 +612,36 @@ uint8_t PPU::Status::toByte() const{
         (spriteOverflow << 5) |
         (sprite0Hit << 6) |
         (vBlankStarted << 7);
-    
     return data;
 }
 
 void PPU::Status::setFromByte(uint8_t data){
     openBus = data & 0x1F;
-    spriteOverflow = (data >> 5) & 1;
-    sprite0Hit = (data >> 6) & 1;
-    vBlankStarted = (data >> 7) & 1;
+    spriteOverflow = (data >> 5) & 0x1;
+    sprite0Hit = (data >> 6) & 0x1;
+    vBlankStarted = (data >> 7) & 0x1;
+}
+
+PPU::InternalRegister::InternalRegister(uint16_t data){
+    setFromWord(data);
+}
+
+uint16_t PPU::InternalRegister::toWord() const{
+    uint16_t data = 
+        coarseX |
+        (coarseY << 5) | 
+        (nametableX << 10) |
+        (nametableY << 11) |
+        (fineY << 12) |
+        (unused << 15);
+    return data;
+}
+
+void PPU::InternalRegister::setFromWord(uint16_t data){
+    coarseX = data & 0x1F;
+    coarseY = (data >> 5) & 0x1F;
+    nametableX = (data >> 10) & 0x1;
+    nametableY = (data >> 11) & 0x1;
+    fineY = (data >> 12) & 0x7;
+    unused = (data >> 15) & 0x1;
 }

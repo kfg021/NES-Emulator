@@ -24,10 +24,31 @@ public:
 
 protected:
     void keyPressEvent(QKeyEvent* event) override;
+    void keyReleaseEvent(QKeyEvent* event) override;
     
 private:
     GameWindow* gameWindow;
     DebugWindow* debugWindow;
+
+    QTimer* updateTimer;
+    QElapsedTimer* elapsedTimer;
+
+    static constexpr int FPS = 60;
+    static constexpr int IPS = 5369318;
+
+    void executeCycle();
+    void executeInstruction();
+
+    void toggleDebugMode();
+    void stepIfInDebugMode();
+
+    bool debugMode;
+
+    int64_t numSteps;
+    int64_t numFrames;
+    void tick();
+
+    std::shared_ptr<Bus> bus;
 };
 
 #endif // MAINWINDOW_HPP

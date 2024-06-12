@@ -2,6 +2,7 @@
 #define MEMORY_HPP
 
 #include "cartridge.hpp"
+#include "controller.hpp"
 #include "cpu.hpp"
 #include "ppu.hpp"
 #include "../util/util.hpp"
@@ -32,14 +33,23 @@ public:
 
     void executeCycle();
 
+    void setController(bool controller, Controller::Button button, bool value);
+
 private:
     static constexpr MemoryRange RAM_ADDRESSABLE_RANGE{0x0000, 0x1FFF};
     static constexpr MemoryRange PPU_ADDRESSABLE_RANGE{0x2000, 0x3FFF};
-    static constexpr MemoryRange APU_ADDRESSABLE_RANGE{0x4000, 0x401F};
+    static constexpr MemoryRange IO_ADDRESSABLE_RANGE{0x4000, 0x401F};
     static constexpr MemoryRange CARTRIDGE_ADDRESSABLE_RANGE{0x4020, 0xFFFF};
 
     std::array<uint8_t, 0x800> ram;
     std::shared_ptr<Cartridge> cartridge;
+
+    static constexpr uint16_t CONTROLLER_1_DATA = 0x4016;
+    static constexpr uint16_t CONTROLLER_2_DATA = 0x4017;
+    std::array<Controller, 2> controllers;
+
+    // After a write to 0x4016 we read controller information into here
+    std::array<uint8_t, 2> controllerData;
 };
 
 #endif // MEMORY_HPP

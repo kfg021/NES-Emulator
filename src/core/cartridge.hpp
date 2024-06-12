@@ -24,6 +24,13 @@ public:
     std::optional<uint8_t> readFromCHR(uint16_t preMappedAddr);
     void writeToCHR(uint16_t preMappedAddr, uint8_t data);
 
+    enum MirrorMode{
+        HORIZONTAL,
+        VERTICAL
+    };
+
+    MirrorMode getMirrorMode() const;
+
 private:
     bool loadINESFile(const std::string& filePath);
 
@@ -35,6 +42,7 @@ private:
     std::vector<uint8_t> prgRom;
     std::vector<uint8_t> chrRom;
     std::unique_ptr<Mapper> mapper;
+    MirrorMode mirrorMode;
 };
 
 #endif // CARTRIDGE_HPP

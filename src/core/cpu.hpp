@@ -19,7 +19,6 @@ public:
     void initCPU();
     
     void executeCycle();
-    // void executeNextInstruction();
 
     // Reset/interrupts
     void reset();

@@ -64,10 +64,6 @@ bool Cartridge::loadINESFile(const std::string& filePath){
         return false;
     }
 
-    uint8_t mapperIdLo = (header.flag6 >> 4) & 0x0F;
-    uint8_t mapperIdHi = (header.flag7 >> 4) & 0x0F;
-    uint8_t mapperId = (mapperIdHi << 4) | mapperIdLo;
-
     bool isTrainer = (header.flag6 >> 2) & 1;
 
     if(isTrainer){
@@ -82,18 +78,24 @@ bool Cartridge::loadINESFile(const std::string& filePath){
         }
     }
 
-    // TODO: parse more fields
-    // Yes:
-    //      iNES version
-    // Maybe:
-    //      Nametable arrangement
-    //      Alternate nametable layout
+    mirrorMode = (MirrorMode)(header.flag6 & 1);
+
+    uint8_t mapperIdLo = (header.flag6 >> 4) & 0x0F;
+    uint8_t mapperIdHi = (header.flag7 >> 4) & 0x0F;
+    uint8_t mapperId = (mapperIdHi << 4) | mapperIdLo;
 
     mapper = Mapper::createMapper(mapperId, header.prgRomChunks, header.chrRomChunks);
     if(mapper == nullptr){
         // The chosen mapper has not been implemented yet
         return false;
     }
+
+    // TODO: parse more fields
+    // Yes:
+    //      iNES version
+    // Maybe:
+    //      Nametable arrangement
+    //      Alternate nametable layout
 
     prgRom.resize(header.prgRomChunks * PRG_ROM_CHUNK_SIZE);
     file.read((char*)prgRom.data(), prgRom.size() * sizeof(uint8_t));
@@ -102,14 +104,28 @@ bool Cartridge::loadINESFile(const std::string& filePath){
         return false;
     }
 
-    chrRom.resize(header.chrRomChunks * CHR_ROM_CHUNK_SIZE);
-    file.read((char*)chrRom.data(), chrRom.size() * sizeof(uint8_t));
+    // For iNES 1.0 we assume that a value of 0 for char rom chunks means we have 1 chunk of CHR RAM.
+    // In iNES 2.0 the size is specified
+    // TODO: Add iNES 2.0 support
+    if(header.chrRomChunks == 0){
+        chrRom.resize(1 * CHR_ROM_CHUNK_SIZE);
+        std::fill(chrRom.begin(), chrRom.end(), 0);
+    }
+    else{
+        chrRom.resize(header.chrRomChunks * CHR_ROM_CHUNK_SIZE);
+        file.read((char*)chrRom.data(), chrRom.size() * sizeof(uint8_t));
+    }
+    
     if(!file){
         // File is too small to contain CHR ROM
         return false;
     }
 
     return true;
+}
+
+Cartridge::MirrorMode Cartridge::getMirrorMode() const{
+    return mirrorMode;
 }
 
 std::optional<uint8_t> Cartridge::viewPRG(uint16_t preMappedAddr) const{

@@ -3,6 +3,7 @@ QT = core gui widgets
 HEADERS += \
 src/core/bus.hpp \
 src/core/cartridge.hpp \
+src/core/controller.cpp \
 src/core/cpu.hpp \
 src/core/ppu.hpp \
 src/core/mapper/mapper.hpp \
@@ -15,6 +16,7 @@ src/util/util.hpp
 SOURCES += \
 src/core/bus.cpp \
 src/core/cartridge.cpp \
+src/core/controller.cpp \
 src/core/cpu.cpp \
 src/core/ppu.cpp \
 src/core/mapper/mapper.cpp \

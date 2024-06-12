@@ -51,10 +51,12 @@ public:
     using PatternTable = std::array<std::array<uint32_t, PATTERN_TABLE_SIZE>, PATTERN_TABLE_SIZE>;
     PatternTable getPatternTable(bool tableNumber, uint8_t palleteNumber) const;
 
-    
     std::array<uint32_t, 0x20> getPalleteRamColors() const;
 
     void executeCycle();
+
+    using Display = std::array<std::array<uint32_t, 256>, 240>;
+    const Display& getDisplay() const;
 
 private:
     // PPU internal data structures (descriptions from https://www.nesdev.org/wiki/PPU_registers)
@@ -80,8 +82,9 @@ private:
     // |          (0: read backdrop from EXT pins; 1: output color on EXT pins)
     // +--------- Generate an NMI at the start of the
     //         vertical blanking interval (0: off; 1: on)
-    struct Control {
-        uint8_t baseNameTableAddress : 2;
+    struct Control{
+        bool nametableX : 1;
+        bool nametableY : 1;
         bool vramAddressIncrement : 1;
         bool spritePatternTable : 1;
         bool backgroundPatternTable : 1;
@@ -164,35 +167,92 @@ private:
         void setFromByte(uint8_t data);
     };
 
+
+    // https://www.nesdev.org/wiki/PPU_scrolling
+    // The 15 bit registers t and v are composed this way during rendering:
+    // yyy NN YYYYY XXXXX
+    // ||| || ||||| +++++-- coarse X scroll
+    // ||| || +++++-------- coarse Y scroll
+    // ||| ++-------------- nametable select
+    // +++----------------- fine Y scroll
+    // Note that while the v register has 15 bits, the PPU memory space is only 14 bits wide. The highest bit is unused for access through $2007.
+    struct InternalRegister{
+        uint8_t coarseX : 5;
+        uint8_t coarseY : 5;
+        bool nametableX : 1;
+        bool nametableY : 1;
+        uint8_t fineY : 3;
+        bool unused : 1;
+
+        InternalRegister() = default;
+        InternalRegister(uint16_t data);
+        uint16_t toWord() const;
+        void setFromWord(uint16_t data);
+    };
+
     Control control;
     Mask mask;
     Status status;
+
+    uint16_t getNameTableIndex(uint16_t address) const;
 
     // Some registers require two instructions to write the data, 
     // and so we store a boolean to represent which byte of the data we are currently writing
     bool addressLatch;
 
+    // This is where we write addresses to in PPUSCROLL and PPUDATA (lo/hi byte is controlled by addressLatch)
+    InternalRegister temporaryVramAddress;
+    InternalRegister vramAddress;
+
+    // Reading PPU data takes two instruction cycles, so we store data that we haven't yet read here
     uint8_t ppuBusData;
-    uint16_t vramAddress;
 
-    uint16_t workingAddress;
-
-    static constexpr MemoryRange CARTRIDGE_RANGE{0x0000, 0x3EFF};
+    static constexpr MemoryRange PATTERN_TABLE_RANGE{0x0000, 0x1FFF};
+    static constexpr MemoryRange NAMETABLE_RANGE{0x2000, 0x2FFF};
     static constexpr MemoryRange PALLETE_RAM_RANGE{0x3F00, 0x3FFF};
 
     static constexpr uint16_t NUM_SCREEN_COLORS = 0x40;
     static const std::array<uint32_t, NUM_SCREEN_COLORS> SCREEN_COLORS;
-
     static std::array<uint32_t, NUM_SCREEN_COLORS> initScreenColors();
 
     std::array<uint8_t, 0x20> palleteRam;
+    uint8_t getPalleteRamIndex(uint16_t address, bool read) const;
 
-    uint8_t getPalleteRamIndex(uint16_t address) const;
+    using NameTable = std::array<uint8_t, 0x800>;
+    NameTable nameTable;
     
     // Pointer to the Bus instance that the PPU is attached to. The CPU is not responsible for clearing this memory as it will get deleted when the Bus goes out of scope
     Bus* bus;
 
     std::shared_ptr<Cartridge> cartridge;
+
+    int scanline;
+    int cycle;
+    int64_t frame;
+
+    // internal latches
+    uint16_t currentPatternTableTileLo;
+    uint16_t currentPatternTableTileHi;
+    uint16_t currentAttributeTableLo;
+    uint16_t currentAttributeTableHi;
+
+    uint8_t nextNameTableByte;
+    
+    uint8_t nextPatternTableTileLo;
+    uint8_t nextPatternTableTileHi;
+    bool nextAttributeTableLo;
+    bool nextAttributeTableHi;
+
+    uint8_t fineX;
+
+    void updatePatternTable();
+    void updateAttributeTable();
+
+    void incrementCoarseX();
+    void incrementY();
+
+    Display workingDisplay;
+    Display finishedDisplay;
 };
 
 #endif // PPU_HPP
