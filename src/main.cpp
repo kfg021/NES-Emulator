@@ -2,7 +2,7 @@
 // To test: 
 // 1) Uncomment write16BitData(RESET_VECTOR, 0xC000) in the initCPU() method in cpu.cpp
 // 2) g++ src/core/bus.cpp src/core/cartridge.cpp src/core/controller.cpp src/core/cpu.cpp src/core/ppu.cpp src/core/mapper/mapper.cpp src/core/mapper/mapper0.cpp src/main.cpp src/util/util.cpp
-// 3) ./a.out > out.txt
+// 3) ./a.out nestest.nes > out.txt
 // 4) diff out.txt nestestedit.log | awk -F, '/^[0-9]/ { print $1; exit }'
 // 5) It should print 5004 (first encountered illegal opcode)
 // TODO: add PPU scanlines/cycles to test
@@ -12,10 +12,10 @@
 // #include <iostream>
 
 // int main(int argc, char* argv[]){
-//     std::string nesTest = "/Users/kennangumbs/Desktop/NES/nestest.nes";
+//     std::string filePath = argc > 1 ? argv[1] : "";    
         
 //     Bus bus{};
-//     if(!bus.loadROM(nesTest)){
+//     if(!bus.loadROM(filePath)){
 //         return 1;
 //     }
 
@@ -43,7 +43,8 @@
 int main(int argc, char* argv[]){
     QApplication app(argc, argv);
 
-    MainWindow window{};
+    std::string filePath = argc > 1 ? argv[1] : "";  
+    MainWindow window(nullptr, filePath);
     window.show();
 
     return app.exec();

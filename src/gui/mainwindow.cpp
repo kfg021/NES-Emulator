@@ -6,25 +6,28 @@
 #include <QHBoxLayout>
 #include <QKeyEvent>
 
-MainWindow::MainWindow(QWidget* parent): QMainWindow(parent){
-    std::string nesTest = "/Users/kennangumbs/Desktop/NES/nestest.nes";
-
+MainWindow::MainWindow(QWidget* parent, const std::string& filePath) : QMainWindow(parent){
     bus = std::make_shared<Bus>();
-    if(!bus->loadROM(nesTest)){
+    if(!bus->loadROM(filePath)){
         qFatal("Could not load file");
-    }
+    } 
 
     setWindowTitle("NES Emulator");
 
     gameWindow = new GameWindow(nullptr, bus);
     gameWindow->setFixedSize(GAME_WIDTH, GAME_HEIGHT);
 
+#ifdef SHOW_DEBUG_WINDOW
     debugWindow = new DebugWindow(nullptr, bus);
     debugWindow->setFixedSize(DEBUG_WIDTH, GAME_HEIGHT);
+#endif
 
     QHBoxLayout* layout = new QHBoxLayout();
     layout->addWidget(gameWindow);
+
+#ifdef SHOW_DEBUG_WINDOW
     layout->addWidget(debugWindow);
+#endif
 
     QWidget* parentWidget = new QWidget();
     parentWidget->setLayout(layout);
@@ -40,10 +43,16 @@ MainWindow::MainWindow(QWidget* parent): QMainWindow(parent){
     elapsedTimer = new QElapsedTimer();
     elapsedTimer->start();
 
+#ifdef SHOW_DEBUG_WINDOW
     debugMode = true;
     toggleDebugMode();
+#else
+    updateTimer->start();
+    elapsedTimer->start();
+#endif
 }
 
+#ifdef SHOW_DEBUG_WINDOW
 void MainWindow::toggleDebugMode(){
     debugMode ^= 1;
 
@@ -61,15 +70,19 @@ void MainWindow::toggleDebugMode(){
         debugWindow->update();
     }
 }
+#endif
 
+#ifdef SHOW_DEBUG_WINDOW
 void MainWindow::stepIfInDebugMode(){
     if(debugMode){
         executeInstruction();
         
         gameWindow->update();
+    
         debugWindow->update();
     }
 }
+#endif
 
 void MainWindow::tick(){
     int64_t totalElapsed = elapsedTimer->nsecsElapsed();
@@ -87,20 +100,28 @@ void MainWindow::tick(){
     for(int i = 0; i < neededFrames; i++){
         numFrames++;
         gameWindow->update();
+
+#ifdef SHOW_DEBUG_WINDOW
         debugWindow->update();
+#endif
     }
 }
 
 void MainWindow::executeCycle(){
     if(!bus->cpu->getRemainingCycles()){
+
+#ifdef SHOW_DEBUG_WINDOW
         QString currentInst = debugWindow->toString(bus->cpu->getPC());
+#endif
         
         bus->executeCycle();
 
+#ifdef SHOW_DEBUG_WINDOW
         if(debugWindow->prevInsts.size() == DebugWindow::NUM_INSTS){
             debugWindow->prevInsts.pop_back();
         }
         debugWindow->prevInsts.prepend(currentInst);
+#endif
     }
     else{
         bus->executeCycle();
@@ -117,6 +138,16 @@ void MainWindow::executeInstruction(){
 
     // We should log this one
     executeCycle();
+}
+
+void MainWindow::reset(){
+    // TODO: technically this is not a reset. It is more like a "power on"
+    bus->initDevices();
+    gameWindow->update();
+
+#ifdef SHOW_DEBUG_WINDOW
+    debugWindow->reset();
+#endif
 }
 
 // TODO: Only one controller for now
@@ -147,12 +178,15 @@ void MainWindow::keyPressEvent(QKeyEvent* event){
         bus->setController(0, Controller::Button::A, 1);
     }
 
+    // Reset button
+    else if(event->key() == Qt::Key_R){
+        reset();
+    }
+
+#ifdef SHOW_DEBUG_WINDOW
     // Debugging keys
     else if(event->key() == Qt::Key_Space){
         stepIfInDebugMode();
-    }
-    else if(event->key() == Qt::Key_R){
-        debugWindow->reset();
     }
     else if(event->key() == Qt::Key_C){
         toggleDebugMode();
@@ -165,6 +199,7 @@ void MainWindow::keyPressEvent(QKeyEvent* event){
         debugWindow->spritePallete = (debugWindow->spritePallete + 1) & 3;
         debugWindow->update();
     }
+#endif
 }
 
 void MainWindow::keyReleaseEvent(QKeyEvent* event){

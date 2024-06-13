@@ -14,8 +14,9 @@ std::array<uint32_t, PPU::NUM_SCREEN_COLORS> PPU::initScreenColors(){
     return screenColors;
 }
 
-const PPU::Display& PPU::getDisplay() const{
-    return finishedDisplay;
+PPU::PPU(){
+    workingDisplay = std::make_unique<Display>();
+    finishedDisplay = std::make_unique<Display>();
 }
 
 void PPU::setBus(Bus* bus){
@@ -54,8 +55,9 @@ void PPU::initPPU(){
     fineX = 0;
 
     nameTable = {};
-    workingDisplay = {};
-    finishedDisplay = {};
+
+    (*workingDisplay) = {};
+    (*finishedDisplay) = {};
 
     oamBuffer = {};
     oamAddress = 0;
@@ -415,10 +417,8 @@ void PPU::executeCycle(){
     
     if(scanline == 241){
         if(cycle == 1){
-            status.vBlankStarted = 1;
-
-            finishedDisplay = workingDisplay;
-
+            status.vBlankStarted = 1;     
+            workingDisplay.swap(finishedDisplay);
             if(control.nmiEnabled){
                 bus->nmiRequest = true;
             }
@@ -530,7 +530,7 @@ void PPU::executeCycle(){
             finalColor = spriteColor;
         }
 
-        workingDisplay[scanline][cycle - 1] = finalColor;
+        (*workingDisplay)[scanline][cycle - 1] = finalColor;
 
         // TODO: Fix sprite 0 hit off by one error
         if(sprite0Rendered && bothVisible && mask.showBackground && mask.showSprites){

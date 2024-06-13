@@ -115,6 +115,7 @@ void DebugWindow::paintEvent(QPaintEvent* /*event*/){
         painter.drawPixmap(start, START_Y + LETTER_HEIGHT * (10 + 2 * NUM_INSTS), PPU::PATTERN_TABLE_SIZE, PPU::PATTERN_TABLE_SIZE, pixmap2);
     }
 
+    // TODO: Move this to the main window
     // if(!debugMode){
     //     // Draw frames / instructions per second as ratios of the optimal values
     //     double fps = (numFrames * 1e9) / elapsedTimer->nsecsElapsed();
@@ -130,10 +131,7 @@ void DebugWindow::paintEvent(QPaintEvent* /*event*/){
     // }
 }
 
-void DebugWindow::reset(){
-    // TODO: technically this is not a reset. It is more like a "power on"
-    bus->initDevices();
-    
+void DebugWindow::reset(){    
     prevInsts.clear();
     update();
 }

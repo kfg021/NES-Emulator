@@ -12,7 +12,7 @@ class Bus;
 
 class PPU{
 public:
-    PPU() = default;
+    PPU();
     void setBus(Bus* bus);
     void setCartridge(std::shared_ptr<Cartridge>& cartridge);
     void initPPU();
@@ -55,7 +55,7 @@ public:
     void executeCycle();
 
     using Display = std::array<std::array<uint32_t, 256>, 240>;
-    const Display& getDisplay() const;
+    std::unique_ptr<Display> finishedDisplay;
 
     static constexpr uint16_t OAM_BUFFER_SIZE = 0x100;
     static constexpr uint16_t OAM_SPRITES = OAM_BUFFER_SIZE / 4;
@@ -268,8 +268,7 @@ private:
     void incrementCoarseX();
     void incrementY();
 
-    Display workingDisplay;
-    Display finishedDisplay;
+    std::unique_ptr<Display> workingDisplay;
 
     uint8_t oamAddress;
 

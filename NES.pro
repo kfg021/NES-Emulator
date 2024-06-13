@@ -1,5 +1,8 @@
 QT = core gui widgets
 
+# Uncomment the line below to compile a version that displays a side panel showing cpu status and pattern tables. May hurt performance.
+# DEFINES += SHOW_DEBUG_WINDOW
+
 HEADERS += \
 src/core/bus.hpp \
 src/core/cartridge.hpp \

@@ -6,6 +6,7 @@
 #include "gamewindow.hpp"
 #include "debugwindow.hpp"
 
+#include <string>
 #include <memory>
 
 #include <QMainWindow>
@@ -16,11 +17,14 @@ class MainWindow : public QMainWindow{
     Q_OBJECT
 
 public:
-    MainWindow(QWidget* parent = nullptr);
+    MainWindow(QWidget* parent, const std::string& filePath);
 
     static constexpr int GAME_WIDTH = 256 * 3;
     static constexpr int GAME_HEIGHT = 240 * 3;
+
+#ifdef SHOW_DEBUG_WINDOW
     static constexpr int DEBUG_WIDTH = 300;
+#endif
 
 protected:
     void keyPressEvent(QKeyEvent* event) override;
@@ -28,7 +32,10 @@ protected:
     
 private:
     GameWindow* gameWindow;
+
+#ifdef SHOW_DEBUG_WINDOW
     DebugWindow* debugWindow;
+#endif
 
     QTimer* updateTimer;
     QElapsedTimer* elapsedTimer;
@@ -39,14 +46,17 @@ private:
     void executeCycle();
     void executeInstruction();
 
+#ifdef SHOW_DEBUG_WINDOW
     void toggleDebugMode();
     void stepIfInDebugMode();
-
     bool debugMode;
+#endif
 
     int64_t numSteps;
     int64_t numFrames;
     void tick();
+
+    void reset();
 
     std::shared_ptr<Bus> bus;
 };
