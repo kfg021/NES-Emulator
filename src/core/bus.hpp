@@ -50,6 +50,15 @@ private:
 
     // After a write to 0x4016 we read controller information into here
     std::array<uint8_t, 2> controllerData;
+
+    static constexpr uint16_t OAM_DMA_ADDR = 0x4014;
+    bool dmaTransferRequested;
+    bool dmaDummyCycleNeeded;
+    bool dmaTransferOngoing;
+    uint8_t dmaPage;
+    uint8_t dmaOffset;
+    uint8_t dmaData;
+    void doDmaTransferCycle();
 };
 
 #endif // MEMORY_HPP

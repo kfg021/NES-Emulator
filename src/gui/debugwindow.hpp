@@ -17,8 +17,6 @@ class DebugWindow : public QWidget{
 public:
     DebugWindow(QWidget* parent, const std::shared_ptr<Bus>& bus);
     void reset();
-    void IRQ();
-    void NMI();
 
     uint8_t backgroundPallete;
     uint8_t spritePallete;

@@ -104,7 +104,7 @@ void DebugWindow::paintEvent(QPaintEvent* /*event*/){
         painter.drawRect(start + (PALLETE_DISPLAY_SIZE * 5) * spritePallete - 2, START_Y + LETTER_HEIGHT * (9 + 2 * NUM_INSTS) - 2, 4 * PALLETE_DISPLAY_SIZE + 4, 1 * PALLETE_DISPLAY_SIZE + 4);
 
         for(int i = 0; i < 4; i++){
-            QImage image3((uint8_t*)&palletes[i * 4], 4, 1, QImage::Format::Format_ARGB32);
+            QImage image3((uint8_t*)&palletes[0x10 + i * 4], 4, 1, QImage::Format::Format_ARGB32);
             const QPixmap palletePixmap = QPixmap::fromImage(image3);
             painter.drawPixmap(start + (PALLETE_DISPLAY_SIZE * 5) * i, START_Y + LETTER_HEIGHT * (9 + 2 * NUM_INSTS), 4 * PALLETE_DISPLAY_SIZE, 1 * PALLETE_DISPLAY_SIZE, palletePixmap);
         }
@@ -134,19 +134,6 @@ void DebugWindow::reset(){
     // TODO: technically this is not a reset. It is more like a "power on"
     bus->initDevices();
     
-    prevInsts.clear();
-    update();
-}
-
-void DebugWindow::IRQ(){
-    if(bus->cpu->IRQ()){
-        prevInsts.clear();
-        update();
-    }
-}
-
-void DebugWindow::NMI(){
-    bus->cpu->NMI();
     prevInsts.clear();
     update();
 }

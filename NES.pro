@@ -27,6 +27,9 @@ src/gui/mainwindow.cpp \
 src/util/util.cpp \
 src/main.cpp
 
+CONFIG -= debug
+CONFIG += release
+
 DESTDIR = bin
 OBJECTS_DIR = obj
 MOC_DIR = moc

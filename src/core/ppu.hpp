@@ -26,7 +26,6 @@ public:
         PPUSCROLL,
         PPUADDR,
         PPUDATA,
-        // OAMDMA = 0x4014
     };
 
     uint8_t view(uint8_t ppuRegister) const;
@@ -57,6 +56,11 @@ public:
 
     using Display = std::array<std::array<uint32_t, 256>, 240>;
     const Display& getDisplay() const;
+
+    static constexpr uint16_t OAM_BUFFER_SIZE = 0x100;
+    static constexpr uint16_t OAM_SPRITES = OAM_BUFFER_SIZE / 4;
+    using OAMBuffer = std::array<uint8_t, OAM_BUFFER_SIZE>;
+    OAMBuffer oamBuffer;
 
 private:
     // PPU internal data structures (descriptions from https://www.nesdev.org/wiki/PPU_registers)
@@ -94,8 +98,8 @@ private:
 
         Control() = default;
         Control(uint8_t data);
-        uint8_t toByte() const; 
-        void setFromByte(uint8_t data);
+        uint8_t toUInt8() const; 
+        void setFromUInt8(uint8_t data);
     };
 
     // Mask ($2001) > write
@@ -127,8 +131,8 @@ private:
 
         Mask() = default;
         Mask(uint8_t data);
-        uint8_t toByte() const;
-        void setFromByte(uint8_t data);
+        uint8_t toUInt8() const;
+        void setFromUInt8(uint8_t data);
     };
 
     // Status ($2002) < read
@@ -163,8 +167,8 @@ private:
 
         Status() = default;
         Status(uint8_t data);
-        uint8_t toByte() const;
-        void setFromByte(uint8_t data);
+        uint8_t toUInt8() const;
+        void setFromUInt8(uint8_t data);
     };
 
 
@@ -186,8 +190,21 @@ private:
 
         InternalRegister() = default;
         InternalRegister(uint16_t data);
-        uint16_t toWord() const;
-        void setFromWord(uint16_t data);
+        uint16_t toUInt16() const;
+        void setFromUInt16(uint16_t data);
+    };
+
+    struct OAMEntry{
+        uint8_t y;
+        uint8_t tileIndex;
+        uint8_t attributes;
+        uint8_t x;
+
+        OAMEntry() = default;
+        OAMEntry(uint32_t data);
+        OAMEntry(const OAMBuffer& oamBuffer, uint8_t bufferIndex);
+        uint32_t toUInt32() const;
+        void setFromUInt32(uint32_t data);
     };
 
     Control control;
@@ -253,6 +270,14 @@ private:
 
     Display workingDisplay;
     Display finishedDisplay;
+
+    uint8_t oamAddress;
+
+    std::vector<OAMEntry> currentScanlineSprites;
+    bool sprite0OnCurrentScanline;
+    void fillCurrentScanlineSprites();
+
+    uint16_t getPalleteRamAddress(uint8_t backgroundTable, uint8_t patternTable) const;
 };
 
 #endif // PPU_HPP

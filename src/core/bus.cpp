@@ -19,6 +19,12 @@ void Bus::initDevices(){
 
     nmiRequest = false;
     totalCycles = 0;
+
+    dmaTransferRequested = false;
+    dmaTransferOngoing = false;
+    dmaPage = 0;
+    dmaOffset = 0;
+    dmaData = 0;
 }
 
 bool Bus::loadROM(const std::string& filePath){
@@ -41,8 +47,8 @@ uint8_t Bus::view(uint16_t address) const{
     }
     else if(IO_ADDRESSABLE_RANGE.contains(address)){
         if(address == CONTROLLER_1_DATA || address == CONTROLLER_2_DATA){
-            uint8_t data = controllerData[address & 1] & 1;
-            return data;
+            // The view mode returns all controller outputs at once
+            return controllerData[address & 1];
         }
         else{
             // TODO: implement APU
@@ -93,6 +99,11 @@ void Bus::write(uint16_t address, uint8_t value){
             controllerData[0] = controllers[0].getButtons();
             controllerData[1] = controllers[1].getButtons();
         }
+        else if(address == OAM_DMA_ADDR){
+            dmaTransferRequested = true;
+            dmaDummyCycleNeeded = true;
+            dmaPage = value;
+        }
         else{
             // TODO: implement APU
         }
@@ -106,7 +117,13 @@ void Bus::executeCycle(){
     ppu->executeCycle();
 
     if(totalCycles % 3 == 0){
-        cpu->executeCycle();
+        // TODO: correctly implement dummy cycle
+        if(dmaTransferRequested){
+            doDmaTransferCycle();
+        }
+        else{
+            cpu->executeCycle();
+        }
     }
 
     if(nmiRequest){
@@ -115,6 +132,34 @@ void Bus::executeCycle(){
     }
 
     totalCycles++;
+}
+
+void Bus::doDmaTransferCycle(){
+    if(dmaDummyCycleNeeded){
+        dmaDummyCycleNeeded = false;
+    }
+    else{
+        bool cycleMod = totalCycles % 2;
+    
+        if(!dmaTransferOngoing && cycleMod == 0){
+            dmaTransferOngoing = true;
+        }
+
+        if(dmaTransferOngoing){
+            if(cycleMod == 0){
+                uint16_t dmaAddress = (dmaPage << 8) | dmaOffset;
+                dmaData = read(dmaAddress);
+            }
+            else{
+                ppu->oamBuffer[dmaOffset] = dmaData;
+                dmaOffset++;
+                if(dmaOffset == 0){
+                    dmaTransferRequested = false;
+                    dmaTransferOngoing = false;
+                }
+            }
+        }
+    }
 }
 
 void Bus::setController(bool controller, Controller::Button button, bool value){

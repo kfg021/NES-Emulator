@@ -1,7 +1,5 @@
 #include "ppu.hpp"
 
-#include <iostream> // temp
-
 const std::array<uint32_t, PPU::NUM_SCREEN_COLORS> PPU::SCREEN_COLORS = initScreenColors();
 
 // Screen colors taken from https://www.nesdev.org/wiki/PPU_palettes
@@ -58,21 +56,27 @@ void PPU::initPPU(){
     nameTable = {};
     workingDisplay = {};
     finishedDisplay = {};
+
+    oamBuffer = {};
+    oamAddress = 0;
+
+    currentScanlineSprites = {};
+    sprite0OnCurrentScanline = false;
 }
 
 uint8_t PPU::view(uint8_t ppuRegister) const{
     if(ppuRegister == PPUSTATUS){
-        return status.toByte();
+        return status.toUInt8();
     }
     else if(ppuRegister == OAMDATA){
-        return 0;
+        return oamBuffer[oamAddress];
     }
     else if(ppuRegister == PPUDATA){
         uint8_t data = ppuBusData;
 
         // pallete addresses get returned immediately
-        if(PALLETE_RAM_RANGE.contains(vramAddress.toWord() & 0x3FFF)){
-            data = ppuView(vramAddress.toWord() & 0x3FFF);
+        if(PALLETE_RAM_RANGE.contains(vramAddress.toUInt16() & 0x3FFF)){
+            data = ppuView(vramAddress.toUInt16() & 0x3FFF);
         }
         
         data &= 0x3F;
@@ -89,24 +93,24 @@ uint8_t PPU::view(uint8_t ppuRegister) const{
 
 uint8_t PPU::read(uint8_t ppuRegister){
     if(ppuRegister == PPUSTATUS){
-        uint8_t data = status.toByte();
+        uint8_t data = status.toUInt8();
         status.vBlankStarted = 0;
         addressLatch = 0;
         return data;
     }
     else if(ppuRegister == OAMDATA){
-        return 0;
+        return oamBuffer[oamAddress];
     }
     else if(ppuRegister == PPUDATA){
         uint8_t data = ppuBusData;
         
-        ppuBusData = ppuRead(vramAddress.toWord() & 0x3FFF);
+        ppuBusData = ppuRead(vramAddress.toUInt16() & 0x3FFF);
         
         // open bus is the bottom 5 bits of the bus
         status.openBus = ppuBusData & 0x1F;
 
         // pallete addresses get returned immediately
-        if(PALLETE_RAM_RANGE.contains(vramAddress.toWord() & 0x3FFF)){
+        if(PALLETE_RAM_RANGE.contains(vramAddress.toUInt16() & 0x3FFF)){
             data = ppuBusData;
         }
         
@@ -115,7 +119,7 @@ uint8_t PPU::read(uint8_t ppuRegister){
             data &= 0x30;
         }
         
-        vramAddress = vramAddress.toWord() + (control.vramAddressIncrement ? 32 : 1);
+        vramAddress = vramAddress.toUInt16() + (control.vramAddressIncrement ? 32 : 1);
 
         return data;
     }
@@ -126,18 +130,18 @@ uint8_t PPU::read(uint8_t ppuRegister){
 
 void PPU::write(uint8_t ppuRegister, uint8_t value){
     if(ppuRegister == PPUCTRL){
-        control.setFromByte(value);
+        control.setFromUInt8(value);
         temporaryVramAddress.nametableX = control.nametableX;
 		temporaryVramAddress.nametableY = control.nametableY;
     }
     else if(ppuRegister == PPUMASK){
-        mask.setFromByte(value);
+        mask.setFromUInt8(value);
     }
     else if(ppuRegister == OAMADDR){
-
+        oamAddress = value;
     }
     else if(ppuRegister == OAMDATA){
-
+        oamBuffer[oamAddress] = value;
     }
     else if(ppuRegister == PPUSCROLL){
         if(addressLatch == 0){
@@ -152,21 +156,21 @@ void PPU::write(uint8_t ppuRegister, uint8_t value){
     }
     else if(ppuRegister == PPUADDR){
         if(addressLatch == 0){ 
-            temporaryVramAddress = temporaryVramAddress.toWord() & 0x00FF;
-            temporaryVramAddress = temporaryVramAddress.toWord() | (value << 8);
+            temporaryVramAddress = temporaryVramAddress.toUInt16() & 0x00FF;
+            temporaryVramAddress = temporaryVramAddress.toUInt16() | (value << 8);
         }
         else{
-            temporaryVramAddress = temporaryVramAddress.toWord() & 0xFF00;
-            temporaryVramAddress = temporaryVramAddress.toWord() | value;
+            temporaryVramAddress = temporaryVramAddress.toUInt16() & 0xFF00;
+            temporaryVramAddress = temporaryVramAddress.toUInt16() | value;
 
             vramAddress = temporaryVramAddress;
         }
         addressLatch ^= 1;
     }
     else if(ppuRegister == PPUDATA){
-        ppuWrite(vramAddress.toWord() & 0x3FFF, value);
+        ppuWrite(vramAddress.toUInt16() & 0x3FFF, value);
   
-        vramAddress = vramAddress.toWord() + (control.vramAddressIncrement ? 32 : 1);
+        vramAddress = vramAddress.toUInt16() + (control.vramAddressIncrement ? 32 : 1);
     }
 }
 
@@ -291,7 +295,7 @@ PPU::PatternTable PPU::getPatternTable(bool tableNumber, uint8_t palleteNumber) 
                     uint16_t pixelRow = PATTERN_TABLE_TILE_SIZE * tileRow + spriteRow;
                     uint16_t pixelCol = PATTERN_TABLE_TILE_SIZE * tileCol + PATTERN_TABLE_TILE_SIZE - 1 - spriteCol;
 
-                    uint16_t addr = PALLETE_RAM_RANGE.lo + (palleteNumber << 2) + palleteIndex;
+                    uint16_t addr = getPalleteRamAddress(palleteIndex, palleteNumber);
                     table[pixelRow][pixelCol] = SCREEN_COLORS[ppuView(addr) & 0x3F];
                 }
             }
@@ -307,6 +311,7 @@ PPU::PatternTable PPU::getPatternTable(bool tableNumber, uint8_t palleteNumber) 
 // The timing below is for NTSC PPUs. PPUs for 50 Hz TV systems differ:
 // Dendy PPUs render 51 post-render scanlines instead of 1
 // PAL NES PPUs render 70 vblank scanlines instead of 20, and they additionally run 3.2 PPU cycles per CPU cycle, or 106.5625 CPU clock cycles per scanline.
+// TODO: Break this up into functions, fix messy if logic
 void PPU::executeCycle(){
     if(scanline >= -1 && scanline < 240){
         // Pre-render scanline (-1 or 261)
@@ -338,14 +343,14 @@ void PPU::executeCycle(){
                 currentAttributeTableHi <<= 1;
             }
 
-            int cycleMod = cycle % 8;
-            if(cycleMod == 1){
+            int cycleMod = (cycle-1) % 8;
+            if(cycleMod == 0){
                 updatePatternTable();
                 updateAttributeTable();
 
-                nextNameTableByte = ppuRead(0x2000 + (vramAddress.toWord() & 0x0FFF));
+                nextNameTableByte = ppuRead(0x2000 + (vramAddress.toUInt16() & 0x0FFF));
             }
-            else if(cycleMod == 3){  
+            else if(cycleMod == 2){  
                 uint16_t offset = 
                     (vramAddress.nametableY << 11) |
                     (vramAddress.nametableX << 10) |
@@ -363,21 +368,21 @@ void PPU::executeCycle(){
                 nextAttributeTableLo = nextAttributeTableByte & 0x1;
 				nextAttributeTableHi = nextAttributeTableByte & 0x2;
             }
-            else if(cycleMod == 5){
+            else if(cycleMod == 4){
                 uint16_t address = 
                     (control.backgroundPatternTable << 12) |
                     (nextNameTableByte << 4) |
                     vramAddress.fineY;
                 nextPatternTableTileLo = ppuRead(address);
             }
-            else if(cycleMod == 7){
+            else if(cycleMod == 6){
                uint16_t address = 
                     (control.backgroundPatternTable << 12) |
                     (nextNameTableByte << 4) |
                     vramAddress.fineY;
                 nextPatternTableTileHi = ppuRead(address + 8);
             }
-            else if(cycleMod == 0){
+            else if(cycleMod == 7){
                 if(mask.showBackground || mask.showSprites){
                     incrementCoarseX();
                 }
@@ -401,16 +406,8 @@ void PPU::executeCycle(){
         }
         
         if(cycle == 337 || cycle == 339){
-            nextNameTableByte = ppuRead(0x2000 + (vramAddress.toWord() & 0x0FFF));
+            nextNameTableByte = ppuRead(0x2000 + (vramAddress.toUInt16() & 0x0FFF));
         }
-
-        // if(scanline == -1 && cycle >= 280 && cycle <= 304){
-        //     if (mask.showBackground || mask.showSprites){
-        //         vramAddress.fineY = temporaryVramAddress.fineY;
-        //         vramAddress.nametableY = temporaryVramAddress.nametableY;
-        //         vramAddress.coarseY = temporaryVramAddress.coarseY;
-        //     }
-        // }
     }
     
     if(scanline == 240){
@@ -428,9 +425,18 @@ void PPU::executeCycle(){
         }
     }
 
+    // TODO: Fix potential off by one errors with cycle / cycle-1
     if(scanline >= 0 && scanline < 240 && (cycle-1) >= 0 && (cycle-1) < 256){
         // Render the current pixel if it is within the bounds of the screen
 
+        // Before we draw anything, get the sprites that are visible on this scanline
+        if(cycle == 1){
+            // This implementation is not at all cycle accurate
+            // TODO: consider rendering sprites the way that the NES does
+            fillCurrentScanlineSprites();
+        }
+
+        // Get color from background
         uint8_t backgroundPatternTable = 0;
         uint8_t backgroundAttributeTable = 0;
         if(mask.showBackground){    
@@ -445,14 +451,98 @@ void PPU::executeCycle(){
                 bool backgroundAttributeTableHi = (currentAttributeTableHi >> shift) & 1;
                 backgroundAttributeTable = (backgroundAttributeTableHi << 1) | backgroundAttributeTableLo;
             }
-        }
+        }   
+        uint16_t backgroundAddr = getPalleteRamAddress(backgroundPatternTable, backgroundAttributeTable);
+        uint32_t backgroundColor = SCREEN_COLORS[ppuRead(backgroundAddr) & 0x3F];
         
-        uint16_t addr = PALLETE_RAM_RANGE.lo + (backgroundAttributeTable << 2) + backgroundPatternTable;
-        uint32_t color = SCREEN_COLORS[ppuRead(addr) & 0x3F];
-        workingDisplay[scanline][cycle - 1] = color;
+        // Get color from sprites
+        uint8_t spritePatternTable = 0;
+        uint8_t spriteAttributeTable = 0;
+        bool spritePriority = 0;
+        bool sprite0Rendered = false;
+        if(mask.showSprites){
+            if(mask.showSpritesLeft || cycle >= 9){
+                for(int i = 0; i < (int)currentScanlineSprites.size(); i++){
+                    const OAMEntry& sprite = currentScanlineSprites[i];
+                    int differenceX = (cycle-1) - sprite.x; // TODO: cycle or cycle-1?
+                    if(differenceX < 0 || differenceX >= 8){
+                        continue;
+                    }
+
+                    if(i == 0 && sprite0OnCurrentScanline){
+                        sprite0Rendered = true;
+                    }
+
+                    // TODO: Implement 8x16 sprites
+                    uint8_t x = differenceX;
+                    uint8_t y = scanline - sprite.y;
+
+                    bool flipHorizontal = (sprite.attributes >> 6) & 1;
+                    if(flipHorizontal){
+                        x = 7 - x;
+                    }
+
+                    bool flipVertical = (sprite.attributes >> 7) & 1;
+                    if(flipVertical){
+                        y = 7 - y;
+                    }
+                    
+                    uint16_t spritePatternTableAddr = 
+                        (control.spritePatternTable << 12) |
+                        (sprite.tileIndex << 4) |
+                        y;
+
+                    uint8_t spritePatternTableLo = ppuRead(spritePatternTableAddr);
+                    uint8_t spritePatternTableHi = ppuRead(spritePatternTableAddr + 8);
+
+                    uint8_t shift = 7 - x;
+                    bool spritePatternTableBitLo = (spritePatternTableLo >> shift) & 1;
+                    bool spritePatternTableBitHi = (spritePatternTableHi >> shift) & 1;
+                    spritePatternTable = (spritePatternTableBitHi << 1) | spritePatternTableBitLo;
+                    
+                    spriteAttributeTable = 0x4 | (sprite.attributes & 0x3);
+                    spritePriority = !((sprite.attributes >> 5) & 1);
+
+                    // If the sprite pattern table is > 0, then it isn't transparent.
+                    // In that case we should draw it and ignore the rest of the sprite.
+                    // This is because priority between sprites is determined by their location in OAM (priority between sprite and background is determined by spritePriority variable)
+                    if(spritePatternTable){
+                        break;
+                    }
+                }
+            }
+        }
+        uint16_t spriteAddr = getPalleteRamAddress(spritePatternTable, spriteAttributeTable);
+        uint32_t spriteColor = SCREEN_COLORS[ppuRead(spriteAddr) & 0x3F];
+
+        // Now combine the background color, sprite color, and priority to get the final color
+        uint32_t finalColor;
+
+        bool bothTransparent = (backgroundPatternTable == 0 && spritePatternTable == 0);
+        // bool onlyBackgroundTransparent = (backgroundPatternTable == 0 && spritePatternTable > 0);
+        bool onlySpriteTransparent = (backgroundPatternTable > 0 && spritePatternTable == 0);
+        bool bothVisible = (backgroundPatternTable > 0 && spritePatternTable > 0);
+
+        if(bothTransparent || onlySpriteTransparent || (bothVisible && spritePriority == 0)){
+            finalColor = backgroundColor;
+        }
+        else{ // if(onlyBackgroundTransparent || (bothVisible && spritePriority == 1))
+            finalColor = spriteColor;
+        }
+
+        workingDisplay[scanline][cycle - 1] = finalColor;
+
+        // TODO: Fix sprite 0 hit off by one error
+        if(sprite0Rendered && bothVisible && mask.showBackground && mask.showSprites){
+            bool renderingLeft = mask.showBackgroundLeft && mask.showSpritesLeft;
+            if(renderingLeft || (!renderingLeft && cycle >= 9)){
+                status.sprite0Hit = 1;
+            }
+        }
     }
 
     // Skip a cycle for odd frame
+    // TODO: this might not be working as intended
     if(mask.showBackground || mask.showSprites){
         if(scanline == -1 && cycle == 339 && !(frame & 1)){
             cycle++;
@@ -469,6 +559,8 @@ void PPU::executeCycle(){
         }
         else if(scanline == 0){
             frame++;
+
+            OAMEntry entry(oamBuffer, 0);
         }
     }
 }
@@ -493,9 +585,33 @@ void PPU::updateAttributeTable(){
     }
 }
 
+void PPU::fillCurrentScanlineSprites(){
+    static constexpr uint8_t MAX_SPRITES = 8;
+    currentScanlineSprites.clear();
+    sprite0OnCurrentScanline = false;
+    for(int i = 0; i < OAM_SPRITES; i++){
+        OAMEntry sprite(oamBuffer, i);
+        uint8_t spriteHeight = control.spriteSize ? 16 : 8;
+
+        int differenceY = scanline - sprite.y;
+        if(differenceY >= 0 && differenceY < spriteHeight){
+            if(currentScanlineSprites.size() == MAX_SPRITES){
+                status.spriteOverflow = true;
+                break;
+            }
+            else{
+                currentScanlineSprites.push_back(sprite);
+                if(i == 0){
+                    sprite0OnCurrentScanline = true;
+                }
+            }
+        }
+    }
+}
+
 // The code for these functions is based on pseudocode from https://www.nesdev.org/wiki/PPU_scrolling
 void PPU::incrementCoarseX(){
-    uint16_t v = vramAddress.toWord();
+    uint16_t v = vramAddress.toUInt16();
     
     if ((v & 0x001F) == 31){ // if coarse X == 31
         v &= ~0x001F; // coarse X = 0
@@ -505,11 +621,11 @@ void PPU::incrementCoarseX(){
         v += 1; // increment coarse X
     }
 
-    vramAddress.setFromWord(v);
+    vramAddress.setFromUInt16(v);
 }
 
 void PPU::incrementY(){
-    uint16_t v = vramAddress.toWord();
+    uint16_t v = vramAddress.toUInt16();
 
     if ((v & 0x7000) != 0x7000){ // if fine Y < 7
         v += 0x1000; // increment fine Y
@@ -530,7 +646,11 @@ void PPU::incrementY(){
         v = (v & ~0x03E0) | (y << 5); // put coarse Y back into v
     }   
 
-    vramAddress.setFromWord(v);
+    vramAddress.setFromUInt16(v);
+}
+
+uint16_t PPU::getPalleteRamAddress(uint8_t patternTable, uint8_t attributeTable) const{
+    return PALLETE_RAM_RANGE.lo + (attributeTable << 2) + patternTable;
 }
 
 std::array<uint32_t, 0x20> PPU::getPalleteRamColors() const{
@@ -544,10 +664,10 @@ std::array<uint32_t, 0x20> PPU::getPalleteRamColors() const{
 
 // Helper struct function definitions
 PPU::Control::Control(uint8_t data){
-    setFromByte(data);
+    setFromUInt8(data);
 }
 
-uint8_t PPU::Control::toByte() const{
+uint8_t PPU::Control::toUInt8() const{
     uint8_t data = 
         nametableX |
         (nametableY << 1) |
@@ -561,7 +681,7 @@ uint8_t PPU::Control::toByte() const{
     return data;
 }
 
-void PPU::Control::setFromByte(uint8_t data){
+void PPU::Control::setFromUInt8(uint8_t data){
     nametableX = data & 0x1;
     nametableY = (data >> 1) & 0x1;
     vramAddressIncrement = (data >> 2) & 0x1;
@@ -574,10 +694,10 @@ void PPU::Control::setFromByte(uint8_t data){
 
 
 PPU::Mask::Mask(uint8_t value){
-    setFromByte(value);
+    setFromUInt8(value);
 }
 
-uint8_t PPU::Mask::toByte() const{
+uint8_t PPU::Mask::toUInt8() const{
     uint8_t data = 
         greyscale |
         (showBackgroundLeft << 1) |
@@ -590,7 +710,7 @@ uint8_t PPU::Mask::toByte() const{
     return data;
 }
 
-void PPU::Mask::setFromByte(uint8_t data) {
+void PPU::Mask::setFromUInt8(uint8_t data) {
     greyscale = data & 0x1;
     showBackgroundLeft = (data >> 1) & 0x1;
     showSpritesLeft = (data >> 2) & 0x1;
@@ -603,10 +723,10 @@ void PPU::Mask::setFromByte(uint8_t data) {
 
 
 PPU::Status::Status(uint8_t data){
-    setFromByte(data);
+    setFromUInt8(data);
 }
 
-uint8_t PPU::Status::toByte() const{
+uint8_t PPU::Status::toUInt8() const{
     uint8_t data = 
         openBus |
         (spriteOverflow << 5) |
@@ -615,7 +735,7 @@ uint8_t PPU::Status::toByte() const{
     return data;
 }
 
-void PPU::Status::setFromByte(uint8_t data){
+void PPU::Status::setFromUInt8(uint8_t data){
     openBus = data & 0x1F;
     spriteOverflow = (data >> 5) & 0x1;
     sprite0Hit = (data >> 6) & 0x1;
@@ -623,10 +743,10 @@ void PPU::Status::setFromByte(uint8_t data){
 }
 
 PPU::InternalRegister::InternalRegister(uint16_t data){
-    setFromWord(data);
+    setFromUInt16(data);
 }
 
-uint16_t PPU::InternalRegister::toWord() const{
+uint16_t PPU::InternalRegister::toUInt16() const{
     uint16_t data = 
         coarseX |
         (coarseY << 5) | 
@@ -637,11 +757,41 @@ uint16_t PPU::InternalRegister::toWord() const{
     return data;
 }
 
-void PPU::InternalRegister::setFromWord(uint16_t data){
+void PPU::InternalRegister::setFromUInt16(uint16_t data){
     coarseX = data & 0x1F;
     coarseY = (data >> 5) & 0x1F;
     nametableX = (data >> 10) & 0x1;
     nametableY = (data >> 11) & 0x1;
     fineY = (data >> 12) & 0x7;
     unused = (data >> 15) & 0x1;
+}
+
+PPU::OAMEntry::OAMEntry(uint32_t data){
+    setFromUInt32(data);
+}
+
+PPU::OAMEntry::OAMEntry(const OAMBuffer& oamBuffer, uint8_t spriteNum) : OAMEntry(0){
+    if(spriteNum < OAM_SPRITES){
+        uint8_t index = spriteNum << 2;
+        y = oamBuffer[index];
+        tileIndex = oamBuffer[index + 1];
+        attributes = oamBuffer[index + 2];
+        x = oamBuffer[index + 3];
+    }
+}
+
+uint32_t PPU::OAMEntry::toUInt32() const{
+    uint32_t data = 
+        y |
+        (tileIndex << 8) |
+        (attributes << 16) |
+        (x << 24);
+    return data;
+}
+
+void PPU::OAMEntry::setFromUInt32(uint32_t data){
+    y = data & 0xFF;
+    tileIndex = (data >> 8) & 0xFF;
+    attributes = (data >> 16) & 0xFF;
+    x = (data >> 24) & 0xFF;
 }

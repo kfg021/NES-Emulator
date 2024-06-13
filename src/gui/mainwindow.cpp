@@ -32,7 +32,6 @@ MainWindow::MainWindow(QWidget* parent): QMainWindow(parent){
 
     numSteps = 0;
     numFrames = 0;
-    debugMode = true;
 
     updateTimer = new QTimer(this);
     connect(updateTimer, &QTimer::timeout, this, &MainWindow::tick);
@@ -40,6 +39,9 @@ MainWindow::MainWindow(QWidget* parent): QMainWindow(parent){
 
     elapsedTimer = new QElapsedTimer();
     elapsedTimer->start();
+
+    debugMode = true;
+    toggleDebugMode();
 }
 
 void MainWindow::toggleDebugMode(){
@@ -135,7 +137,7 @@ void MainWindow::keyPressEvent(QKeyEvent* event){
     else if(event->key() == Qt::Key_Shift){
         bus->setController(0, Controller::Button::SELECT, 1);
     }
-    else if(event->key() == Qt::Key_Enter){
+    else if(event->key() == Qt::Key_Return){
         bus->setController(0, Controller::Button::START, 1);
     }
     else if(event->key() == Qt::Key_Z){
@@ -151,12 +153,6 @@ void MainWindow::keyPressEvent(QKeyEvent* event){
     }
     else if(event->key() == Qt::Key_R){
         debugWindow->reset();
-    }
-    else if(event->key() == Qt::Key_I){
-        debugWindow->IRQ();
-    }
-    else if(event->key() == Qt::Key_N){
-        debugWindow->NMI();
     }
     else if(event->key() == Qt::Key_C){
         toggleDebugMode();
@@ -188,7 +184,7 @@ void MainWindow::keyReleaseEvent(QKeyEvent* event){
     else if(event->key() == Qt::Key_Shift){
         bus->setController(0, Controller::Button::SELECT, 0);
     }
-    else if(event->key() == Qt::Key_Enter){
+    else if(event->key() == Qt::Key_Return){
         bus->setController(0, Controller::Button::START, 0);
     }
     else if(event->key() == Qt::Key_Z){
