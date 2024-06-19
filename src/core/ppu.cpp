@@ -80,12 +80,6 @@ uint8_t PPU::view(uint8_t ppuRegister) const{
         if(PALLETE_RAM_RANGE.contains(vramAddress.toUInt16() & 0x3FFF)){
             data = ppuView(vramAddress.toUInt16() & 0x3FFF);
         }
-        
-        data &= 0x3F;
-        if(mask.greyscale){
-            data &= 0x30;
-        }
-
         return data;
     }
     else{
@@ -114,11 +108,6 @@ uint8_t PPU::read(uint8_t ppuRegister){
         // pallete addresses get returned immediately
         if(PALLETE_RAM_RANGE.contains(vramAddress.toUInt16() & 0x3FFF)){
             data = ppuBusData;
-        }
-        
-        data &= 0x3F;
-        if(mask.greyscale){
-            data &= 0x30;
         }
         
         vramAddress = vramAddress.toUInt16() + (control.vramAddressIncrement ? 32 : 1);
@@ -241,7 +230,11 @@ uint8_t PPU::ppuView(uint16_t address) const{
         return nameTable[getNameTableIndex(address)];
     }
     else if(PALLETE_RAM_RANGE.contains(address)){
-        return palleteRam[getPalleteRamIndex(address, true)];
+        uint8_t data = palleteRam[getPalleteRamIndex(address, true)] & 0x3F;
+        if(mask.greyscale){
+            data &= 0x30;
+        }
+        return data;
     }
     else{
         return 0;
@@ -257,7 +250,11 @@ uint8_t PPU::ppuRead(uint16_t address){
         return nameTable[getNameTableIndex(address)];
     }
     else if(PALLETE_RAM_RANGE.contains(address)){
-        return palleteRam[getPalleteRamIndex(address, true)];
+        uint8_t data = palleteRam[getPalleteRamIndex(address, true)] & 0x3F;
+        if(mask.greyscale){
+            data &= 0x30;
+        }
+        return data;
     }
     else{
         return 0;
@@ -292,8 +289,8 @@ PPU::PatternTable PPU::getPatternTable(bool tableNumber, uint8_t palleteNumber) 
                 for(int spriteCol = 0; spriteCol < PATTERN_TABLE_TILE_SIZE; spriteCol++){
                     bool currentLoBit = (loBits >> spriteCol) & 1;
                     bool currentHiBit = (hiBits >> spriteCol) & 1;
-                    uint8_t palleteIndex = (currentHiBit << 1) | currentLoBit;
-                    
+                    uint8_t palleteIndex = (currentHiBit << 1) | currentLoBit + ((1 - tableNumber) << 4); // TODO: use control.spritePatternTable
+
                     uint16_t pixelRow = PATTERN_TABLE_TILE_SIZE * tileRow + spriteRow;
                     uint16_t pixelCol = PATTERN_TABLE_TILE_SIZE * tileCol + PATTERN_TABLE_TILE_SIZE - 1 - spriteCol;
 

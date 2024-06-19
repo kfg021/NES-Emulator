@@ -80,6 +80,7 @@ void DebugWindow::paintEvent(QPaintEvent* /*event*/){
 
     static constexpr int PALLETE_DISPLAY_SIZE = 7;
     
+    // TODO: variable names are incorrect
     {
         // Display each of the 4 background color palletes
         painter.setBrush(Qt::white);
@@ -90,7 +91,7 @@ void DebugWindow::paintEvent(QPaintEvent* /*event*/){
             const QPixmap palletePixmap = QPixmap::fromImage(image3);
             painter.drawPixmap(START_X + (PALLETE_DISPLAY_SIZE * 5) * i, START_Y + LETTER_HEIGHT * (9 + 2 * NUM_INSTS), 4 * PALLETE_DISPLAY_SIZE, 1 * PALLETE_DISPLAY_SIZE, palletePixmap);
         }
-        PPU::PatternTable table1 = bus->ppu->getPatternTable(0, backgroundPallete);
+        PPU::PatternTable table1 = bus->ppu->getPatternTable(1, backgroundPallete);
         QImage image1((uint8_t*)&table1, PPU::PATTERN_TABLE_SIZE, PPU::PATTERN_TABLE_SIZE, QImage::Format::Format_ARGB32);
         const QPixmap pixmap1 = QPixmap::fromImage(image1);
         painter.drawPixmap(START_X, START_Y + LETTER_HEIGHT * (10 + 2 * NUM_INSTS), PPU::PATTERN_TABLE_SIZE, PPU::PATTERN_TABLE_SIZE, pixmap1);
@@ -109,7 +110,7 @@ void DebugWindow::paintEvent(QPaintEvent* /*event*/){
             painter.drawPixmap(start + (PALLETE_DISPLAY_SIZE * 5) * i, START_Y + LETTER_HEIGHT * (9 + 2 * NUM_INSTS), 4 * PALLETE_DISPLAY_SIZE, 1 * PALLETE_DISPLAY_SIZE, palletePixmap);
         }
         
-        PPU::PatternTable table2 = bus->ppu->getPatternTable(1, spritePallete);
+        PPU::PatternTable table2 = bus->ppu->getPatternTable(0, spritePallete);
         QImage image2((uint8_t*)&table2, PPU::PATTERN_TABLE_SIZE, PPU::PATTERN_TABLE_SIZE, QImage::Format::Format_ARGB32);
         const QPixmap pixmap2 = QPixmap::fromImage(image2);
         painter.drawPixmap(start, START_Y + LETTER_HEIGHT * (10 + 2 * NUM_INSTS), PPU::PATTERN_TABLE_SIZE, PPU::PATTERN_TABLE_SIZE, pixmap2);

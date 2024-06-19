@@ -171,7 +171,6 @@ private:
         void setFromUInt8(uint8_t data);
     };
 
-
     // https://www.nesdev.org/wiki/PPU_scrolling
     // The 15 bit registers t and v are composed this way during rendering:
     // yyy NN YYYYY XXXXX
