@@ -590,7 +590,11 @@ void PPU::fillCurrentScanlineSprites(){
         OAMEntry sprite(oamBuffer, i);
         uint8_t spriteHeight = control.spriteSize ? 16 : 8;
 
-        int differenceY = scanline - sprite.y;
+        // NES sprite renders are delayed by one scanline, so they will end up one scanline below where it is specified in OAM
+        // As a result, NES programmers place their sprite value MINUS 1 into OAM.
+        // I manually remove this offset by adding because I determine which sprites will be rendered for a particular scanline at the start of a scanline, not during a previous one.
+        int differenceY = scanline - (sprite.y + 1);
+
         if(differenceY >= 0 && differenceY < spriteHeight){
             if(currentScanlineSprites.size() == MAX_SPRITES){
                 status.spriteOverflow = true;
@@ -598,6 +602,10 @@ void PPU::fillCurrentScanlineSprites(){
             }
             else{
                 currentScanlineSprites.push_back(sprite);
+
+                // Adding 1 to the y value of visible sprites for aforementioned reason
+                currentScanlineSprites.back().y++;
+
                 if(i == 0){
                     sprite0OnCurrentScanline = true;
                 }
