@@ -28,9 +28,9 @@ std::optional<uint32_t> Mapper0::mapToPRGRead(uint16_t cpuAddress){
     return mapToPRGView(cpuAddress);
 }
 
-std::optional<uint32_t> Mapper0::mapToPRGWrite(uint16_t cpuAddress){
-    // TODO: Figure out if mapper 0 should actually have PRG RAM
-    return mapToPRGView(cpuAddress);
+std::optional<uint32_t> Mapper0::mapToPRGWrite(uint16_t /*cpuAddress*/){
+    // PRG in mapper 0 is read only
+    return std::nullopt;
 }
 
 

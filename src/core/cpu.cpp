@@ -8,9 +8,6 @@
 const std::array<CPU::Opcode, CPU::MAX_NUM_OPCODES> CPU::lookup = CPU::initLookup();
 
 void CPU::initCPU(){
-    // TODO: REMOVE, manually setting the reset vector for nestest.nes console test 
-    // write16BitData(RESET_VECTOR, 0xC000);
-
     // Init registers
     a = 0;
     x = 0;
