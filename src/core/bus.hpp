@@ -18,7 +18,7 @@ class Bus{
 public:
     Bus();
 
-    bool loadROM(const std::string& filePath);
+    Cartridge::Status loadROM(const std::string& filePath);
     void initDevices();
 
     uint8_t view(uint16_t address) const;

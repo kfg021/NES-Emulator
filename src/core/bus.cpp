@@ -27,15 +27,16 @@ void Bus::initDevices(){
     dmaData = 0;
 }
 
-bool Bus::loadROM(const std::string& filePath){
+Cartridge::Status Bus::loadROM(const std::string& filePath){
     cartridge = std::make_shared<Cartridge>(filePath);
-    if(!cartridge->isValid()){
-        return false;
-    }
-    ppu->setCartridge(cartridge);
 
-    initDevices();
-    return true;
+    Cartridge::Status status = cartridge->getStatus();
+    if(status == Cartridge::Status::SUCCESS){
+        ppu->setCartridge(cartridge);
+        initDevices();
+    }
+    
+    return status;
 }
 
 uint8_t Bus::view(uint16_t address) const{

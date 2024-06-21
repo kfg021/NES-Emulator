@@ -14,7 +14,6 @@ class Cartridge{
 public:
     Cartridge();
     Cartridge(const std::string& filePath);
-    bool isValid() const;
 
     std::optional<uint8_t> viewPRG(uint16_t preMappedAddr) const;
     std::optional<uint8_t> readFromPRG(uint16_t preMappedAddr);
@@ -31,13 +30,29 @@ public:
 
     MirrorMode getMirrorMode() const;
 
+    enum Status{
+        SUCCESS,
+        INCORRECT_EXTENSION,
+        MISSING_FILE,
+        MISSING_HEADER,
+        INCORRECT_HEADER_NAME,
+        MISSING_TRAINER,
+        UNIMPLEMENTED_MAPPER,
+        UNSUPPORTED_INES_VERSION,
+        MISSING_PRG,
+        MISSING_CHR
+    };
+
+    Status getStatus() const;
+
+    static const std::string getMessage(Status status);
+
 private:
-    bool loadINESFile(const std::string& filePath);
+    Status status;
+    Status loadINESFile(const std::string& filePath);
 
     static constexpr uint16_t PRG_ROM_CHUNK_SIZE = 0x4000;
     static constexpr uint16_t CHR_ROM_CHUNK_SIZE = 0x2000;
-
-    bool valid;
 
     std::vector<uint8_t> prgRom;
     std::vector<uint8_t> chrRom;

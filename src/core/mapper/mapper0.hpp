@@ -13,6 +13,7 @@ public:
     
     std::optional<uint32_t> mapToCHRView(uint16_t ppuAddress) const override;
     std::optional<uint32_t> mapToCHRRead(uint16_t ppuAddress) override;
-    std::optional<uint32_t> mapToCHRWrite(uint16_t ppuAddress) override;};
+    std::optional<uint32_t> mapToCHRWrite(uint16_t ppuAddress) override;
+};
 
 #endif // MAPPER0_HPP

@@ -48,7 +48,7 @@ public:
     static constexpr uint16_t PATTERN_TABLE_TOTAL_BYTES = PATTERN_TABLE_TILE_BYTES * PATTERN_TABLE_NUM_TILES * PATTERN_TABLE_NUM_TILES;
 
     using PatternTable = std::array<std::array<uint32_t, PATTERN_TABLE_SIZE>, PATTERN_TABLE_SIZE>;
-    PatternTable getPatternTable(bool tableNumber, uint8_t palleteNumber) const;
+    PatternTable getPatternTable(bool isBackground, uint8_t palleteNumber) const;
 
     std::array<uint32_t, 0x20> getPalleteRamColors() const;
 

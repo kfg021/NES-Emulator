@@ -4,14 +4,14 @@
 #include <filesystem>
 
 Cartridge::Cartridge(){
-    valid = false;
+    status = MISSING_FILE;
 }
 
 Cartridge::Cartridge(const std::string& filePath){
-    valid = loadINESFile(filePath);
+    status = loadINESFile(filePath);
 }
 
-bool Cartridge::loadINESFile(const std::string& filePath){
+Cartridge::Status Cartridge::loadINESFile(const std::string& filePath){
     // iNES file format (https://www.nesdev.org/wiki/INES)
     // An iNES file consists of the following sections, in order:
     // Header (16 bytes)
@@ -41,30 +41,26 @@ bool Cartridge::loadINESFile(const std::string& filePath){
 
     // TODO: add error message enum, change return depending on failure type
     if(std::filesystem::path(filePath).extension() != ".nes"){
-        // File extension is incorrect
-        return false;
+        return INCORRECT_EXTENSION;
     }
 
     std::ifstream file(filePath);
     if(!file){
-        // File does not exist
-        return false;
+       return MISSING_FILE;
     }
 
     Header header;
     file.read((char*)&header, sizeof(Header));
     if(!file){
-        // File is too small to contain header
-        return false;
+        return MISSING_HEADER;
     }
     
     static constexpr std::array<char, 4> correctName = {'N', 'E', 'S', '\x1A'};
     if(header.name != correctName){
-        // Name given in file is incorrect
-        return false;
+        return INCORRECT_HEADER_NAME;
     }
 
-    bool isTrainer = (header.flag6 >> 2) & 1;
+    bool isTrainer = (header.flag6 >> 2) & 0x1;
 
     if(isTrainer){
         static constexpr uint16_t TRAINER_SIZE = 0x200;
@@ -73,35 +69,32 @@ bool Cartridge::loadINESFile(const std::string& filePath){
         file.ignore(TRAINER_SIZE);
         
         if(!file){
-            // File is too small to contain trainer
-            return false;
+            return MISSING_TRAINER;
         }
     }
 
     mirrorMode = (MirrorMode)(header.flag6 & 1);
 
-    uint8_t mapperIdLo = (header.flag6 >> 4) & 0x0F;
-    uint8_t mapperIdHi = (header.flag7 >> 4) & 0x0F;
+    uint8_t mapperIdLo = (header.flag6 >> 4) & 0xF;
+    uint8_t mapperIdHi = (header.flag7 >> 4) & 0xF;
     uint8_t mapperId = (mapperIdHi << 4) | mapperIdLo;
 
     mapper = Mapper::createMapper(mapperId, header.prgRomChunks, header.chrRomChunks);
     if(mapper == nullptr){
-        // The chosen mapper has not been implemented yet
-        return false;
+        return UNIMPLEMENTED_MAPPER;
     }
 
-    // TODO: parse more fields
-    // Yes:
-    //      iNES version
-    // Maybe:
-    //      Nametable arrangement
-    //      Alternate nametable layout
+    uint8_t iNESVersion = (((header.flag7 >> 2) & 0x3) == 2) ? 2 : 1;
+    if(iNESVersion != 1){
+        return UNSUPPORTED_INES_VERSION;
+    }
+
+    // TODO: parse alternative nametable layout
 
     prgRom.resize(header.prgRomChunks * PRG_ROM_CHUNK_SIZE);
     file.read((char*)prgRom.data(), prgRom.size() * sizeof(uint8_t));
     if(!file){
-        // File is too small to contain PRG ROM
-        return false;
+        return MISSING_PRG;
     }
 
     // For iNES 1.0 we assume that a value of 0 for char rom chunks means we have 1 chunk of CHR RAM.
@@ -117,11 +110,25 @@ bool Cartridge::loadINESFile(const std::string& filePath){
     }
     
     if(!file){
-        // File is too small to contain CHR ROM
-        return false;
+        return MISSING_CHR;
     }
 
-    return true;
+    return SUCCESS;
+}
+
+const std::string Cartridge::getMessage(Status status){
+    switch(status){
+        case SUCCESS:                   return "";
+        case INCORRECT_EXTENSION:       return "Requested file has an incorrect extension (.nes is required)";
+        case MISSING_FILE:              return "No file was requested, or requested file does not exist";
+        case MISSING_HEADER:            return "File does not contain an iNES header.";
+        case INCORRECT_HEADER_NAME:     return "File header contains incorrect name.";
+        case MISSING_TRAINER:           return "Trainer data should be present, but was not found or incomplete.";
+        case UNIMPLEMENTED_MAPPER:      return "The requested mapper is currently not supported.";
+        case UNSUPPORTED_INES_VERSION:  return "The requested iNES version is currently not supported.";
+        case MISSING_PRG:               return "Program data not found.";
+        case MISSING_CHR:               return "Character data not found.";
+    }
 }
 
 Cartridge::MirrorMode Cartridge::getMirrorMode() const{
@@ -181,6 +188,6 @@ void Cartridge::writeToCHR(uint16_t preMappedAddr, uint8_t data){
     }
 }
 
-bool Cartridge::isValid() const{
-    return valid;
+Cartridge::Status Cartridge::getStatus() const{
+    return status;
 }

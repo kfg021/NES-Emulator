@@ -271,13 +271,13 @@ void PPU::ppuWrite(uint16_t address, uint8_t value){
     else if(PALLETE_RAM_RANGE.contains(address)){
         palleteRam[getPalleteRamIndex(address, false)] = value;
     }
-    else{
-    }
 }
 
-// TODO: maybe optimize to return the data before the pallete is applied
-PPU::PatternTable PPU::getPatternTable(bool tableNumber, uint8_t palleteNumber) const{
+PPU::PatternTable PPU::getPatternTable(bool isBackground, uint8_t palleteNumber) const{
     PatternTable table{};
+
+    bool tableNumber = isBackground ? control.backgroundPatternTable : control.spritePatternTable;
+    
     for(int tileRow = 0; tileRow < PATTERN_TABLE_NUM_TILES; tileRow++){
         for(int tileCol = 0; tileCol < PATTERN_TABLE_NUM_TILES; tileCol++){
             uint16_t tableOffset = PATTERN_TABLE_TILE_BYTES * (PATTERN_TABLE_NUM_TILES * tileRow + tileCol);
@@ -289,7 +289,7 @@ PPU::PatternTable PPU::getPatternTable(bool tableNumber, uint8_t palleteNumber) 
                 for(int spriteCol = 0; spriteCol < PATTERN_TABLE_TILE_SIZE; spriteCol++){
                     bool currentLoBit = (loBits >> spriteCol) & 1;
                     bool currentHiBit = (hiBits >> spriteCol) & 1;
-                    uint8_t palleteIndex = (currentHiBit << 1) | currentLoBit + ((1 - tableNumber) << 4); // TODO: use control.spritePatternTable
+                    uint8_t palleteIndex = (currentHiBit << 1) | currentLoBit;
 
                     uint16_t pixelRow = PATTERN_TABLE_TILE_SIZE * tileRow + spriteRow;
                     uint16_t pixelCol = PATTERN_TABLE_TILE_SIZE * tileCol + PATTERN_TABLE_TILE_SIZE - 1 - spriteCol;

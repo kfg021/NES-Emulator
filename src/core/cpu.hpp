@@ -8,8 +8,6 @@
 #include <memory>
 #include <variant>
 
-// TODO: Add data view in addition to read, fix const
-
 class Bus;
 
 class CPU{

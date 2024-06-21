@@ -8,8 +8,10 @@
 
 MainWindow::MainWindow(QWidget* parent, const std::string& filePath) : QMainWindow(parent){
     bus = std::make_shared<Bus>();
-    if(!bus->loadROM(filePath)){
-        qFatal("Could not load file");
+
+    Cartridge::Status status = bus->loadROM(filePath);
+    if(status != Cartridge::Status::SUCCESS){
+        qFatal("%s", Cartridge::getMessage(status).c_str());
     } 
 
     setWindowTitle("NES Emulator");
