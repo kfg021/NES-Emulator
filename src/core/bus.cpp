@@ -52,7 +52,7 @@ uint8_t Bus::view(uint16_t address) const{
             return controllerData[address & 1];
         }
         else{
-            // TODO: implement APU
+            // TODO: Implement APU
             return 0;
         } 
         
@@ -77,7 +77,7 @@ uint8_t Bus::read(uint16_t address){
             return data;
         }
         else{
-            // TODO: implement APU
+            // TODO: Implement APU
             return 0;
         } 
     }
@@ -95,7 +95,7 @@ void Bus::write(uint16_t address, uint8_t value){
         ppu->write(address & 0x7, value); // TODO: what happens when write fails?
     }
     else if(IO_ADDRESSABLE_RANGE.contains(address)){
-        // TODO: implement strobe
+        // TODO: Implement strobe
         if(address == CONTROLLER_1_DATA){
             controllerData[0] = controllers[0].getButtons();
             controllerData[1] = controllers[1].getButtons();
@@ -106,7 +106,7 @@ void Bus::write(uint16_t address, uint8_t value){
             dmaPage = value;
         }
         else{
-            // TODO: implement APU
+            // TODO: Implement APU
         }
     }
     else{ // if(CARTRIDGE_ADDRESSABLE_RANGE.contains(address))
@@ -118,7 +118,7 @@ void Bus::executeCycle(){
     ppu->executeCycle();
 
     if(totalCycles % 3 == 0){
-        // TODO: correctly implement dummy cycle
+        // TODO: Correctly implement dummy cycle
         if(dmaTransferRequested){
             doDmaTransferCycle();
         }

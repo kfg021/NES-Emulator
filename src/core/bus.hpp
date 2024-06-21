@@ -46,6 +46,8 @@ private:
 
     static constexpr uint16_t CONTROLLER_1_DATA = 0x4016;
     static constexpr uint16_t CONTROLLER_2_DATA = 0x4017;
+
+    // TODO: Consider adding NES zapper support
     std::array<Controller, 2> controllers;
 
     // After a write to 0x4016 we read controller information into here

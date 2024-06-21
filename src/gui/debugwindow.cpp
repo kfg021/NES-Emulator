@@ -114,21 +114,6 @@ void DebugWindow::paintEvent(QPaintEvent* /*event*/){
         const QPixmap pixmap2 = QPixmap::fromImage(image2);
         painter.drawPixmap(start, START_Y + LETTER_HEIGHT * (10 + 2 * NUM_INSTS), PPU::PATTERN_TABLE_SIZE, PPU::PATTERN_TABLE_SIZE, pixmap2);
     }
-
-    // TODO: Move this to the main window
-    // if(!debugMode){
-    //     // Draw frames / instructions per second as ratios of the optimal values
-    //     double fps = (numFrames * 1e9) / elapsedTimer->nsecsElapsed();
-    //     double ips = (numSteps * 1e9) / elapsedTimer->nsecsElapsed();
-    //     std::string stats = "FPS: " +  std::to_string(fps / FPS * 100) + "% IPS: " + std::to_string(ips / IPS * 100) + "%";
-    //     painter.setPen(Qt::green);
-    //     auto smallFont = painter.font();
-    //     smallFont.setPointSize(10);
-    //     painter.setFont(smallFont);
-    //     int smallLetterWidth = QFontMetrics(smallFont).horizontalAdvance("A");
-    //     int locX = width() - START_X - smallLetterWidth * stats.size();
-    //     painter.drawText(locX, height(), stats.c_str());
-    // }
 }
 
 void DebugWindow::reset(){    

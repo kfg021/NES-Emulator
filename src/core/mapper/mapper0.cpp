@@ -14,9 +14,11 @@ std::optional<uint32_t> Mapper0::mapToPRGView(uint16_t cpuAddress) const{
         if(prgRomChunks == 1){
             return cpuAddress & 0x3FFF;
         }
-        else{
-            // TODO: check that prgRomChunks == 2
+        else if(prgRomChunks == 2){
             return cpuAddress & 0x7FFF;
+        }
+        else{
+            return std::nullopt;
         }
     }
     else{

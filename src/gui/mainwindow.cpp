@@ -143,7 +143,7 @@ void MainWindow::executeInstruction(){
 }
 
 void MainWindow::reset(){
-    // TODO: technically this is not a reset. It is more like a "power on"
+    // TODO: Technically this is not a reset. It is more like a "power on"
     bus->initDevices();
     gameWindow->update();
 

@@ -27,7 +27,6 @@ void PPU::setCartridge(std::shared_ptr<Cartridge>& cartridge){
     this->cartridge = cartridge;
 }
 
-// TODO: call on reset, probably
 void PPU::initPPU(){
     control = 0;
     mask = 0;
@@ -289,7 +288,7 @@ PPU::PatternTable PPU::getPatternTable(bool isBackground, uint8_t palleteNumber)
                 for(int spriteCol = 0; spriteCol < PATTERN_TABLE_TILE_SIZE; spriteCol++){
                     bool currentLoBit = (loBits >> spriteCol) & 1;
                     bool currentHiBit = (hiBits >> spriteCol) & 1;
-                    uint8_t palleteIndex = (currentHiBit << 1) | currentLoBit;
+                    uint8_t palleteIndex = ((!isBackground) << 4) | (currentHiBit << 1) | currentLoBit;
 
                     uint16_t pixelRow = PATTERN_TABLE_TILE_SIZE * tileRow + spriteRow;
                     uint16_t pixelCol = PATTERN_TABLE_TILE_SIZE * tileCol + PATTERN_TABLE_TILE_SIZE - 1 - spriteCol;
@@ -429,7 +428,7 @@ void PPU::executeCycle(){
         // Before we draw anything, get the sprites that are visible on this scanline
         if(cycle == 1){
             // This implementation is not at all cycle accurate
-            // TODO: consider rendering sprites the way that the NES does
+            // TODO: Consider rendering sprites the way that the NES does
             fillCurrentScanlineSprites();
         }
 
@@ -461,7 +460,7 @@ void PPU::executeCycle(){
             if(mask.showSpritesLeft || cycle >= 9){
                 for(int i = 0; i < (int)currentScanlineSprites.size(); i++){
                     const OAMEntry& sprite = currentScanlineSprites[i];
-                    int differenceX = (cycle-1) - sprite.x; // TODO: cycle or cycle-1?
+                    int differenceX = (cycle-1) - sprite.x;
                     if(differenceX < 0 || differenceX >= 8){
                         continue;
                     }
@@ -529,7 +528,6 @@ void PPU::executeCycle(){
 
         (*workingDisplay)[scanline][cycle - 1] = finalColor;
 
-        // TODO: Fix sprite 0 hit off by one error
         if(sprite0Rendered && bothVisible && mask.showBackground && mask.showSprites){
             bool renderingLeft = mask.showBackgroundLeft && mask.showSpritesLeft;
             if(renderingLeft || (!renderingLeft && cycle >= 9)){
@@ -539,7 +537,7 @@ void PPU::executeCycle(){
     }
 
     // Skip a cycle for odd frame
-    // TODO: this might not be working as intended
+    // TODO: This might not be working as intended
     if(mask.showBackground || mask.showSprites){
         if(scanline == -1 && cycle == 339 && !(frame & 1)){
             cycle++;

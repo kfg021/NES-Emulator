@@ -39,7 +39,6 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath){
         std::array<char, 5> unused;
     };
 
-    // TODO: add error message enum, change return depending on failure type
     if(std::filesystem::path(filePath).extension() != ".nes"){
         return INCORRECT_EXTENSION;
     }
@@ -84,12 +83,13 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath){
         return UNIMPLEMENTED_MAPPER;
     }
 
-    uint8_t iNESVersion = (((header.flag7 >> 2) & 0x3) == 2) ? 2 : 1;
-    if(iNESVersion != 1){
-        return UNSUPPORTED_INES_VERSION;
-    }
+    // TODO: Parse iNES version
+    // uint8_t iNESVersion = (((header.flag7 >> 2) & 0x3) == 2) ? 2 : 1;
+    // if(iNESVersion != 1){
+    //     return UNSUPPORTED_INES_VERSION;
+    // }
 
-    // TODO: parse alternative nametable layout
+    // TODO: Parse alternative nametable layout
 
     prgRom.resize(header.prgRomChunks * PRG_ROM_CHUNK_SIZE);
     file.read((char*)prgRom.data(), prgRom.size() * sizeof(uint8_t));

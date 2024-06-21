@@ -11,7 +11,7 @@ std::unique_ptr<Mapper> Mapper::createMapper(uint8_t id, uint8_t prgRomChunks, u
         return std::make_unique<Mapper0>(prgRomChunks, chrRomChunks);
     }
     else{
-        // TODO: add more mappers
+        // TODO: Add more mappers
         return nullptr;
     }
 }
