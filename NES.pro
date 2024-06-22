@@ -30,9 +30,13 @@ src/gui/mainwindow.cpp \
 src/util/util.cpp \
 src/main.cpp
 
-CONFIG -= debug
-CONFIG += release
-
-DESTDIR = bin
-OBJECTS_DIR = obj
-MOC_DIR = moc
+CONFIG(debug, debug|release) {
+    DESTDIR = build/debug
+    OBJECTS_DIR = build/debug/.obj
+    MOC_DIR = build/debug/.moc
+}
+CONFIG(release, debug|release) {
+    DESTDIR = build/release
+    OBJECTS_DIR = build/release/.obj
+    MOC_DIR = build/release/.moc
+}

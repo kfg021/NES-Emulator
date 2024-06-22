@@ -1,5 +1,3 @@
 *.stash
-Makefile
-bin/
-obj/
-moc/
+Makefile*
+build/
