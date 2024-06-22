@@ -130,6 +130,7 @@ void MainWindow::executeCycle() {
     }
 }
 
+#ifdef SHOW_DEBUG_WINDOW
 void MainWindow::executeInstruction() {
     while (bus->cpu->getRemainingCycles()) {
         bus->executeCycle();
@@ -141,6 +142,7 @@ void MainWindow::executeInstruction() {
     // We should log this one
     executeCycle();
 }
+#endif
 
 void MainWindow::reset() {
     // TODO: Technically this is not a reset. It is more like a "power on"
