@@ -11,7 +11,7 @@
 
 #include <memory>
 
-class DebugWindow : public QWidget{
+class DebugWindow : public QWidget {
     Q_OBJECT
 
 public:
@@ -28,7 +28,7 @@ public:
 
 protected:
     void paintEvent(QPaintEvent* event) override;
-    
+
 private:
 
     std::shared_ptr<Bus> bus;

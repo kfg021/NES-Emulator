@@ -3,10 +3,10 @@
 
 #include <cstdint>
 
-class Controller{
+class Controller {
 public:
     Controller();
-    enum Button{
+    enum Button {
         A,
         B,
         SELECT,

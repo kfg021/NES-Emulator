@@ -14,7 +14,7 @@
 class CPU;
 class PPU;
 
-class Bus{
+class Bus {
 public:
     Bus();
 
@@ -36,10 +36,10 @@ public:
     void setController(bool controller, Controller::Button button, bool value);
 
 private:
-    static constexpr MemoryRange RAM_ADDRESSABLE_RANGE{0x0000, 0x1FFF};
-    static constexpr MemoryRange PPU_ADDRESSABLE_RANGE{0x2000, 0x3FFF};
-    static constexpr MemoryRange IO_ADDRESSABLE_RANGE{0x4000, 0x401F};
-    static constexpr MemoryRange CARTRIDGE_ADDRESSABLE_RANGE{0x4020, 0xFFFF};
+    static constexpr MemoryRange RAM_ADDRESSABLE_RANGE{ 0x0000, 0x1FFF };
+    static constexpr MemoryRange PPU_ADDRESSABLE_RANGE{ 0x2000, 0x3FFF };
+    static constexpr MemoryRange IO_ADDRESSABLE_RANGE{ 0x4000, 0x401F };
+    static constexpr MemoryRange CARTRIDGE_ADDRESSABLE_RANGE{ 0x4020, 0xFFFF };
 
     std::array<uint8_t, 0x800> ram;
     std::shared_ptr<Cartridge> cartridge;

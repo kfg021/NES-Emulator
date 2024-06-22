@@ -8,7 +8,7 @@
 #include <QWidget>
 #include <QPaintEvent>
 
-class GameWindow : public QWidget{
+class GameWindow : public QWidget {
     Q_OBJECT
 
 public:

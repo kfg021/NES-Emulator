@@ -10,12 +10,12 @@
 
 class Bus;
 
-class CPU{
+class CPU {
 public:
     CPU() = default;
     void setBus(Bus* bus);
     void initCPU();
-    
+
     void executeCycle();
 
     // Reset/interrupts
@@ -24,7 +24,7 @@ public:
     void NMI();
 
     // Data structures
-    enum Flags{
+    enum Flags {
         CARRY,
         ZERO,
         INTERRUPT,
@@ -34,8 +34,8 @@ public:
         OVERFLOW,
         NEGATIVE
     };
-    struct AddressingMode{
-        struct ReturnType{
+    struct AddressingMode {
+        struct ReturnType {
             // This is the variable that will be populated after we determine the instruction's addressing mode.
             // Addressing modes can either return a 16-bit address, an 8-bit data value, or nothing (in the case of IMP).
             // These three options are captured in the below std::variant
@@ -47,15 +47,15 @@ public:
             bool mightNeedExtraCycle = 0;
         };
         uint8_t instructionSize;
-        ReturnType (CPU::*getOperand)();
-        std::string (CPU::*toString)(uint16_t address) const;
+        ReturnType(CPU::* getOperand)();
+        std::string(CPU::* toString)(uint16_t address) const;
     };
-    struct Instruction{
+    struct Instruction {
         std::string name;
-        void (CPU::*execute)(const AddressingMode::ReturnType& operand);
+        void (CPU::* execute)(const AddressingMode::ReturnType& operand);
         bool mightNeedExtraCycle = 0;
     };
-    struct Opcode{
+    struct Opcode {
         Instruction instruction;
         AddressingMode addressingMode;
         uint8_t numDefaultCycles;
@@ -96,19 +96,19 @@ private:
     uint8_t y; // y register
     uint8_t sr; // status register
     uint8_t sp; // stack pointer
-    
+
     // Helper variables
     uint8_t remainingCycles;
     int64_t totalCycles;
     bool shouldAdvancePC;
     static const std::array<Opcode, MAX_NUM_OPCODES> lookup;
-    
+
     // Pointer to the Bus instance that the CPU is attached to. The CPU is not responsible for clearing this memory as it will get deleted when the Bus goes out of scope
     Bus* bus;
 
     // Initialization
     static std::array<Opcode, MAX_NUM_OPCODES> initLookup();
-    
+
     // Flags
     void setFlag(Flags flag, bool value);
     void setNZFlags(uint8_t x);
@@ -117,12 +117,12 @@ private:
     uint16_t view16BitData(uint16_t address) const;
     uint16_t read16BitData(uint16_t address);
     void write16BitData(uint16_t address, uint16_t data);
-    
+
     void push8BitDataToStack(uint8_t data);
     uint8_t pop8BitDataFromStack();
     void push16BitDataToStack(uint16_t data);
     uint16_t pop16BitDataFromStack();
-    
+
     // Addressing mode functions
     AddressingMode::ReturnType ACC();
     AddressingMode::ReturnType ABS();

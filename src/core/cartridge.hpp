@@ -10,7 +10,7 @@
 #include <memory>
 #include <optional>
 
-class Cartridge{
+class Cartridge {
 public:
     Cartridge();
     Cartridge(const std::string& filePath);
@@ -23,14 +23,14 @@ public:
     std::optional<uint8_t> readFromCHR(uint16_t preMappedAddr);
     void writeToCHR(uint16_t preMappedAddr, uint8_t data);
 
-    enum MirrorMode{
+    enum MirrorMode {
         HORIZONTAL,
         VERTICAL
     };
 
     MirrorMode getMirrorMode() const;
 
-    enum Status{
+    enum Status {
         SUCCESS,
         INCORRECT_EXTENSION,
         MISSING_FILE,

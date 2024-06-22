@@ -5,11 +5,11 @@
 #include <memory>
 #include <optional>
 
-class Mapper{
+class Mapper {
 public:
     Mapper(uint8_t prgRomChunks, uint8_t chrRomChunks);
     virtual ~Mapper() = default;
-    
+
     static std::unique_ptr<Mapper> createMapper(uint8_t id, uint8_t prgRomChunks, uint8_t chrRomChunks);
 
     // "View" is different from "read" because view functions do not change the state of the mapper.

@@ -10,14 +10,14 @@
 
 class Bus;
 
-class PPU{
+class PPU {
 public:
     PPU();
     void setBus(Bus* bus);
     void setCartridge(std::shared_ptr<Cartridge>& cartridge);
     void initPPU();
 
-    enum Register{
+    enum Register {
         PPUCTRL,
         PPUMASK,
         PPUSTATUS,
@@ -30,7 +30,7 @@ public:
 
     uint8_t view(uint8_t ppuRegister) const;
     uint8_t read(uint8_t ppuRegister);
-    void write(uint8_t ppuRegister, uint8_t value); 
+    void write(uint8_t ppuRegister, uint8_t value);
 
     uint8_t ppuView(uint16_t address) const;
     uint8_t ppuRead(uint16_t address);
@@ -41,9 +41,9 @@ public:
 
     // Width/height of pattern table, measured by number of tiles
     static constexpr uint16_t PATTERN_TABLE_NUM_TILES = 0x10;
-    
+
     static constexpr uint16_t PATTERN_TABLE_SIZE = PATTERN_TABLE_TILE_SIZE * PATTERN_TABLE_NUM_TILES;
-    
+
     static constexpr uint16_t PATTERN_TABLE_TILE_BYTES = (PATTERN_TABLE_TILE_SIZE * PATTERN_TABLE_TILE_SIZE * 2) / 8;
     static constexpr uint16_t PATTERN_TABLE_TOTAL_BYTES = PATTERN_TABLE_TILE_BYTES * PATTERN_TABLE_NUM_TILES * PATTERN_TABLE_NUM_TILES;
 
@@ -64,7 +64,7 @@ public:
 
 private:
     // PPU internal data structures (descriptions from https://www.nesdev.org/wiki/PPU_registers)
-    
+
     // Controller ($2000) > write
     // Common name: PPUCTRL
     // Description: PPU control register
@@ -86,7 +86,7 @@ private:
     // |          (0: read backdrop from EXT pins; 1: output color on EXT pins)
     // +--------- Generate an NMI at the start of the
     //         vertical blanking interval (0: off; 1: on)
-    struct Control{
+    struct Control {
         bool nametableX : 1;
         bool nametableY : 1;
         bool vramAddressIncrement : 1;
@@ -98,7 +98,7 @@ private:
 
         Control() = default;
         Control(uint8_t data);
-        uint8_t toUInt8() const; 
+        uint8_t toUInt8() const;
         void setFromUInt8(uint8_t data);
     };
 
@@ -119,7 +119,7 @@ private:
     // ||+------- Emphasize red (green on PAL/Dendy)
     // |+-------- Emphasize green (red on PAL/Dendy)
     // +--------- Emphasize blue
-    struct Mask{
+    struct Mask {
         bool greyscale : 1;
         bool showBackgroundLeft : 1;
         bool showSpritesLeft : 1;
@@ -159,7 +159,7 @@ private:
     //         Set at dot 1 of line 241 (the line *after* the post-render
     //         line); cleared after reading $2002 and at dot 1 of the
     //         pre-render line.
-    struct Status{
+    struct Status {
         uint8_t openBus : 5;
         bool spriteOverflow : 1;
         bool sprite0Hit : 1;
@@ -179,7 +179,7 @@ private:
     // ||| ++-------------- nametable select
     // +++----------------- fine Y scroll
     // Note that while the v register has 15 bits, the PPU memory space is only 14 bits wide. The highest bit is unused for access through $2007.
-    struct InternalRegister{
+    struct InternalRegister {
         uint8_t coarseX : 5;
         uint8_t coarseY : 5;
         bool nametableX : 1;
@@ -193,7 +193,7 @@ private:
         void setFromUInt16(uint16_t data);
     };
 
-    struct OAMEntry{
+    struct OAMEntry {
         uint8_t y;
         uint8_t tileIndex;
         uint8_t attributes;
@@ -223,9 +223,9 @@ private:
     // Reading PPU data takes two instruction cycles, so we store data that we haven't yet read here
     uint8_t ppuBusData;
 
-    static constexpr MemoryRange PATTERN_TABLE_RANGE{0x0000, 0x1FFF};
-    static constexpr MemoryRange NAMETABLE_RANGE{0x2000, 0x2FFF};
-    static constexpr MemoryRange PALLETE_RAM_RANGE{0x3F00, 0x3FFF};
+    static constexpr MemoryRange PATTERN_TABLE_RANGE{ 0x0000, 0x1FFF };
+    static constexpr MemoryRange NAMETABLE_RANGE{ 0x2000, 0x2FFF };
+    static constexpr MemoryRange PALLETE_RAM_RANGE{ 0x3F00, 0x3FFF };
 
     static constexpr uint16_t NUM_SCREEN_COLORS = 0x40;
     static const std::array<uint32_t, NUM_SCREEN_COLORS> SCREEN_COLORS;
@@ -236,7 +236,7 @@ private:
 
     using NameTable = std::array<uint8_t, 0x800>;
     NameTable nameTable;
-    
+
     // Pointer to the Bus instance that the PPU is attached to. The CPU is not responsible for clearing this memory as it will get deleted when the Bus goes out of scope
     Bus* bus;
 
@@ -253,7 +253,7 @@ private:
     uint16_t currentAttributeTableHi;
 
     uint8_t nextNameTableByte;
-    
+
     uint8_t nextPatternTableTileLo;
     uint8_t nextPatternTableTileHi;
     bool nextAttributeTableLo;

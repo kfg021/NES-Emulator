@@ -13,7 +13,7 @@
 #include <QWidget>
 
 
-class MainWindow : public QMainWindow{
+class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
@@ -29,7 +29,7 @@ public:
 protected:
     void keyPressEvent(QKeyEvent* event) override;
     void keyReleaseEvent(QKeyEvent* event) override;
-    
+
 private:
     GameWindow* gameWindow;
 
