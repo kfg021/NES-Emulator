@@ -32,29 +32,49 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath){
     // 10	Flags 10 – TV system, PRG-RAM presence (unofficial, rarely used extension)
     // 11-15	Unused padding (should be filled with zero, but some rippers put their name across bytes 7-15)
     struct Header{
-        std::array<char, 4> name;
+        std::array<uint8_t, 4> name;
         uint8_t prgRomChunks;
         uint8_t chrRomChunks;
         uint8_t flag6, flag7, flag8, flag9, flag10;
-        std::array<char, 5> unused;
+        std::array<uint8_t, 5> unused;
+    };
+
+    auto readHeader = [](std::ifstream& file, Header& header) -> Status{
+        std::array<uint8_t, 16> buffer;
+        file.read((char*)buffer.data(), buffer.size() * sizeof(uint8_t));
+        if(!file){
+            return MISSING_HEADER;
+        }
+
+        header.name = {buffer[0], buffer[1], buffer[2], buffer[3]};
+        header.prgRomChunks = buffer[4];
+        header.chrRomChunks = buffer[5];
+        header.flag6 = buffer[6];
+        header.flag7 = buffer[7];
+        header.flag8 = buffer[8];
+        header.flag9 = buffer[9];
+        header.flag10 = buffer[10];
+        header.unused = {buffer[11], buffer[12], buffer[13], buffer[14], buffer[15]};
+
+        return SUCCESS;
     };
 
     if(std::filesystem::path(filePath).extension() != ".nes"){
         return INCORRECT_EXTENSION;
     }
 
-    std::ifstream file(filePath);
+    std::ifstream file(filePath, std::ios::binary);
     if(!file){
-       return MISSING_FILE;
+        return MISSING_FILE;
     }
 
     Header header;
-    file.read((char*)&header, sizeof(Header));
+    readHeader(file, header);
     if(!file){
         return MISSING_HEADER;
     }
     
-    static constexpr std::array<char, 4> correctName = {'N', 'E', 'S', '\x1A'};
+    static constexpr std::array<uint8_t, 4> correctName = {'N', 'E', 'S', '\x1A'};
     if(header.name != correctName){
         return INCORRECT_HEADER_NAME;
     }
@@ -118,7 +138,6 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath){
 
 const std::string Cartridge::getMessage(Status status){
     switch(status){
-        case SUCCESS:                   return "";
         case INCORRECT_EXTENSION:       return "Requested file has an incorrect extension (.nes is required)";
         case MISSING_FILE:              return "No file was requested, or requested file does not exist";
         case MISSING_HEADER:            return "File does not contain an iNES header.";
@@ -128,6 +147,7 @@ const std::string Cartridge::getMessage(Status status){
         case UNSUPPORTED_INES_VERSION:  return "The requested iNES version is currently not supported.";
         case MISSING_PRG:               return "Program data not found.";
         case MISSING_CHR:               return "Character data not found.";
+        case SUCCESS: default:          return "";
     }
 }
 
