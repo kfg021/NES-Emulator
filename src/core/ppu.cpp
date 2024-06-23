@@ -465,7 +465,6 @@ void PPU::executeCycle() {
                         continue;
                     }
 
-                    // TODO: Implement 8x16 sprites
                     uint8_t x = differenceX;
                     uint8_t y = scanline - sprite.y;
 
@@ -476,13 +475,31 @@ void PPU::executeCycle() {
 
                     bool flipVertical = (sprite.attributes >> 7) & 1;
                     if (flipVertical) {
-                        y = 7 - y;
+                        y = control.spriteSize ? (15 - y) : (7 - y);
                     }
 
-                    uint16_t spritePatternTableAddr =
-                        (control.spritePatternTable << 12) |
-                        (sprite.tileIndex << 4) |
-                        y;
+                    uint16_t spritePatternTableAddr;
+
+                    if (!control.spriteSize) {
+                        spritePatternTableAddr =
+                            (control.spritePatternTable << 12) |
+                            (sprite.tileIndex << 4) |
+                            y;
+                    }
+                    else {
+                        if (y < 8) {
+                            spritePatternTableAddr =
+                                ((sprite.tileIndex & 0x1) << 12) |
+                                ((sprite.tileIndex & 0xFE) << 4) |
+                                y;
+                        }
+                        else {
+                            spritePatternTableAddr =
+                                ((sprite.tileIndex & 0x1) << 12) |
+                                (((sprite.tileIndex & 0xFE) | 1) << 4) |
+                                (y & 0x7);
+                        }
+                    }
 
                     uint8_t spritePatternTableLo = ppuRead(spritePatternTableAddr);
                     uint8_t spritePatternTableHi = ppuRead(spritePatternTableAddr + 8);
@@ -527,7 +544,7 @@ void PPU::executeCycle() {
 
         (*workingDisplay)[scanline][cycle - 1] = finalColor;
 
-        if (sprite0Rendered && bothVisible && mask.showBackground && mask.showSprites && (cycle-1) != 0xFF) {
+        if (sprite0Rendered && bothVisible && mask.showBackground && mask.showSprites && (cycle - 1) != 0xFF) {
             bool renderingLeft = mask.showBackgroundLeft && mask.showSpritesLeft;
             if (renderingLeft || (!renderingLeft && cycle >= 9)) {
                 status.sprite0Hit = 1;
