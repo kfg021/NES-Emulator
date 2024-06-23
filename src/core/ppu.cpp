@@ -465,10 +465,6 @@ void PPU::executeCycle() {
                         continue;
                     }
 
-                    if (i == 0 && sprite0OnCurrentScanline) {
-                        sprite0Rendered = true;
-                    }
-
                     // TODO: Implement 8x16 sprites
                     uint8_t x = differenceX;
                     uint8_t y = scanline - sprite.y;
@@ -500,9 +496,12 @@ void PPU::executeCycle() {
                     spritePriority = !((sprite.attributes >> 5) & 1);
 
                     // If the sprite pattern table is > 0, then it isn't transparent.
-                    // In that case we should draw it and ignore the rest of the sprite.
+                    // In that case we should draw it and ignore the rest of the sprites.
                     // This is because priority between sprites is determined by their location in OAM (priority between sprite and background is determined by spritePriority variable)
                     if (spritePatternTable) {
+                        if (i == 0 && sprite0OnCurrentScanline) {
+                            sprite0Rendered = true;
+                        }
                         break;
                     }
                 }
