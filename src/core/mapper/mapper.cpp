@@ -1,5 +1,7 @@
 #include "mapper.hpp"
+
 #include "mapper0.hpp"
+#include "mapper2.hpp"
 
 Mapper::Mapper(uint8_t prgRomChunks, uint8_t chrRomChunks) :
     prgRomChunks(prgRomChunks),
@@ -7,11 +9,9 @@ Mapper::Mapper(uint8_t prgRomChunks, uint8_t chrRomChunks) :
 }
 
 std::unique_ptr<Mapper> Mapper::createMapper(uint8_t id, uint8_t prgRomChunks, uint8_t chrRomChunks) {
-    if (id == 0) {
-        return std::make_unique<Mapper0>(prgRomChunks, chrRomChunks);
-    }
-    else {
-        // TODO: Add more mappers
-        return nullptr;
+    switch (id) {
+        case 0:     return std::make_unique<Mapper0>(prgRomChunks, chrRomChunks);
+        case 2:     return std::make_unique<Mapper2>(prgRomChunks, chrRomChunks);
+        default:    return nullptr; // TODO: Add more mappers
     }
 }

@@ -156,7 +156,7 @@ std::optional<uint8_t> Cartridge::readFromPRG(uint16_t preMappedAddr) {
     }
 }
 void Cartridge::writeToPRG(uint16_t preMappedAddr, uint8_t data) {
-    std::optional<uint32_t> mappedAddr = mapper->mapToPRGWrite(preMappedAddr);
+    std::optional<uint32_t> mappedAddr = mapper->mapToPRGWrite(preMappedAddr, data);
     if (mappedAddr.has_value()) {
         prgRom[mappedAddr.value()] = data;
     }
@@ -183,7 +183,7 @@ std::optional<uint8_t> Cartridge::readFromCHR(uint16_t preMappedAddr) {
     }
 }
 void Cartridge::writeToCHR(uint16_t preMappedAddr, uint8_t data) {
-    std::optional<uint32_t> mappedAddr = mapper->mapToCHRWrite(preMappedAddr);
+    std::optional<uint32_t> mappedAddr = mapper->mapToCHRWrite(preMappedAddr, data);
     if (mappedAddr.has_value()) {
         chrRom[mappedAddr.value()] = data;
     }

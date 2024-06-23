@@ -17,11 +17,11 @@ public:
     // This can be useful for debugging.
     virtual std::optional<uint32_t> mapToPRGView(uint16_t cpuAddress) const = 0;
     virtual std::optional<uint32_t> mapToPRGRead(uint16_t cpuAddress) = 0;
-    virtual std::optional<uint32_t> mapToPRGWrite(uint16_t cpuAddress) = 0;
+    virtual std::optional<uint32_t> mapToPRGWrite(uint16_t cpuAddress, uint8_t value) = 0;
 
     virtual std::optional<uint32_t> mapToCHRView(uint16_t ppuAddress) const = 0;
     virtual std::optional<uint32_t> mapToCHRRead(uint16_t ppuAddress) = 0;
-    virtual std::optional<uint32_t> mapToCHRWrite(uint16_t ppuAddress) = 0;
+    virtual std::optional<uint32_t> mapToCHRWrite(uint16_t ppuAddress, uint8_t value) = 0;
 
 protected:
     const uint8_t prgRomChunks;
