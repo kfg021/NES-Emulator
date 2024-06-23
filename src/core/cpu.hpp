@@ -24,7 +24,7 @@ public:
     void NMI();
 
     // Data structures
-    enum class Flags {
+    enum class Flag {
         CARRY,
         ZERO,
         INTERRUPT,
@@ -72,7 +72,7 @@ public:
     uint8_t getY() const;
     uint8_t getSP() const;
     uint8_t getSR() const;
-    bool getFlag(Flags flag) const;
+    bool getFlag(Flag flag) const;
     uint8_t getRemainingCycles() const;
     int64_t getTotalCycles() const;
 
@@ -110,7 +110,7 @@ private:
     static std::array<Opcode, MAX_NUM_OPCODES> initLookup();
 
     // Flags
-    void setFlag(Flags flag, bool value);
+    void setFlag(Flag flag, bool value);
     void setNZFlags(uint8_t x);
 
     // Reading/writing data

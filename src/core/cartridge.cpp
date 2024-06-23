@@ -50,7 +50,7 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath) {
 
     auto readHeader = [](std::ifstream& file, Header& header) -> void {
         std::array<uint8_t, 16> buffer;
-        file.read((char*)buffer.data(), buffer.size() * sizeof(uint8_t));
+        file.read(reinterpret_cast<char*>(buffer.data()), buffer.size() * sizeof(uint8_t));
         if (!file) {
             return;
         }
@@ -85,11 +85,11 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath) {
         file.ignore(TRAINER_SIZE);
 
         if (!file) {
-            return {Code::MISSING_TRAINER, "Trainer data should be present, but missing or incomplete." };
+            return { Code::MISSING_TRAINER, "Trainer data should be present, but missing or incomplete." };
         }
     }
 
-    mirrorMode = (MirrorMode)(header.flag6 & 1);
+    mirrorMode = static_cast<MirrorMode>(header.flag6 & 1);
 
     uint8_t mapperIdLo = (header.flag6 >> 4) & 0xF;
     uint8_t mapperIdHi = (header.flag7 >> 4) & 0xF;
@@ -108,7 +108,7 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath) {
     // TODO: Parse alternative nametable layout
 
     prgRom.resize(header.prgRomChunks * PRG_ROM_CHUNK_SIZE);
-    file.read((char*)prgRom.data(), prgRom.size() * sizeof(uint8_t));
+    file.read(reinterpret_cast<char*>(prgRom.data()), prgRom.size() * sizeof(uint8_t));
     if (!file) {
         return { Code::MISSING_PRG, "Program data missing or incomplete." };
     }
@@ -122,7 +122,7 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath) {
     }
     else {
         chrRom.resize(header.chrRomChunks * CHR_ROM_CHUNK_SIZE);
-        file.read((char*)chrRom.data(), chrRom.size() * sizeof(uint8_t));
+        file.read(reinterpret_cast<char*>(chrRom.data()), chrRom.size() * sizeof(uint8_t));
     }
 
     if (!file) {

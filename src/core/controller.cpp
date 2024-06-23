@@ -15,17 +15,17 @@ uint8_t Controller::getButtons() {
 }
 
 void Controller::setButton(Button button, bool value) {
-    buttons &= ~(1 << (int)button);
+    buttons &= ~(1 << static_cast<int>(button));
     if (value) {
-        buttons |= (1 << (int)button);
+        buttons |= (1 << static_cast<int>(button));
     }
 }
 
 void Controller::removeOppositeInputs(uint8_t& originalButtons, Button a, Button b) const {
-    bool aPressed = (originalButtons >> (int)a) & 1;
-    bool bPressed = (originalButtons >> (int)b) & 1;
+    bool aPressed = (originalButtons >> static_cast<int>(a)) & 1;
+    bool bPressed = (originalButtons >> static_cast<int>(b)) & 1;
     if (aPressed && bPressed) {
-        originalButtons &= ~(1 << (int)a);
-        originalButtons &= ~(1 << (int)b);
+        originalButtons &= ~(1 << static_cast<int>(a));
+        originalButtons &= ~(1 << static_cast<int>(b));
     }
 }
