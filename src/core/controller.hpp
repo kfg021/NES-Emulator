@@ -6,7 +6,7 @@
 class Controller {
 public:
     Controller();
-    enum Button {
+    enum class Button {
         A,
         B,
         SELECT,

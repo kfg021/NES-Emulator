@@ -24,7 +24,7 @@ public:
     void NMI();
 
     // Data structures
-    enum Flags {
+    enum class Flags {
         CARRY,
         ZERO,
         INTERRUPT,

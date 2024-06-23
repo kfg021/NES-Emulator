@@ -17,7 +17,7 @@ public:
     void setCartridge(std::shared_ptr<Cartridge>& cartridge);
     void initPPU();
 
-    enum Register {
+    enum class Register {
         PPUCTRL,
         PPUMASK,
         PPUSTATUS,

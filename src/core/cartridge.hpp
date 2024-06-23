@@ -23,14 +23,14 @@ public:
     std::optional<uint8_t> readFromCHR(uint16_t preMappedAddr);
     void writeToCHR(uint16_t preMappedAddr, uint8_t data);
 
-    enum MirrorMode {
+    enum class MirrorMode {
         HORIZONTAL,
         VERTICAL
     };
 
     MirrorMode getMirrorMode() const;
 
-    enum Code {
+    enum class Code {
         SUCCESS,
         INCORRECT_EXTENSION,
         MISSING_FILE,

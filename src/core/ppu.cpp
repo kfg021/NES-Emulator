@@ -66,13 +66,13 @@ void PPU::initPPU() {
 }
 
 uint8_t PPU::view(uint8_t ppuRegister) const {
-    if (ppuRegister == PPUSTATUS) {
+    if (ppuRegister == (int)Register::PPUSTATUS) {
         return status.toUInt8();
     }
-    else if (ppuRegister == OAMDATA) {
+    else if (ppuRegister == (int)Register::OAMDATA) {
         return oamBuffer[oamAddress];
     }
-    else if (ppuRegister == PPUDATA) {
+    else if (ppuRegister == (int)Register::PPUDATA) {
         uint8_t data = ppuBusData;
 
         // pallete addresses get returned immediately
@@ -87,16 +87,16 @@ uint8_t PPU::view(uint8_t ppuRegister) const {
 }
 
 uint8_t PPU::read(uint8_t ppuRegister) {
-    if (ppuRegister == PPUSTATUS) {
+    if (ppuRegister == (int)Register::PPUSTATUS) {
         uint8_t data = status.toUInt8();
         status.vBlankStarted = 0;
         addressLatch = 0;
         return data;
     }
-    else if (ppuRegister == OAMDATA) {
+    else if (ppuRegister == (int)Register::OAMDATA) {
         return oamBuffer[oamAddress];
     }
-    else if (ppuRegister == PPUDATA) {
+    else if (ppuRegister == (int)Register::PPUDATA) {
         uint8_t data = ppuBusData;
 
         ppuBusData = ppuRead(vramAddress.toUInt16() & 0x3FFF);
@@ -119,21 +119,21 @@ uint8_t PPU::read(uint8_t ppuRegister) {
 }
 
 void PPU::write(uint8_t ppuRegister, uint8_t value) {
-    if (ppuRegister == PPUCTRL) {
+    if (ppuRegister == (int)Register::PPUCTRL) {
         control.setFromUInt8(value);
         temporaryVramAddress.nametableX = control.nametableX;
         temporaryVramAddress.nametableY = control.nametableY;
     }
-    else if (ppuRegister == PPUMASK) {
+    else if (ppuRegister == (int)Register::PPUMASK) {
         mask.setFromUInt8(value);
     }
-    else if (ppuRegister == OAMADDR) {
+    else if (ppuRegister == (int)Register::OAMADDR) {
         oamAddress = value;
     }
-    else if (ppuRegister == OAMDATA) {
+    else if (ppuRegister == (int)Register::OAMDATA) {
         oamBuffer[oamAddress] = value;
     }
-    else if (ppuRegister == PPUSCROLL) {
+    else if (ppuRegister == (int)Register::PPUSCROLL) {
         if (addressLatch == 0) {
             fineX = value & 0x7;
             temporaryVramAddress.coarseX = value >> 3;
@@ -144,7 +144,7 @@ void PPU::write(uint8_t ppuRegister, uint8_t value) {
         }
         addressLatch ^= 1;
     }
-    else if (ppuRegister == PPUADDR) {
+    else if (ppuRegister == (int)Register::PPUADDR) {
         if (addressLatch == 0) {
             temporaryVramAddress = temporaryVramAddress.toUInt16() & 0x00FF;
             temporaryVramAddress = temporaryVramAddress.toUInt16() | (value << 8);
@@ -157,7 +157,7 @@ void PPU::write(uint8_t ppuRegister, uint8_t value) {
         }
         addressLatch ^= 1;
     }
-    else if (ppuRegister == PPUDATA) {
+    else if (ppuRegister == (int)Register::PPUDATA) {
         ppuWrite(vramAddress.toUInt16() & 0x3FFF, value);
 
         vramAddress = vramAddress.toUInt16() + (control.vramAddressIncrement ? 32 : 1);
