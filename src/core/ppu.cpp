@@ -527,7 +527,7 @@ void PPU::executeCycle() {
 
         (*workingDisplay)[scanline][cycle - 1] = finalColor;
 
-        if (sprite0Rendered && bothVisible && mask.showBackground && mask.showSprites) {
+        if (sprite0Rendered && bothVisible && mask.showBackground && mask.showSprites && (cycle-1) != 0xFF) {
             bool renderingLeft = mask.showBackgroundLeft && mask.showSpritesLeft;
             if (renderingLeft || (!renderingLeft && cycle >= 9)) {
                 status.sprite0Hit = 1;

@@ -224,7 +224,7 @@ private:
     uint8_t ppuBusData;
 
     static constexpr MemoryRange PATTERN_TABLE_RANGE{ 0x0000, 0x1FFF };
-    static constexpr MemoryRange NAMETABLE_RANGE{ 0x2000, 0x2FFF };
+    static constexpr MemoryRange NAMETABLE_RANGE{ 0x2000, /*0x2FFF*/ 0x3EFF };
     static constexpr MemoryRange PALLETE_RAM_RANGE{ 0x3F00, 0x3FFF };
 
     static constexpr uint16_t NUM_SCREEN_COLORS = 0x40;
