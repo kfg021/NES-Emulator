@@ -12,6 +12,7 @@ src/core/ppu.hpp \
 src/core/mapper/mapper.hpp \
 src/core/mapper/mapper0.hpp \
 src/core/mapper/mapper2.hpp \
+src/core/mapper/mapper3.hpp \
 src/gui/debugwindow.hpp \
 src/gui/gamewindow.hpp \
 src/gui/mainwindow.hpp \
@@ -26,6 +27,7 @@ src/core/ppu.cpp \
 src/core/mapper/mapper.cpp \
 src/core/mapper/mapper0.cpp \
 src/core/mapper/mapper2.cpp \
+src/core/mapper/mapper3.cpp \
 src/gui/debugwindow.cpp \
 src/gui/gamewindow.cpp \
 src/gui/mainwindow.cpp \
