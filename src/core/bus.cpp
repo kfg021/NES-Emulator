@@ -31,7 +31,7 @@ Cartridge::Status Bus::loadROM(const std::string& filePath) {
     cartridge = std::make_shared<Cartridge>(filePath);
 
     Cartridge::Status status = cartridge->getStatus();
-    if (status == Cartridge::Status::SUCCESS) {
+    if (status.code == Cartridge::Code::SUCCESS) {
         ppu->setCartridge(cartridge);
         initDevices();
     }

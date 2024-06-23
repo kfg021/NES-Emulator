@@ -4,7 +4,7 @@
 #include <filesystem>
 
 Cartridge::Cartridge() {
-    status = MISSING_FILE;
+    status = { MISSING_FILE, "No file was requested." };
 }
 
 Cartridge::Cartridge(const std::string& filePath) {
@@ -39,11 +39,20 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath) {
         std::array<uint8_t, 5> unused;
     };
 
-    auto readHeader = [](std::ifstream& file, Header& header) -> Status {
+    if (std::filesystem::path(filePath).extension() != ".nes") {
+        return { INCORRECT_EXTENSION, "Requested file (" + filePath + ") has an incorrect extension (.nes is required)." };
+    }
+
+    std::ifstream file(filePath, std::ios::binary);
+    if (!file) {
+        return { MISSING_FILE, "Requested file (" + filePath + ") does not exist." };
+    }
+
+    auto readHeader = [](std::ifstream& file, Header& header) -> void {
         std::array<uint8_t, 16> buffer;
         file.read((char*)buffer.data(), buffer.size() * sizeof(uint8_t));
         if (!file) {
-            return MISSING_HEADER;
+            return;
         }
 
         header.name = { buffer[0], buffer[1], buffer[2], buffer[3] };
@@ -55,32 +64,20 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath) {
         header.flag9 = buffer[9];
         header.flag10 = buffer[10];
         header.unused = { buffer[11], buffer[12], buffer[13], buffer[14], buffer[15] };
-
-        return SUCCESS;
     };
-
-    if (std::filesystem::path(filePath).extension() != ".nes") {
-        return INCORRECT_EXTENSION;
-    }
-
-    std::ifstream file(filePath, std::ios::binary);
-    if (!file) {
-        return MISSING_FILE;
-    }
 
     Header header;
     readHeader(file, header);
     if (!file) {
-        return MISSING_HEADER;
+        return { MISSING_HEADER, "iNES header missing or incomplete." };
     }
 
     static constexpr std::array<uint8_t, 4> correctName = { 'N', 'E', 'S', '\x1A' };
     if (header.name != correctName) {
-        return INCORRECT_HEADER_NAME;
+        return { INCORRECT_HEADER_NAME, "File header contains incorrect name." };
     }
 
     bool isTrainer = (header.flag6 >> 2) & 0x1;
-
     if (isTrainer) {
         static constexpr uint16_t TRAINER_SIZE = 0x200;
 
@@ -88,25 +85,24 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath) {
         file.ignore(TRAINER_SIZE);
 
         if (!file) {
-            return MISSING_TRAINER;
+            return { MISSING_TRAINER, "Trainer data should be present, but missing or incomplete." };
         }
     }
 
-    mirrorMode = (MirrorMode)(header.flag6 & 1);
+    mirrorMode = MirrorMode(header.flag6 & 1);
 
     uint8_t mapperIdLo = (header.flag6 >> 4) & 0xF;
     uint8_t mapperIdHi = (header.flag7 >> 4) & 0xF;
     uint8_t mapperId = (mapperIdHi << 4) | mapperIdLo;
-
     mapper = Mapper::createMapper(mapperId, header.prgRomChunks, header.chrRomChunks);
     if (mapper == nullptr) {
-        return UNIMPLEMENTED_MAPPER;
+        return { UNIMPLEMENTED_MAPPER, "The requested mapper (" + std::to_string(mapperId) + ") is currently not supported." };
     }
 
     // TODO: Parse iNES version
     // uint8_t iNESVersion = (((header.flag7 >> 2) & 0x3) == 2) ? 2 : 1;
     // if(iNESVersion != 1){
-    //     return UNSUPPORTED_INES_VERSION;
+    //     return { UNSUPPORTED_INES_VERSION, "The requested iNES version (" + std::to_string(iNESVersion) + ") is currently not supported."};
     // }
 
     // TODO: Parse alternative nametable layout
@@ -114,7 +110,7 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath) {
     prgRom.resize(header.prgRomChunks * PRG_ROM_CHUNK_SIZE);
     file.read((char*)prgRom.data(), prgRom.size() * sizeof(uint8_t));
     if (!file) {
-        return MISSING_PRG;
+        return { MISSING_PRG, "Program data missing or incomplete." };
     }
 
     // For iNES 1.0 we assume that a value of 0 for char rom chunks means we have 1 chunk of CHR RAM.
@@ -130,25 +126,10 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath) {
     }
 
     if (!file) {
-        return MISSING_CHR;
+        return { MISSING_CHR, "Character data missing or incomplete." };
     }
 
-    return SUCCESS;
-}
-
-const std::string Cartridge::getMessage(Status status) {
-    switch (status) {
-    case INCORRECT_EXTENSION:       return "Requested file has an incorrect extension (.nes is required)";
-    case MISSING_FILE:              return "No file was requested, or requested file does not exist";
-    case MISSING_HEADER:            return "File does not contain an iNES header.";
-    case INCORRECT_HEADER_NAME:     return "File header contains incorrect name.";
-    case MISSING_TRAINER:           return "Trainer data should be present, but was not found or incomplete.";
-    case UNIMPLEMENTED_MAPPER:      return "The requested mapper is currently not supported.";
-    case UNSUPPORTED_INES_VERSION:  return "The requested iNES version is currently not supported.";
-    case MISSING_PRG:               return "Program data not found.";
-    case MISSING_CHR:               return "Character data not found.";
-    case SUCCESS: default:          return "";
-    }
+    return { SUCCESS, "" };
 }
 
 Cartridge::MirrorMode Cartridge::getMirrorMode() const {

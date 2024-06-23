@@ -30,7 +30,7 @@ public:
 
     MirrorMode getMirrorMode() const;
 
-    enum Status {
+    enum Code {
         SUCCESS,
         INCORRECT_EXTENSION,
         MISSING_FILE,
@@ -43,9 +43,12 @@ public:
         MISSING_CHR
     };
 
-    Status getStatus() const;
+    struct Status{
+        Code code;
+        std::string message;
+    };
 
-    static const std::string getMessage(Status status);
+    Status getStatus() const;
 
 private:
     Status status;
