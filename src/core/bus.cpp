@@ -13,6 +13,7 @@ void Bus::initDevices() {
 
     controllers = {};
     controllerData = {};
+    strobe = 0;
 
     cpu->initCPU();
     ppu->initPPU();
@@ -73,7 +74,9 @@ uint8_t Bus::read(uint16_t address) {
     else if (IO_ADDRESSABLE_RANGE.contains(address)) {
         if (address == CONTROLLER_1_DATA || address == CONTROLLER_2_DATA) {
             uint8_t data = controllerData[address & 1] & 1;
-            controllerData[address & 1] >>= 1;
+            if (!strobe) {
+                controllerData[address & 1] >>= 1;
+            }
             return data;
         }
         else {
@@ -95,10 +98,12 @@ void Bus::write(uint16_t address, uint8_t value) {
         ppu->write(address & 0x7, value); // TODO: what happens when write fails?
     }
     else if (IO_ADDRESSABLE_RANGE.contains(address)) {
-        // TODO: Implement strobe
         if (address == CONTROLLER_1_DATA) {
-            controllerData[0] = controllers[0].getButtons();
-            controllerData[1] = controllers[1].getButtons();
+            strobe = value & 1;
+            if (strobe) {
+                controllerData[0] = controllers[0].getButtons();
+                controllerData[1] = controllers[1].getButtons();
+            }
         }
         else if (address == OAM_DMA_ADDR) {
             dmaTransferRequested = true;

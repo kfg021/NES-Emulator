@@ -22,6 +22,7 @@ public:
 
 private:
     uint8_t buttons;
+    void removeOppositeInputs(uint8_t& originalButtons, Button a, Button b) const;
 };
 
 #endif // CONTROLLER_HPP
