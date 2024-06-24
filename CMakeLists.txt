@@ -67,3 +67,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     WIN32_EXECUTABLE ON
     OUTPUT_NAME ${PROJECT_NAME}
 )
+
+# Uncomment the line below to compile a version that displays a side panel showing cpu status and pattern tables. May hurt performance.
+# target_compile_definitions(${PROJECT_NAME} PRIVATE SHOW_DEBUG_WINDOW)
