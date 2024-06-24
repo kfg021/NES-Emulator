@@ -1,4 +1,4 @@
-#include "mapper0.hpp"
+#include "core/mapper/mapper0.hpp"
 
 Mapper0::Mapper0(uint8_t prgRomChunks, uint8_t chrRomChunks)
     : Mapper(prgRomChunks, chrRomChunks) {

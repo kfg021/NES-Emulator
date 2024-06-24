@@ -1,8 +1,8 @@
 #ifndef DEBUGWINDOW_HPP
 #define DEBUGWINDOW_HPP
 
-#include "../core/cpu.hpp"
-#include "../core/cartridge.hpp"
+#include "core/cpu.hpp"
+#include "core/cartridge.hpp"
 
 #include <QWidget>
 #include <QKeyEvent>
@@ -16,6 +16,7 @@ class DebugWindow : public QWidget {
 
 public:
     DebugWindow(QWidget* parent, const std::shared_ptr<Bus>& bus);
+
     void reset();
 
     uint8_t backgroundPallete;

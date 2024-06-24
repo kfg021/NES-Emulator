@@ -1,7 +1,7 @@
 #ifndef GAMEWINDOW_HPP
 #define GAMEWINDOW_HPP
 
-#include "../core/bus.hpp"
+#include "core/bus.hpp"
 
 #include <memory>
 

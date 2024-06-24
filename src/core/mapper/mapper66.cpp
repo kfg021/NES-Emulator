@@ -1,6 +1,6 @@
-#include "mapper66.hpp"
+#include "core/mapper/mapper66.hpp"
 
-#include "../cartridge.hpp"
+#include "core/cartridge.hpp"
 
 Mapper66::Mapper66(uint8_t prgRomChunks, uint8_t chrRomChunks) :
     Mapper(prgRomChunks, chrRomChunks) {

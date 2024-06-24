@@ -1,8 +1,6 @@
-#include "mapper3.hpp"
+#include "core/mapper/mapper3.hpp"
 
-#include "mapper2.hpp"
-
-#include "../cartridge.hpp"
+#include "core/cartridge.hpp"
 
 Mapper3::Mapper3(uint8_t prgRomChunks, uint8_t chrRomChunks) :
     Mapper(prgRomChunks, chrRomChunks) {

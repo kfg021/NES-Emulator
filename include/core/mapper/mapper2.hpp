@@ -1,9 +1,9 @@
 #ifndef MAPPER2_HPP
 #define MAPPER2_HPP
 
-#include "mapper.hpp"
+#include "core/mapper/mapper.hpp"
 
-#include "../../util/util.hpp"
+#include "util/util.hpp"
 
 class Mapper2 : public Mapper {
 public:

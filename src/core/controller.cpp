@@ -1,4 +1,4 @@
-#include "controller.hpp"
+#include "core/controller.hpp"
 
 Controller::Controller() {
     buttons = 0;

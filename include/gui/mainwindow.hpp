@@ -1,10 +1,10 @@
 #ifndef MAINWINDOW_HPP
 #define MAINWINDOW_HPP
 
-#include "../core/cpu.hpp"
+#include "core/cpu.hpp"
 
-#include "gamewindow.hpp"
-#include "debugwindow.hpp"
+#include "gui/gamewindow.hpp"
+#include "gui/debugwindow.hpp"
 
 #include <string>
 #include <memory>

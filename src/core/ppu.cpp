@@ -1,4 +1,4 @@
-#include "ppu.hpp"
+#include "core/ppu.hpp"
 
 const std::array<uint32_t, PPU::NUM_SCREEN_COLORS> PPU::SCREEN_COLORS = initScreenColors();
 

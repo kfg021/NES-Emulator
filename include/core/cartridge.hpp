@@ -1,7 +1,7 @@
 #ifndef CARTRIDGE_HPP
 #define CARTRIDGE_HPP
 
-#include "mapper/mapper.hpp"
+#include "core/mapper/mapper.hpp"
 
 #include <stdint.h>
 #include <array>

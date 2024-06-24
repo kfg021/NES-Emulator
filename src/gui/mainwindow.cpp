@@ -1,7 +1,7 @@
-#include "mainwindow.hpp"
+#include "gui/mainwindow.hpp"
 
-#include "../core/controller.hpp"
-#include "../core/cpu.hpp"
+#include "core/controller.hpp"
+#include "core/cpu.hpp"
 
 #include <QHBoxLayout>
 #include <QKeyEvent>

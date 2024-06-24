@@ -1,6 +1,6 @@
-#include "debugwindow.hpp"
+#include "gui/debugwindow.hpp"
 
-#include "../util/util.hpp"
+#include "util/util.hpp"
 
 #include <QPainter>
 #include <QTimer>

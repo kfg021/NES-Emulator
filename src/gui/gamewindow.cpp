@@ -1,6 +1,6 @@
-#include "gamewindow.hpp"
+#include "gui/gamewindow.hpp"
 
-#include "mainwindow.hpp"
+#include "gui/mainwindow.hpp"
 
 #include <QPainter>
 

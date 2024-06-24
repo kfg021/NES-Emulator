@@ -1,11 +1,11 @@
 #ifndef MEMORY_HPP
 #define MEMORY_HPP
 
-#include "cartridge.hpp"
-#include "controller.hpp"
-#include "cpu.hpp"
-#include "ppu.hpp"
-#include "../util/util.hpp"
+#include "core/cartridge.hpp"
+#include "core/controller.hpp"
+#include "core/cpu.hpp"
+#include "core/ppu.hpp"
+#include "util/util.hpp"
 
 #include <stdint.h>
 #include <array>

@@ -1,6 +1,6 @@
-#include "cpu.hpp"
+#include "core/cpu.hpp"
 
-#include "../util/util.hpp"
+#include "util/util.hpp"
 
 #include <fstream>
 #include <iostream>

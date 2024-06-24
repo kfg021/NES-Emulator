@@ -1,9 +1,9 @@
-#include "mapper.hpp"
+#include "core/mapper/mapper.hpp"
 
-#include "mapper0.hpp"
-#include "mapper2.hpp"
-#include "mapper3.hpp"
-#include "mapper66.hpp"
+#include "core/mapper/mapper0.hpp"
+#include "core/mapper/mapper2.hpp"
+#include "core/mapper/mapper3.hpp"
+#include "core/mapper/mapper66.hpp"
 
 Mapper::Mapper(uint8_t prgRomChunks, uint8_t chrRomChunks) :
     prgRomChunks(prgRomChunks),

@@ -1,4 +1,4 @@
-#include "bus.hpp"
+#include "core/bus.hpp"
 
 Bus::Bus() {
     cpu = std::make_unique<CPU>();

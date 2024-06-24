@@ -1,4 +1,4 @@
-#include "cartridge.hpp"
+#include "core/cartridge.hpp"
 
 #include <fstream>
 #include <filesystem>

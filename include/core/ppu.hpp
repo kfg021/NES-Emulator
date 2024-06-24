@@ -1,9 +1,9 @@
 #ifndef PPU_HPP
 #define PPU_HPP
 
-#include "bus.hpp"
-#include "cartridge.hpp"
-#include "../util/util.hpp"
+#include "core/bus.hpp"
+#include "core/cartridge.hpp"
+#include "util/util.hpp"
 
 #include <memory>
 #include <optional>

@@ -1,7 +1,7 @@
 #ifndef CPU_HPP
 #define CPU_HPP
 
-#include "bus.hpp"
+#include "core/bus.hpp"
 
 #include <stdint.h>
 #include <string>

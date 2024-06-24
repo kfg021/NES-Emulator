@@ -1,13 +1,13 @@
-#ifndef MAPPER66_HPP
-#define MAPPER66_HPP
+#ifndef MAPPER3_HPP
+#define MAPPER3_HPP
 
-#include "mapper.hpp"
+#include "core/mapper/mapper.hpp"
 
-#include "../../util/util.hpp"
+#include "util/util.hpp"
 
-class Mapper66 : public Mapper {
+class Mapper3 : public Mapper {
 public:
-    Mapper66(uint8_t prgRomChunks, uint8_t chrRomChunks);
+    Mapper3(uint8_t prgRomChunks, uint8_t chrRomChunks);
 
     std::optional<uint32_t> mapToPRGView(uint16_t cpuAddress) const override;
     std::optional<uint32_t> mapToPRGRead(uint16_t cpuAddress) override;
@@ -21,8 +21,7 @@ private:
     static constexpr MemoryRange PRG_RANGE{ 0x8000, 0xFFFF };
     static constexpr MemoryRange CHR_RANGE{ 0x0000, 0x1FFF };
     static constexpr MemoryRange BANK_SELECT_RANGE{ 0x8000, 0xFFFF };
-    uint8_t currentPRGBank;
-    uint8_t currentCHRBank;
+    uint8_t currentBank;
 };
 
-#endif // MAPPER66_HPP
+#endif // MAPPER3_HPP
