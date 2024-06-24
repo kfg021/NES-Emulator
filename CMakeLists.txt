@@ -2,16 +2,16 @@
 # cmake -DCMAKE_BUILD_TYPE=Release ..
 # make
 
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.21.1)
 
 set(PROJECT_NAME NES_Emulator)
 
-project(${PROJECT_NAME})
+project(${PROJECT_NAME} VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
 qt_standard_project_setup()
 
 include_directories(include)
@@ -51,12 +51,12 @@ set(SOURCES
     src/main.cpp
 )
 
-add_executable(${PROJECT_NAME} 
+qt_add_executable(${PROJECT_NAME} 
     ${HEADERS} 
     ${SOURCES}
 )
 
-target_link_libraries(${PROJECT_NAME} 
+target_link_libraries(${PROJECT_NAME} PRIVATE 
     Qt6::Core 
     Qt6::Gui 
     Qt6::Widgets
