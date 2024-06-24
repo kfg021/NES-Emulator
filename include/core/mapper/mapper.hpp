@@ -1,7 +1,7 @@
 #ifndef MAPPER_HPP
 #define MAPPER_HPP
 
-#include <stdint.h>
+#include <cstdint>
 #include <memory>
 #include <optional>
 

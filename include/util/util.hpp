@@ -1,7 +1,7 @@
 #ifndef UTIL_HPP
 #define UTIL_HPP
 
-#include <stdint.h>
+#include <cstdint>
 #include <string>
 
 struct MemoryRange {

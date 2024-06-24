@@ -3,7 +3,7 @@
 
 #include "core/mapper/mapper.hpp"
 
-#include <stdint.h>
+#include <cstdint>
 #include <array>
 #include <vector>
 #include <string>

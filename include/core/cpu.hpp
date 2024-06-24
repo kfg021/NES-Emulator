@@ -3,7 +3,7 @@
 
 #include "core/bus.hpp"
 
-#include <stdint.h>
+#include <cstdint>
 #include <string>
 #include <memory>
 #include <variant>
