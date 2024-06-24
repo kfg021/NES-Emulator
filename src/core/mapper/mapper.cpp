@@ -5,9 +5,8 @@
 #include "core/mapper/mapper3.hpp"
 #include "core/mapper/mapper66.hpp"
 
-Mapper::Mapper(uint8_t prgRomChunks, uint8_t chrRomChunks) :
-    prgRomChunks(prgRomChunks),
-    chrRomChunks(chrRomChunks) {
+Mapper::Mapper(uint8_t prgRomChunks, uint8_t chrRomChunks)
+    : prgRomChunks(prgRomChunks), chrRomChunks(chrRomChunks) {
 }
 
 std::unique_ptr<Mapper> Mapper::createMapper(uint8_t id, uint8_t prgRomChunks, uint8_t chrRomChunks) {

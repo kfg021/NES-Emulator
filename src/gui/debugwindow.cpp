@@ -2,17 +2,17 @@
 
 #include "util/util.hpp"
 
-#include <QPainter>
-#include <QTimer>
+#include <QColor>
 #include <QFont>
 #include <QFontDatabase>
+#include <QPainter>
 #include <QString>
-#include <QColor>
+#include <QTimer>
 
-DebugWindow::DebugWindow(QWidget* parent, const std::shared_ptr<Bus>& bus) :
-    QWidget(parent),
-    bus(bus) {
 
+DebugWindow::DebugWindow(QWidget* parent, const std::shared_ptr<Bus>& bus)
+    : QWidget(parent), bus(bus) {
+    
     backgroundPallete = 0;
     spritePallete = 0;
 }

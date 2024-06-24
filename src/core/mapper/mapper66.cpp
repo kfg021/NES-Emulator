@@ -2,8 +2,9 @@
 
 #include "core/cartridge.hpp"
 
-Mapper66::Mapper66(uint8_t prgRomChunks, uint8_t chrRomChunks) :
-    Mapper(prgRomChunks, chrRomChunks) {
+Mapper66::Mapper66(uint8_t prgRomChunks, uint8_t chrRomChunks)
+    : Mapper(prgRomChunks, chrRomChunks) {
+    
     currentPRGBank = 0;
     currentCHRBank = 0;
 }

@@ -5,8 +5,8 @@
 
 #include <memory>
 
-#include <QWidget>
 #include <QPaintEvent>
+#include <QWidget>
 
 class GameWindow : public QWidget {
     Q_OBJECT

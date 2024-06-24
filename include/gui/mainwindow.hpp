@@ -6,8 +6,8 @@
 #include "gui/gamewindow.hpp"
 #include "gui/debugwindow.hpp"
 
-#include <string>
 #include <memory>
+#include <string>
 
 #include <QMainWindow>
 #include <QWidget>

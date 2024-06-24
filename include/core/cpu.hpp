@@ -4,8 +4,8 @@
 #include "core/bus.hpp"
 
 #include <cstdint>
-#include <string>
 #include <memory>
+#include <string>
 #include <variant>
 
 class Bus;

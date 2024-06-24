@@ -7,8 +7,8 @@
 #include "core/ppu.hpp"
 #include "util/util.hpp"
 
-#include <cstdint>
 #include <array>
+#include <cstdint>
 #include <memory>
 
 class CPU;

@@ -3,12 +3,12 @@
 
 #include "core/mapper/mapper.hpp"
 
-#include <cstdint>
 #include <array>
-#include <vector>
-#include <string>
+#include <cstdint>
 #include <memory>
 #include <optional>
+#include <string>
+#include <vector>
 
 class Cartridge {
 public:

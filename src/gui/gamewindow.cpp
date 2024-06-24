@@ -4,7 +4,8 @@
 
 #include <QPainter>
 
-GameWindow::GameWindow(QWidget* parent, const std::shared_ptr<Bus>& bus) : QWidget(parent), bus(bus) {
+GameWindow::GameWindow(QWidget* parent, const std::shared_ptr<Bus>& bus)
+    : QWidget(parent), bus(bus) {
 }
 
 void GameWindow::paintEvent(QPaintEvent* /*event*/) {

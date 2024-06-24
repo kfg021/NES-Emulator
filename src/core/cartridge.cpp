@@ -1,7 +1,7 @@
 #include "core/cartridge.hpp"
 
-#include <fstream>
 #include <filesystem>
+#include <fstream>
 
 Cartridge::Cartridge() {
     status = { Code::MISSING_FILE, "No file was requested." };

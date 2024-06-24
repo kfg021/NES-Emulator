@@ -4,12 +4,12 @@
 #include "core/cpu.hpp"
 #include "core/cartridge.hpp"
 
-#include <QWidget>
+#include <memory>
+
 #include <QKeyEvent>
 #include <QPaintEvent>
 #include <QTimer>
-
-#include <memory>
+#include <QWidget>
 
 class DebugWindow : public QWidget {
     Q_OBJECT

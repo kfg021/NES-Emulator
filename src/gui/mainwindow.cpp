@@ -6,9 +6,11 @@
 #include <QHBoxLayout>
 #include <QKeyEvent>
 
-MainWindow::MainWindow(QWidget* parent, const std::string& filePath) : QMainWindow(parent) {
+MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
+    : QMainWindow(parent) {
+    
     bus = std::make_shared<Bus>();
-
+    
     Cartridge::Status status = bus->loadROM(filePath);
     if (status.code != Cartridge::Code::SUCCESS) {
         qFatal("%s", status.message.c_str());
