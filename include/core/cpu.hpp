@@ -31,7 +31,7 @@ public:
         DECIMAL, // Unimplemented - not used on the NES
         BREAK,
         UNUSED,
-        OVERFLOW,
+        OVERFLOW_, // Underscore to avoid naming conflict with a Windows library
         NEGATIVE
     };
     struct AddressingMode {

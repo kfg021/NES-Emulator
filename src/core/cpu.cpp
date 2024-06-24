@@ -655,7 +655,7 @@ void CPU::ADC(const AddressingMode::ReturnType& operand) {
     setFlag(Flag::CARRY, fullSum > 0xFF);
 
     // Set the overflow flag only when the two addends have the same sign, and result has a different sign
-    setFlag(Flag::OVERFLOW, ~(a ^ data) & (a ^ static_cast<uint8_t>(fullSum)) & 0x80);
+    setFlag(Flag::OVERFLOW_, ~(a ^ data) & (a ^ static_cast<uint8_t>(fullSum)) & 0x80);
 
     setNZFlags(static_cast<uint8_t>(fullSum));
 
@@ -764,7 +764,7 @@ void CPU::BIT(const AddressingMode::ReturnType& operand) {
 
     setFlag(Flag::ZERO, (a & data) == 0);
     setFlag(Flag::NEGATIVE, (data >> 7) & 1);
-    setFlag(Flag::OVERFLOW, (data >> 6) & 1);
+    setFlag(Flag::OVERFLOW_, (data >> 6) & 1);
 }
 
 // BMI
@@ -851,7 +851,7 @@ void CPU::BRK(const AddressingMode::ReturnType& /*operand*/) {
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	-
 void CPU::BVC(const AddressingMode::ReturnType& operand) {
-    if (!getFlag(Flag::OVERFLOW)) {
+    if (!getFlag(Flag::OVERFLOW_)) {
         pc = getAddress(operand);
         shouldAdvancePC = false;
         remainingCycles++;
@@ -868,7 +868,7 @@ void CPU::BVC(const AddressingMode::ReturnType& operand) {
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	-
 void CPU::BVS(const AddressingMode::ReturnType& operand) {
-    if (getFlag(Flag::OVERFLOW)) {
+    if (getFlag(Flag::OVERFLOW_)) {
         pc = getAddress(operand);
         shouldAdvancePC = false;
         remainingCycles++;
@@ -912,7 +912,7 @@ void CPU::CLI(const AddressingMode::ReturnType& /*operand*/) {
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	0
 void CPU::CLV(const AddressingMode::ReturnType& /*operand*/) {
-    setFlag(Flag::OVERFLOW, 0);
+    setFlag(Flag::OVERFLOW_, 0);
 }
 
 // Compare Memory with Accumulator
@@ -1264,7 +1264,7 @@ void CPU::SBC(const AddressingMode::ReturnType& operand) {
     setFlag(Flag::CARRY, fullSum > 0xFF);
 
     // Set the overflow flag only when the two addends have the same sign, and result has a different sign
-    setFlag(Flag::OVERFLOW, ~(a ^ data) & (a ^ static_cast<uint8_t>(fullSum)) & 0x80);
+    setFlag(Flag::OVERFLOW_, ~(a ^ data) & (a ^ static_cast<uint8_t>(fullSum)) & 0x80);
 
     setNZFlags(static_cast<uint8_t>(fullSum));
 
