@@ -89,12 +89,12 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath) {
         }
     }
 
-    mirrorMode = static_cast<MirrorMode>(header.flag6 & 1);
+    bool mirrorModeId = header.flag6 & 1;
 
     uint8_t mapperIdLo = (header.flag6 >> 4) & 0xF;
     uint8_t mapperIdHi = (header.flag7 >> 4) & 0xF;
     uint8_t mapperId = (mapperIdHi << 4) | mapperIdLo;
-    mapper = Mapper::createMapper(mapperId, header.prgRomChunks, header.chrRomChunks);
+    mapper = Mapper::createMapper(mapperId, header.prgRomChunks, header.chrRomChunks, mirrorModeId);
     if (mapper == nullptr) {
         return { Code::UNIMPLEMENTED_MAPPER, "The requested mapper (" + std::to_string(mapperId) + ") is currently not supported." };
     }
@@ -132,8 +132,8 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath) {
     return { Code::SUCCESS, "" };
 }
 
-Cartridge::MirrorMode Cartridge::getMirrorMode() const {
-    return mirrorMode;
+Mapper::MirrorMode Cartridge::getMirrorMode() const {
+    return mapper->getMirrorMode();
 }
 
 std::optional<uint8_t> Cartridge::viewPRG(uint16_t preMappedAddr) const {

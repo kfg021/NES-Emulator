@@ -7,7 +7,7 @@
 
 class Mapper0 : public Mapper {
 public:
-    Mapper0(uint8_t prgRomChunks, uint8_t chrRomChunks);
+    Mapper0(uint8_t prgRomChunks, uint8_t chrRomChunks, MirrorMode mirrorMode);
 
     std::optional<uint32_t> mapToPRGView(uint16_t cpuAddress) const override;
     std::optional<uint32_t> mapToPRGRead(uint16_t cpuAddress) override;

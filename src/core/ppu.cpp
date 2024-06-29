@@ -193,7 +193,7 @@ uint16_t PPU::getNameTableIndex(uint16_t address) const {
     static constexpr MemoryRange NAMETABLE_QUAD_3{ 0x800, 0xBFF };
     // static constexpr MemoryRange NAMETABLE_QUAD_4{0xC00, 0xFFF};
 
-    if (cartridge->getMirrorMode() == Cartridge::MirrorMode::HORIZONTAL) {
+    if (cartridge->getMirrorMode() == Mapper::MirrorMode::HORIZONTAL) {
         if (NAMETABLE_QUAD_1.contains(address)) {
             return address;
         }
@@ -207,7 +207,7 @@ uint16_t PPU::getNameTableIndex(uint16_t address) const {
             return address - 0x800;
         }
     }
-    else if (cartridge->getMirrorMode() == Cartridge::MirrorMode::VERTICAL) {
+    else if (cartridge->getMirrorMode() == Mapper::MirrorMode::VERTICAL) {
         if (NAMETABLE_QUAD_1.contains(address) || NAMETABLE_QUAD_2.contains(address)) {
             return address;
         }

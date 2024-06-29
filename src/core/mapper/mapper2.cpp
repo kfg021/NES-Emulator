@@ -2,8 +2,8 @@
 
 #include "core/cartridge.hpp"
 
-Mapper2::Mapper2(uint8_t prgRomChunks, uint8_t chrRomChunks)
-    : Mapper(prgRomChunks, chrRomChunks) {
+Mapper2::Mapper2(uint8_t prgRomChunks, uint8_t chrRomChunks, MirrorMode mirrorMode)
+    : Mapper(prgRomChunks, chrRomChunks, mirrorMode) {
 
     currentBank = 0;
 }

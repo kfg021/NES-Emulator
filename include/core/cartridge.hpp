@@ -23,12 +23,7 @@ public:
     std::optional<uint8_t> readFromCHR(uint16_t preMappedAddr);
     void writeToCHR(uint16_t preMappedAddr, uint8_t data);
 
-    enum class MirrorMode {
-        HORIZONTAL,
-        VERTICAL
-    };
-
-    MirrorMode getMirrorMode() const;
+    Mapper::MirrorMode getMirrorMode() const;
 
     enum class Code {
         SUCCESS,
@@ -60,7 +55,6 @@ private:
     std::vector<uint8_t> prgRom;
     std::vector<uint8_t> chrRom;
     std::unique_ptr<Mapper> mapper;
-    MirrorMode mirrorMode;
 };
 
 #endif // CARTRIDGE_HPP

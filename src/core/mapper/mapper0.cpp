@@ -1,7 +1,7 @@
 #include "core/mapper/mapper0.hpp"
 
-Mapper0::Mapper0(uint8_t prgRomChunks, uint8_t chrRomChunks)
-    : Mapper(prgRomChunks, chrRomChunks) {
+Mapper0::Mapper0(uint8_t prgRomChunks, uint8_t chrRomChunks, MirrorMode mirrorMode)
+    : Mapper(prgRomChunks, chrRomChunks, mirrorMode) {
 }
 
 std::optional<uint32_t> Mapper0::mapToPRGView(uint16_t cpuAddress) const {
