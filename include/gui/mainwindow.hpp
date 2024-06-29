@@ -44,7 +44,7 @@ private:
     static constexpr int IPS = 5369318;
 
     void executeCycle();
-    
+
 #ifdef SHOW_DEBUG_WINDOW
     void executeInstruction();
     void toggleDebugMode();

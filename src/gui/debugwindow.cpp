@@ -12,7 +12,7 @@
 
 DebugWindow::DebugWindow(QWidget* parent, const std::shared_ptr<Bus>& bus)
     : QWidget(parent), bus(bus) {
-    
+
     backgroundPallete = 0;
     spritePallete = 0;
 }

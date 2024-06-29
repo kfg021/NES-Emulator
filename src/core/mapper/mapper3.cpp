@@ -4,7 +4,7 @@
 
 Mapper3::Mapper3(uint8_t prgRomChunks, uint8_t chrRomChunks)
     : Mapper(prgRomChunks, chrRomChunks) {
-    
+
     currentBank = 0;
 }
 

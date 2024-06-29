@@ -43,7 +43,7 @@ public:
         MISSING_CHR
     };
 
-    struct Status{
+    struct Status {
         Code code;
         std::string message;
     };
