@@ -288,7 +288,7 @@ PPU::PatternTable PPU::getPatternTable(bool isBackground, uint8_t palleteNumber)
                 for (int spriteCol = 0; spriteCol < PATTERN_TABLE_TILE_SIZE; spriteCol++) {
                     bool currentLoBit = (loBits >> spriteCol) & 1;
                     bool currentHiBit = (hiBits >> spriteCol) & 1;
-                    uint8_t palleteIndex = ((!isBackground) << 4) | (currentHiBit << 1) | currentLoBit;
+                    uint8_t palleteIndex = ((!isBackground) << 4) | (currentHiBit << 1) | static_cast<uint8_t>(currentLoBit);
 
                     uint16_t pixelRow = PATTERN_TABLE_TILE_SIZE * tileRow + spriteRow;
                     uint16_t pixelCol = PATTERN_TABLE_TILE_SIZE * tileCol + PATTERN_TABLE_TILE_SIZE - 1 - spriteCol;
@@ -441,11 +441,11 @@ void PPU::executeCycle() {
 
                 bool backgroundPatternTableLo = (currentPatternTableTileLo >> shift) & 1;
                 bool backgroundPatternTableHi = (currentPatternTableTileHi >> shift) & 1;
-                backgroundPatternTable = (backgroundPatternTableHi << 1) | backgroundPatternTableLo;
+                backgroundPatternTable = (backgroundPatternTableHi << 1) | static_cast<uint8_t>(backgroundPatternTableLo);
 
                 bool backgroundAttributeTableLo = (currentAttributeTableLo >> shift) & 1;
                 bool backgroundAttributeTableHi = (currentAttributeTableHi >> shift) & 1;
-                backgroundAttributeTable = (backgroundAttributeTableHi << 1) | backgroundAttributeTableLo;
+                backgroundAttributeTable = (backgroundAttributeTableHi << 1) | static_cast<uint8_t>(backgroundAttributeTableLo);
             }
         }
         uint16_t backgroundAddr = getPalleteRamAddress(backgroundPatternTable, backgroundAttributeTable);
@@ -507,7 +507,7 @@ void PPU::executeCycle() {
                     uint8_t shift = 7 - x;
                     bool spritePatternTableBitLo = (spritePatternTableLo >> shift) & 1;
                     bool spritePatternTableBitHi = (spritePatternTableHi >> shift) & 1;
-                    spritePatternTable = (spritePatternTableBitHi << 1) | spritePatternTableBitLo;
+                    spritePatternTable = (spritePatternTableBitHi << 1) | static_cast<uint8_t>(spritePatternTableBitLo);
 
                     spriteAttributeTable = 0x4 | (sprite.attributes & 0x3);
                     spritePriority = !((sprite.attributes >> 5) & 1);
@@ -688,7 +688,7 @@ PPU::Control::Control(uint8_t data) {
 
 uint8_t PPU::Control::toUInt8() const {
     uint8_t data =
-        nametableX |
+        static_cast<uint8_t>(nametableX) |
         (nametableY << 1) |
         (vramAddressIncrement << 2) |
         (spritePatternTable << 3) |
@@ -718,7 +718,7 @@ PPU::Mask::Mask(uint8_t value) {
 
 uint8_t PPU::Mask::toUInt8() const {
     uint8_t data =
-        greyscale |
+        static_cast<uint8_t>(greyscale) |
         (showBackgroundLeft << 1) |
         (showSpritesLeft << 2) |
         (showBackground << 3) |

@@ -1186,12 +1186,12 @@ void CPU::ROL(const AddressingMode::ReturnType& operand) {
         uint16_t addr = getAddress(operand);
         uint8_t data = getDataRead(operand);
 
-        shift = (data << 1) | getFlag(Flag::CARRY);
+        shift = (data << 1) | static_cast<uint8_t>(getFlag(Flag::CARRY));
         bus->write(addr, static_cast<uint8_t>(shift));
     }
     else {
         // If there is no address to write to, then we are in accumulator addressing mode
-        shift = (a << 1) | getFlag(Flag::CARRY);
+        shift = (a << 1) | static_cast<uint8_t>(getFlag(Flag::CARRY));
         a = static_cast<uint8_t>(shift);
     }
 
