@@ -1,5 +1,5 @@
-#ifndef MEMORY_HPP
-#define MEMORY_HPP
+#ifndef BUS_HPP
+#define BUS_HPP
 
 #include "core/cartridge.hpp"
 #include "core/controller.hpp"
@@ -64,4 +64,4 @@ private:
     void doDmaTransferCycle();
 };
 
-#endif // MEMORY_HPP
+#endif // BUS_HPP
