@@ -59,8 +59,7 @@ uint8_t Bus::view(uint16_t address) const {
 
     }
     else { // if(CARTRIDGE_ADDRESSABLE_RANGE.contains(address))
-        std::optional<uint8_t> data = cartridge->viewPRG(address);
-        return data.value_or(0);
+        return cartridge->viewPRG(address);
     }
 }
 
@@ -85,8 +84,7 @@ uint8_t Bus::read(uint16_t address) {
         }
     }
     else { // if(CARTRIDGE_ADDRESSABLE_RANGE.contains(address))
-        std::optional<uint8_t> data = cartridge->readFromPRG(address);
-        return data.value_or(0);
+        return cartridge->readFromPRG(address);
     }
 }
 

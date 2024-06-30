@@ -222,8 +222,7 @@ uint16_t PPU::getNameTableIndex(uint16_t address) const {
 
 uint8_t PPU::ppuView(uint16_t address) const {
     if (PATTERN_TABLE_RANGE.contains(address)) {
-        std::optional<uint8_t> data = cartridge->viewCHR(address);
-        return data.value_or(0);
+        return cartridge->viewCHR(address);
     }
     else if (NAMETABLE_RANGE.contains(address)) {
         return nameTable[getNameTableIndex(address)];
@@ -242,8 +241,7 @@ uint8_t PPU::ppuView(uint16_t address) const {
 
 uint8_t PPU::ppuRead(uint16_t address) {
     if (PATTERN_TABLE_RANGE.contains(address)) {
-        std::optional<uint8_t> data = cartridge->readFromCHR(address);
-        return data.value_or(0);
+        return cartridge->readFromCHR(address);
     }
     else if (NAMETABLE_RANGE.contains(address)) {
         return nameTable[getNameTableIndex(address)];

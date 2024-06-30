@@ -4,7 +4,7 @@ Mapper0::Mapper0(uint8_t prgRomChunks, uint8_t chrRomChunks, MirrorMode mirrorMo
     : Mapper(prgRomChunks, chrRomChunks, mirrorMode) {
 }
 
-std::optional<uint32_t> Mapper0::mapToPRGView(uint16_t cpuAddress) const {
+uint32_t Mapper0::mapToPRGView(uint16_t cpuAddress) const {
     if (PRG_RANGE.contains(cpuAddress)) {
         if (prgRomChunks == 1) {
             return cpuAddress & 0x3FFF;
@@ -12,44 +12,40 @@ std::optional<uint32_t> Mapper0::mapToPRGView(uint16_t cpuAddress) const {
         else if (prgRomChunks == 2) {
             return cpuAddress & 0x7FFF;
         }
-        else {
-            return std::nullopt;
-        }
     }
-    else {
-        return std::nullopt;
-    }
+    
+    return 0;
 }
 
-std::optional<uint32_t> Mapper0::mapToPRGRead(uint16_t cpuAddress) {
+uint32_t Mapper0::mapToPRGRead(uint16_t cpuAddress) {
     return mapToPRGView(cpuAddress);
 }
 
-std::optional<uint32_t> Mapper0::mapToPRGWrite(uint16_t /*cpuAddress*/, uint8_t /*value*/) {
+uint32_t Mapper0::mapToPRGWrite(uint16_t /*cpuAddress*/, uint8_t /*value*/) {
     // PRG in mapper 0 is read only
-    return std::nullopt;
+    return 0;
 }
 
 
-std::optional<uint32_t> Mapper0::mapToCHRView(uint16_t ppuAddress) const {
+uint32_t Mapper0::mapToCHRView(uint16_t ppuAddress) const {
     if (CHR_RANGE.contains(ppuAddress)) {
         return ppuAddress;
     }
     else {
-        return std::nullopt;
+        return 0;
     }
 }
 
-std::optional<uint32_t> Mapper0::mapToCHRRead(uint16_t ppuAddress) {
+uint32_t Mapper0::mapToCHRRead(uint16_t ppuAddress) {
     return mapToCHRView(ppuAddress);
 }
 
-std::optional<uint32_t> Mapper0::mapToCHRWrite(uint16_t ppuAddress, uint8_t /*value*/) {
+uint32_t Mapper0::mapToCHRWrite(uint16_t ppuAddress, uint8_t /*value*/) {
     if (CHR_RANGE.contains(ppuAddress) && chrRomChunks == 0) {
         // If chrRomChunks == 0, we assume we have CHR RAM
         return ppuAddress;
     }
     else {
-        return std::nullopt;
+        return 0;
     }
 }

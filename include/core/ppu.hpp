@@ -6,7 +6,6 @@
 #include "util/util.hpp"
 
 #include <memory>
-#include <optional>
 
 class Bus;
 

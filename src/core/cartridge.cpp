@@ -136,57 +136,26 @@ Mapper::MirrorMode Cartridge::getMirrorMode() const {
     return mapper->getMirrorMode();
 }
 
-std::optional<uint8_t> Cartridge::viewPRG(uint16_t preMappedAddr) const {
-    std::optional<uint32_t> mappedAddr = mapper->mapToPRGView(preMappedAddr);
-    if (mappedAddr.has_value()) {
-        return prgRom[mappedAddr.value()];
-    }
-    else {
-        return std::nullopt;
-    }
+uint8_t Cartridge::viewPRG(uint16_t preMappedAddr) const {
+    return prgRom[mapper->mapToPRGView(preMappedAddr)];
 }
 
-std::optional<uint8_t> Cartridge::readFromPRG(uint16_t preMappedAddr) {
-    std::optional<uint32_t> mappedAddr = mapper->mapToPRGRead(preMappedAddr);
-    if (mappedAddr.has_value()) {
-        return prgRom[mappedAddr.value()];
-    }
-    else {
-        return std::nullopt;
-    }
+uint8_t Cartridge::readFromPRG(uint16_t preMappedAddr) {
+    return prgRom[mapper->mapToPRGRead(preMappedAddr)];
 }
 void Cartridge::writeToPRG(uint16_t preMappedAddr, uint8_t data) {
-    std::optional<uint32_t> mappedAddr = mapper->mapToPRGWrite(preMappedAddr, data);
-    if (mappedAddr.has_value()) {
-        prgRom[mappedAddr.value()] = data;
-    }
+    prgRom[mapper->mapToPRGWrite(preMappedAddr, data)] = data;
 }
 
 
-std::optional<uint8_t> Cartridge::viewCHR(uint16_t preMappedAddr) const {
-    std::optional<uint32_t> mappedAddr = mapper->mapToCHRView(preMappedAddr);
-    if (mappedAddr.has_value()) {
-        return chrRom[mappedAddr.value()];
-    }
-    else {
-        return std::nullopt;
-    }
+uint8_t Cartridge::viewCHR(uint16_t preMappedAddr) const {
+    return chrRom[mapper->mapToCHRView(preMappedAddr)];
 }
-
-std::optional<uint8_t> Cartridge::readFromCHR(uint16_t preMappedAddr) {
-    std::optional<uint32_t> mappedAddr = mapper->mapToCHRRead(preMappedAddr);
-    if (mappedAddr.has_value()) {
-        return chrRom[mappedAddr.value()];
-    }
-    else {
-        return std::nullopt;
-    }
+uint8_t Cartridge::readFromCHR(uint16_t preMappedAddr) {
+    return chrRom[mapper->mapToCHRRead(preMappedAddr)];
 }
 void Cartridge::writeToCHR(uint16_t preMappedAddr, uint8_t data) {
-    std::optional<uint32_t> mappedAddr = mapper->mapToCHRWrite(preMappedAddr, data);
-    if (mappedAddr.has_value()) {
-        chrRom[mappedAddr.value()] = data;
-    }
+    chrRom[mapper->mapToCHRWrite(preMappedAddr, data)] = data;
 }
 
 Cartridge::Status Cartridge::getStatus() const {
