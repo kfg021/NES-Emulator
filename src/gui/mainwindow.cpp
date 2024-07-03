@@ -79,7 +79,15 @@ void MainWindow::toggleDebugMode() {
 #ifdef SHOW_DEBUG_WINDOW
 void MainWindow::stepIfInDebugMode() {
     if (debugMode) {
-        executeInstruction();
+        // Pressing space causes the processor to jump to the next non-repeating instruction.
+        // There is a maximum number of instructions to jump, preventing the emulator from crashing if there is an infinite loop in the code.
+        // static constexpr int MAX_LOOP = 1e6;
+        // uint16_t lastPC = bus->cpu->getPC();
+        // int i = 0;
+        // while(bus->cpu->getPC() == lastPC && i < MAX_LOOP){
+            executeInstruction();
+        //     i++;
+        // }
 
         gameWindow->update();
 
@@ -116,6 +124,10 @@ void MainWindow::executeCycle() {
 
 #ifdef SHOW_DEBUG_WINDOW
         QString currentInst = debugWindow->toString(bus->cpu->getPC());
+
+        // if(bus->cpu->getPC() == 0x8000){
+        //    exit(1);
+        // }
 #endif
 
         bus->executeCycle();

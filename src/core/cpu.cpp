@@ -3,7 +3,7 @@
 #include "util/util.hpp"
 
 #include <fstream>
-#include <iostream>
+#include <sstream>
 
 const std::array<CPU::Opcode, CPU::MAX_NUM_OPCODES> CPU::lookup = CPU::initLookup();
 
@@ -37,7 +37,7 @@ void CPU::executeCycle() {
         const Instruction& inst = currentOpcode.instruction;
         const AddressingMode& mode = currentOpcode.addressingMode;
         const AddressingMode::ReturnType& operand = (this->*mode.getOperand)();
-
+        
         (this->*inst.execute)(operand);
 
         if (shouldAdvancePC) {
@@ -1447,26 +1447,28 @@ const CPU::Opcode& CPU::getOpcode(uint16_t address) const {
     return lookup[index];
 }
 
-// Prints in a format that closely resembles the nestest.nes log found here: https://www.qmtpro.com/~nes/misc/nestest.log
-void CPU::printDebug() const {
+// Returns a string that closely resembles the nestest.nes log found here: https://www.qmtpro.com/~nes/misc/nestest.log
+std::string CPU::debugString() const {
     uint8_t index = bus->view(pc);
     const Opcode& currentOpcode = lookup[index];
     const AddressingMode& mode = currentOpcode.addressingMode;
 
-    std::cout << toHexString16(pc) << "  ";
+    // TODO: Probably just use string
+    std::ostringstream stream;
+    stream << toHexString16(pc) << "  ";
     for (int i = 0; i < 3; i++) {
         if (i < mode.instructionSize) {
-            std::cout << toHexString8(bus->view(pc + i)) << " ";
+            stream << toHexString8(bus->view(pc + i)) << " ";
         }
         else {
-            std::cout << "   ";
+            stream << "   ";
         }
     }
     std::string str = toString(pc);
     std::string gap(32 - static_cast<int>(str.length()), ' ');
-    std::cout << " " << str << gap;
+    stream << " " << str << gap;
 
-    std::cout
+    stream
         << "A:" << toHexString8(a) \
         << " X:" << toHexString8(x) \
         << " Y:" << toHexString8(y) \
@@ -1474,5 +1476,7 @@ void CPU::printDebug() const {
         << " SP:" << toHexString8(sp) \
         << " CYC:" << totalCycles - 1;
 
-    std::cout << std::endl;
+    // stream << std::endl;
+
+    return stream.str();
 }

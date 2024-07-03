@@ -52,7 +52,9 @@ void PPU::initPPU() {
     (*workingDisplay) = {};
     (*finishedDisplay) = {};
 
-    oamBuffer = {};
+    // Reset the OAM buffer to 0xFF so that sprites start off the screen
+    std::fill(oamBuffer.begin(), oamBuffer.end(), 0xFF);
+
     oamAddress = 0;
 
     currentScanlineSprites = {};
@@ -69,7 +71,7 @@ uint8_t PPU::view(uint8_t ppuRegister) const {
     else if (ppuRegister == static_cast<int>(Register::PPUDATA)) {
         uint8_t data = ppuBusData;
 
-        // pallete addresses get returned immediately
+        // Pallete addresses get returned immediately
         if (PALLETE_RAM_RANGE.contains(vramAddress.toUInt16() & 0x3FFF)) {
             data = ppuView(vramAddress.toUInt16() & 0x3FFF);
         }
@@ -114,7 +116,18 @@ uint8_t PPU::read(uint8_t ppuRegister) {
 
 void PPU::write(uint8_t ppuRegister, uint8_t value) {
     if (ppuRegister == static_cast<int>(Register::PPUCTRL)) {
+        bool oldNmiFlag = control.nmiEnabled;
+        
         control.setFromUInt8(value);
+        
+        bool newNmiFlag = control.nmiEnabled;
+        
+        // From (https://www.nesdev.org/wiki/PPU_registers#PPUCTRL): 
+        // If the PPU is currently in vertical blank, and the PPUSTATUS ($2002) vblank flag is still set (1), changing the NMI flag in bit 7 of $2000 from 0 to 1 will immediately generate an NMI. 
+        if(status.vBlankStarted && !oldNmiFlag && newNmiFlag){
+            bus->nmiRequest = true;
+        }
+
         temporaryVramAddress.nametableX = control.nametableX;
         temporaryVramAddress.nametableY = control.nametableY;
     }
@@ -210,13 +223,14 @@ uint16_t PPU::getNameTableIndex(uint16_t address) const {
         }
     }
     else {
+        // TODO: HANDLE OTHER MIRRORING MODES
         return 0;
     }
 }
 
 uint8_t PPU::ppuView(uint16_t address) const {
     if (PATTERN_TABLE_RANGE.contains(address)) {
-        return cartridge->viewCHR(address);
+        return cartridge->mapper->mapCHRView(address);
     }
     else if (NAMETABLE_RANGE.contains(address)) {
         return nameTable[getNameTableIndex(address)];
@@ -235,7 +249,7 @@ uint8_t PPU::ppuView(uint16_t address) const {
 
 uint8_t PPU::ppuRead(uint16_t address) {
     if (PATTERN_TABLE_RANGE.contains(address)) {
-        return cartridge->readFromCHR(address);
+        return cartridge->mapper->mapCHRRead(address);
     }
     else if (NAMETABLE_RANGE.contains(address)) {
         return nameTable[getNameTableIndex(address)];
@@ -254,7 +268,7 @@ uint8_t PPU::ppuRead(uint16_t address) {
 
 void PPU::ppuWrite(uint16_t address, uint8_t value) {
     if (PATTERN_TABLE_RANGE.contains(address)) {
-        cartridge->writeToCHR(address, value);
+        cartridge->mapper->mapCHRWrite(address, value);
     }
     else if (NAMETABLE_RANGE.contains(address)) {
         nameTable[getNameTableIndex(address)] = value;

@@ -76,8 +76,8 @@ public:
     uint8_t getRemainingCycles() const;
     int64_t getTotalCycles() const;
 
-    // Printing and debugging
-    void printDebug() const;
+    // Debugging
+    std::string debugString() const;
     std::string toString(uint16_t address) const;
     const Opcode& getOpcode(uint16_t address) const;
 
