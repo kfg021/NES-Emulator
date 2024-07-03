@@ -117,14 +117,14 @@ uint8_t PPU::read(uint8_t ppuRegister) {
 void PPU::write(uint8_t ppuRegister, uint8_t value) {
     if (ppuRegister == static_cast<int>(Register::PPUCTRL)) {
         bool oldNmiFlag = control.nmiEnabled;
-        
+
         control.setFromUInt8(value);
-        
+
         bool newNmiFlag = control.nmiEnabled;
-        
+
         // From (https://www.nesdev.org/wiki/PPU_registers#PPUCTRL): 
         // If the PPU is currently in vertical blank, and the PPUSTATUS ($2002) vblank flag is still set (1), changing the NMI flag in bit 7 of $2000 from 0 to 1 will immediately generate an NMI. 
-        if(status.vBlankStarted && !oldNmiFlag && newNmiFlag){
+        if (status.vBlankStarted && !oldNmiFlag && newNmiFlag) {
             bus->nmiRequest = true;
         }
 
@@ -198,33 +198,40 @@ uint16_t PPU::getNameTableIndex(uint16_t address) const {
     static constexpr MemoryRange NAMETABLE_QUAD_1{ 0x000, 0x3FF };
     static constexpr MemoryRange NAMETABLE_QUAD_2{ 0x400, 0x7FF };
     static constexpr MemoryRange NAMETABLE_QUAD_3{ 0x800, 0xBFF };
-    // static constexpr MemoryRange NAMETABLE_QUAD_4{0xC00, 0xFFF};
+    // static constexpr MemoryRange NAMETABLE_QUAD_4{ 0xC00, 0xFFF };
 
-    if (cartridge->getMirrorMode() == Mapper::MirrorMode::HORIZONTAL) {
-        if (NAMETABLE_QUAD_1.contains(address)) {
-            return address;
-        }
-        else if (NAMETABLE_QUAD_2.contains(address)) {
-            return address - 0x400;
-        }
-        else if (NAMETABLE_QUAD_3.contains(address)) {
-            return address - 0x400;
-        }
-        else { // if(NAMETABLE_QUAD_4.contains(address))
-            return address - 0x800;
-        }
-    }
-    else if (cartridge->getMirrorMode() == Mapper::MirrorMode::VERTICAL) {
+    // Bits 10 and 11 determine the nametable, and we can modify them to map any address onto a specific nametable.
+    // Setting {bit10, bit11} = {0, 0} maps to nametable A
+    // Setting {bit10, bit11} = {0, 1} maps to nametable B
+    auto mapToNameTableA = [](uint16_t address) {
+        return address & 0xF3FF;
+    };
+    auto mapToNameTableB = [](uint16_t address) {
+        return (address & 0xF3FF) | 0x0400;
+    };
+
+    Mapper::MirrorMode mirrorMode = cartridge->getMirrorMode();
+    if (mirrorMode == Mapper::MirrorMode::HORIZONTAL) {
         if (NAMETABLE_QUAD_1.contains(address) || NAMETABLE_QUAD_2.contains(address)) {
-            return address;
+            return mapToNameTableA(address);
         }
-        else { // if(NAMETABLE_QUAD_3.contains(address) || NAMETABLE_QUAD_4.contains(address))
-            return address - 0x800;
+        else { // if(NAMETABLE_QUAD_3.contains(address) || NAMETABLE_QUAD_4.contains(address)) {
+            return mapToNameTableB(address);
         }
     }
-    else {
-        // TODO: HANDLE OTHER MIRRORING MODES
-        return 0;
+    else if (mirrorMode == Mapper::MirrorMode::VERTICAL) {
+        if (NAMETABLE_QUAD_1.contains(address) || NAMETABLE_QUAD_3.contains(address)) {
+            return mapToNameTableA(address);
+        }
+        else { // if(NAMETABLE_QUAD_2.contains(address) || NAMETABLE_QUAD_4.contains(address)) {
+            return mapToNameTableB(address);
+        }
+    }
+    else if (mirrorMode == Mapper::MirrorMode::ONE_SCREEN_LOWER_BANK) {
+        return mapToNameTableA(address);
+    }
+    else { // if (mirrorMode == Mapper::MirrorMode::ONE_SCREEN_UPPER_BANK) {
+        return mapToNameTableB(address);
     }
 }
 
