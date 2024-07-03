@@ -3,7 +3,7 @@
 #include "util/util.hpp"
 
 Mapper1::Mapper1(uint8_t prgChunks, uint8_t chrChunks, MirrorMode mirrorMode, bool hasBatteryBackedPrgRam, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr) :
-    Mapper(prgChunks, chrChunks, mirrorMode, hasBatteryBackedPrgRam, prg, chr) {
+    Mapper(prgChunks, chrChunks, mirrorMode, true, prg, chr) { // Mapper 1 has prg ram by default
 
     shiftRegister = SHIFT_REGISTER_RESET;
 
