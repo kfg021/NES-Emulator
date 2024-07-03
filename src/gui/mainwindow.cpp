@@ -81,13 +81,13 @@ void MainWindow::stepIfInDebugMode() {
     if (debugMode) {
         // Pressing space causes the processor to jump to the next non-repeating instruction.
         // There is a maximum number of instructions to jump, preventing the emulator from crashing if there is an infinite loop in the code.
-        // static constexpr int MAX_LOOP = 1e6;
-        // uint16_t lastPC = bus->cpu->getPC();
-        // int i = 0;
-        // while(bus->cpu->getPC() == lastPC && i < MAX_LOOP){
+        static constexpr int MAX_LOOP = 1e6;
+        uint16_t lastPC = bus->cpu->getPC();
+        int i = 0;
+        while(bus->cpu->getPC() == lastPC && i < MAX_LOOP){
             executeInstruction();
-        //     i++;
-        // }
+            i++;
+        }
 
         gameWindow->update();
 
@@ -99,7 +99,7 @@ void MainWindow::stepIfInDebugMode() {
 void MainWindow::tick() {
     int64_t totalElapsed = elapsedTimer->nsecsElapsed();
 
-    // step
+    // Step
     int64_t neededSteps = ((totalElapsed * IPS) / (int64_t)1e9) - numSteps;
     for (int i = 0; i < neededSteps; i++) {
         numSteps++;
@@ -107,7 +107,7 @@ void MainWindow::tick() {
         executeCycle();
     }
 
-    // draw
+    // Draw
     int64_t neededFrames = ((totalElapsed * FPS) / (int64_t)1e9) - numFrames;
     for (int i = 0; i < neededFrames; i++) {
         numFrames++;
@@ -124,10 +124,6 @@ void MainWindow::executeCycle() {
 
 #ifdef SHOW_DEBUG_WINDOW
         QString currentInst = debugWindow->toString(bus->cpu->getPC());
-
-        // if(bus->cpu->getPC() == 0x8000){
-        //    exit(1);
-        // }
 #endif
 
         bus->executeCycle();
@@ -159,7 +155,7 @@ void MainWindow::executeInstruction() {
 #endif
 
 void MainWindow::reset() {
-    // TODO: Technically this is not a reset. It is more like a "power on"
+    // TODO: This is technically this is not a reset. It is more like a "power on"
     bus->initDevices();
     gameWindow->update();
 
@@ -168,7 +164,7 @@ void MainWindow::reset() {
 #endif
 }
 
-// TODO: Only one controller for now
+// TODO: Key inputs for second controller
 void MainWindow::keyPressEvent(QKeyEvent* event) {
     // Game keys
     if (event->key() == Qt::Key_Up) {

@@ -215,7 +215,7 @@ uint16_t PPU::getNameTableIndex(uint16_t address) const {
         if (NAMETABLE_QUAD_1.contains(address) || NAMETABLE_QUAD_2.contains(address)) {
             return mapToNameTableA(address);
         }
-        else { // if(NAMETABLE_QUAD_3.contains(address) || NAMETABLE_QUAD_4.contains(address)) {
+        else { // if (NAMETABLE_QUAD_3.contains(address) || NAMETABLE_QUAD_4.contains(address)) {
             return mapToNameTableB(address);
         }
     }
@@ -223,7 +223,7 @@ uint16_t PPU::getNameTableIndex(uint16_t address) const {
         if (NAMETABLE_QUAD_1.contains(address) || NAMETABLE_QUAD_3.contains(address)) {
             return mapToNameTableA(address);
         }
-        else { // if(NAMETABLE_QUAD_2.contains(address) || NAMETABLE_QUAD_4.contains(address)) {
+        else { // if (NAMETABLE_QUAD_2.contains(address) || NAMETABLE_QUAD_4.contains(address)) {
             return mapToNameTableB(address);
         }
     }
@@ -345,7 +345,7 @@ void PPU::executeCycle() {
             }
         }
 
-        if ((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 336)) { // if((cycle >= 1 && cycle <= 257) || (cycle >= 321 && cycle <= 336)){
+        if ((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 336)) { // if ((cycle >= 1 && cycle <= 257) || (cycle >= 321 && cycle <= 336)){
             if (mask.showBackground) {
                 currentPatternTableTileLo <<= 1;
                 currentPatternTableTileHi <<= 1;
@@ -551,10 +551,11 @@ void PPU::executeCycle() {
         if (bothTransparent || onlySpriteTransparent || (bothVisible && spritePriority == 0)) {
             finalColor = backgroundColor;
         }
-        else { // if(onlyBackgroundTransparent || (bothVisible && spritePriority == 1))
+        else { // if (onlyBackgroundTransparent || (bothVisible && spritePriority == 1))
             finalColor = spriteColor;
         }
 
+        // TODO: use the PPU's emphasis bits to modify the final color
         (*workingDisplay)[scanline][cycle - 1] = finalColor;
 
         if (sprite0Rendered && bothVisible && mask.showBackground && mask.showSprites && (cycle - 1) != 0xFF) {
@@ -565,13 +566,7 @@ void PPU::executeCycle() {
         }
     }
 
-    // Skip a cycle for odd frame
-    // TODO: This might not be working as intended
-    if (mask.showBackground || mask.showSprites) {
-        if (scanline == -1 && cycle == 339 && !(frame & 1)) {
-            cycle++;
-        }
-    }
+    // TODO: Need to skip the first cycle of scanline -1 for odd frames
 
     // Advance the cycle/scanline
     cycle++;
@@ -583,8 +578,6 @@ void PPU::executeCycle() {
         }
         else if (scanline == 0) {
             frame++;
-
-            OAMEntry entry(oamBuffer, 0);
         }
     }
 }

@@ -58,7 +58,7 @@ uint8_t Bus::view(uint16_t address) const {
         }
 
     }
-    else { // if(CARTRIDGE_ADDRESSABLE_RANGE.contains(address))
+    else { // if (CARTRIDGE_ADDRESSABLE_RANGE.contains(address))
         return cartridge->mapper->mapPRGView(address);
     }
 }
@@ -83,7 +83,7 @@ uint8_t Bus::read(uint16_t address) {
             return 0;
         }
     }
-    else { // if(CARTRIDGE_ADDRESSABLE_RANGE.contains(address))
+    else { // if (CARTRIDGE_ADDRESSABLE_RANGE.contains(address))
         return cartridge->mapper->mapPRGRead(address);
     }
 }
@@ -105,15 +105,14 @@ void Bus::write(uint16_t address, uint8_t value) {
         }
         else if (address == OAM_DMA_ADDR) {
             dmaTransferRequested = true;
-            dmaDummyCycleNeeded = true;
             dmaPage = value;
         }
         else {
             // TODO: Implement APU
         }
     }
-    else { // if(CARTRIDGE_ADDRESSABLE_RANGE.contains(address)) 
-        cartridge->mapper->mapPRGWrite(address, value); // TODO: what happens when write fails?
+    else { // if (CARTRIDGE_ADDRESSABLE_RANGE.contains(address)) 
+        cartridge->mapper->mapPRGWrite(address, value);
     }
 }
 
@@ -121,7 +120,7 @@ void Bus::executeCycle() {
     ppu->executeCycle();
 
     if (totalCycles % 3 == 0) {
-        // TODO: Correctly implement dummy cycle
+        // TODO: Implement DMA dummy cycle
         if (dmaTransferRequested) {
             doDmaTransferCycle();
         }
@@ -139,28 +138,23 @@ void Bus::executeCycle() {
 }
 
 void Bus::doDmaTransferCycle() {
-    if (dmaDummyCycleNeeded) {
-        dmaDummyCycleNeeded = false;
+    bool cycleMod = totalCycles & 1;
+
+    if (!dmaTransferOngoing && cycleMod == 0) {
+        dmaTransferOngoing = true;
     }
-    else {
-        bool cycleMod = totalCycles % 2;
 
-        if (!dmaTransferOngoing && cycleMod == 0) {
-            dmaTransferOngoing = true;
+    if (dmaTransferOngoing) {
+        if (cycleMod == 0) {
+            uint16_t dmaAddress = (dmaPage << 8) | dmaOffset;
+            dmaData = read(dmaAddress);
         }
-
-        if (dmaTransferOngoing) {
-            if (cycleMod == 0) {
-                uint16_t dmaAddress = (dmaPage << 8) | dmaOffset;
-                dmaData = read(dmaAddress);
-            }
-            else {
-                ppu->oamBuffer[dmaOffset] = dmaData;
-                dmaOffset++;
-                if (dmaOffset == 0) {
-                    dmaTransferRequested = false;
-                    dmaTransferOngoing = false;
-                }
+        else {
+            ppu->oamBuffer[dmaOffset] = dmaData;
+            dmaOffset++;
+            if (dmaOffset == 0) {
+                dmaTransferRequested = false;
+                dmaTransferOngoing = false;
             }
         }
     }

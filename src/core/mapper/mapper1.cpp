@@ -3,7 +3,7 @@
 #include "util/util.hpp"
 
 Mapper1::Mapper1(uint8_t prgChunks, uint8_t chrChunks, MirrorMode mirrorMode, bool hasBatteryBackedPrgRam, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr) :
-    Mapper(prgChunks, chrChunks, mirrorMode, true, prg, chr) { // Mapper 1 has prg ram by default
+    Mapper(prgChunks, chrChunks, mirrorMode, true, prg, chr) { // Mapper 1 has PRG RAM by default
 
     shiftRegister = SHIFT_REGISTER_RESET;
 
@@ -28,7 +28,7 @@ uint8_t Mapper1::mapPRGView(uint16_t cpuAddress) const {
             if (PRG_ROM_BANK_0.contains(cpuAddress)) {
                 mappedAddress = cpuAddress & 0x3FFF;
             }
-            else { // if(PRG_ROM_BANK_1.contains(cpuAddress))
+            else { // if (PRG_ROM_BANK_1.contains(cpuAddress))
                 mappedAddress = (16 * KB) * prgBank.prgRomSelect + (cpuAddress & 0x3FFF);
             }
         }
@@ -37,7 +37,7 @@ uint8_t Mapper1::mapPRGView(uint16_t cpuAddress) const {
             if (PRG_ROM_BANK_0.contains(cpuAddress)) {
                 mappedAddress = (16 * KB) * prgBank.prgRomSelect + (cpuAddress & 0x3FFF);
             }
-            else { // if(PRG_ROM_BANK_1.contains(cpuAddress))
+            else { // if (PRG_ROM_BANK_1.contains(cpuAddress))
                 mappedAddress = (16 * KB) * (prgChunks - 1) + (cpuAddress & 0x3FFF);
             }
         }
@@ -53,7 +53,7 @@ uint8_t Mapper1::mapPRGView(uint16_t cpuAddress) const {
 
 void Mapper1::mapPRGWrite(uint16_t cpuAddress, uint8_t value) {
     if (LOAD_REGISTER.contains(cpuAddress)) {
-        // TODO: Writes to load register on consecutive cycles are ignored
+        // TODO: If two writes occur on consecutive cycles, the second one should be ignored
         if ((value >> 7) & 1) {
             shiftRegister = SHIFT_REGISTER_RESET;
             control.prgRomMode = 0x3;
@@ -99,7 +99,7 @@ uint8_t Mapper1::mapCHRView(uint16_t ppuAddress) const {
         else if (CHR_ROM_BANK_0.contains(ppuAddress)) {
             mappedAddress = (4 * KB) * chrBank0 + (ppuAddress & 0x0FFF);
         }
-        else { // if(CHR_ROM_BANK_1.contains(ppuAddress))
+        else { // if (CHR_ROM_BANK_1.contains(ppuAddress))
             mappedAddress = (4 * KB) * chrBank1 + (ppuAddress & 0x0FFF);
         }
 

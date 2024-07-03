@@ -101,7 +101,7 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath) {
         uint8_t mapperIdHi = last4Bytes0 ? (header.flag7 >> 4) & 0xF : 0;
         mapperId = (mapperIdHi << 4) | mapperIdLo;
     }
-    else { // if(iNESVersion == 2)
+    else { // if (iNESVersion == 2)
         uint8_t mapperIdLo = (header.flag6 >> 4) & 0xF;
         uint8_t mapperIdMid = (header.flag7 >> 4) & 0xF;
         uint8_t mapperIdHi = header.flag8 & 0xF;
