@@ -1,7 +1,7 @@
 #include "core/mapper/mapper0.hpp"
 
-Mapper0::Mapper0(uint8_t prgChunks, uint8_t chrChunks, MirrorMode mirrorMode, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr)
-    : Mapper(prgChunks, chrChunks, mirrorMode, prg, chr) {
+Mapper0::Mapper0(uint8_t prgChunks, uint8_t chrChunks, MirrorMode mirrorMode, bool hasBatteryBackedPrgRam, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr)
+    : Mapper(prgChunks, chrChunks, mirrorMode, hasBatteryBackedPrgRam, prg, chr) {
 }
 
 uint8_t Mapper0::mapPRGView(uint16_t cpuAddress) const {
@@ -13,21 +13,25 @@ uint8_t Mapper0::mapPRGView(uint16_t cpuAddress) const {
             return prg[cpuAddress & 0x7FFF];
         }
     }
+    else if (canAccessPrgRam(cpuAddress)) {
+        return getPrgRam(cpuAddress);
+    }
 
     return 0;
 }
 
-void Mapper0::mapPRGWrite(uint16_t /*cpuAddress*/, uint8_t /*value*/) {
-    // PRG in mapper 0 is read only
+void Mapper0::mapPRGWrite(uint16_t cpuAddress, uint8_t value) {
+    if (canAccessPrgRam(cpuAddress)) {
+        setPrgRam(cpuAddress, value);
+    }
 }
 
 uint8_t Mapper0::mapCHRView(uint16_t ppuAddress) const {
     if (CHR_RANGE.contains(ppuAddress)) {
         return chr[ppuAddress];
     }
-    else {
-        return 0;
-    }
+
+    return 0;
 }
 
 void Mapper0::mapCHRWrite(uint16_t ppuAddress, uint8_t value) {

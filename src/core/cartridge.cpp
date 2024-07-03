@@ -89,12 +89,10 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath) {
         }
     }
 
-    bool mirrorModeId = header.flag6 & 1;
-
     uint8_t iNESVersion = (((header.flag7 >> 2) & 0x3) == 2) ? 2 : 1;
-    
+
     uint16_t mapperId;
-    if(iNESVersion == 1){
+    if (iNESVersion == 1) {
         // In an older version of the iNES file format ("Archaic iNES"), bytes 7-15 were ignored and sometimes contain garbage information, giving an incorrect value for the mapper.
         // So we need a way to determine if the file uses this old format.
         // (From https://www.nesdev.org/wiki/INES): A general rule of thumb: if the last 4 bytes are not all zero, and the header is not marked for NES 2.0 format, an emulator should either mask off the upper 4 bits of the mapper number or simply refuse to load the ROM.
@@ -135,7 +133,10 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath) {
         return { Code::MISSING_CHR, "Character data missing or incomplete." };
     }
 
-    mapper = Mapper::createMapper(mapperId, header.prgChunks, header.chrChunks, mirrorModeId, prg, chr);
+    bool mirrorModeId = header.flag6 & 1;
+    bool hasBatteryBackedPrgRam = (header.flag6 >> 1) & 1;
+
+    mapper = Mapper::createMapper(mapperId, header.prgChunks, header.chrChunks, mirrorModeId, hasBatteryBackedPrgRam, prg, chr);
     if (mapper == nullptr) {
         return { Code::UNIMPLEMENTED_MAPPER, "The requested mapper (" + std::to_string(mapperId) + ") is currently not supported." };
     }

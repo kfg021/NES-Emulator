@@ -9,7 +9,7 @@
 
 class Mapper1 : public Mapper {
 public:
-    Mapper1(uint8_t prgChunks, uint8_t chrChunks, MirrorMode initialMirrorMode, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr);
+    Mapper1(uint8_t prgChunks, uint8_t chrChunks, MirrorMode initialMirrorMode, bool hasBatteryBackedPrgRam, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr);
 
     uint8_t mapPRGView(uint16_t cpuAddress) const override;
     void mapPRGWrite(uint16_t cpuAddress, uint8_t value) override;
@@ -56,7 +56,7 @@ private:
     // |                         2: fix first bank at $8000 and switch 16 KB bank at $C000;
     // |                         3: fix last bank at $C000 and switch 16 KB bank at $8000)
     // +----- CHR ROM bank mode (0: switch 8 KB at a time; 1: switch two separate 4 KB banks)
-    struct Control{
+    struct Control {
         uint8_t mirroring : 2;
         uint8_t prgRomMode : 2;
         bool chrRomMode : 1;
@@ -79,7 +79,7 @@ private:
     // +----- MMC1B and later: PRG RAM chip enable (0: enabled; 1: disabled; ignored on MMC1A)
     //     MMC1A: Bit 3 bypasses fixed bank logic in 16K mode (0: fixed bank affects A17-A14;
     //     1: fixed bank affects A16-A14 and bit 3 directly controls A17)
-    struct PRGBank{
+    struct PRGBank {
         uint8_t prgRomSelect : 4;
         bool prgRamDisable : 1;
 
@@ -89,9 +89,6 @@ private:
         void setFromUInt8(uint16_t data);
     };
     PRGBank prgBank;
-
-    static constexpr uint16_t INTERNAL_RAM_SIZE = 8 * KB;
-    std::array<uint8_t, INTERNAL_RAM_SIZE> internalRam;
 };
 
 #endif // MAPPER1_HPP

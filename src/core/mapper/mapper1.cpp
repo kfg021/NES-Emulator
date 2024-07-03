@@ -2,8 +2,8 @@
 
 #include "util/util.hpp"
 
-Mapper1::Mapper1(uint8_t prgChunks, uint8_t chrChunks, MirrorMode mirrorMode, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr) :
-    Mapper(prgChunks, chrChunks, mirrorMode, prg, chr) {
+Mapper1::Mapper1(uint8_t prgChunks, uint8_t chrChunks, MirrorMode mirrorMode, bool hasBatteryBackedPrgRam, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr) :
+    Mapper(prgChunks, chrChunks, mirrorMode, hasBatteryBackedPrgRam, prg, chr) {
 
     shiftRegister = SHIFT_REGISTER_RESET;
 
@@ -14,22 +14,12 @@ Mapper1::Mapper1(uint8_t prgChunks, uint8_t chrChunks, MirrorMode mirrorMode, co
     chrBank0 = 0;
     chrBank1 = 0;
     prgBank = 0;
-
-    internalRam = {};
 }
 
 uint8_t Mapper1::mapPRGView(uint16_t cpuAddress) const {
-    if (PRG_RAM_BANK.contains(cpuAddress)) {
-        if(!prgBank.prgRamDisable){
-            return internalRam[cpuAddress & 0x1FFF];
-        }
-        else{
-            return 0;
-        }
-    }
-    else if (PRG_ROM_FULL.contains(cpuAddress)) {
+    if (PRG_ROM_FULL.contains(cpuAddress)) {
         uint32_t mappedAddress;
-        if (control.prgRomMode == 0 || control.prgRomMode == 1) {   
+        if (control.prgRomMode == 0 || control.prgRomMode == 1) {
             // 0, 1: switch 32 KB at $8000
             mappedAddress = (32 * KB) * (prgBank.prgRomSelect >> 1) + (cpuAddress & 0x7FFF);
         }
@@ -54,18 +44,15 @@ uint8_t Mapper1::mapPRGView(uint16_t cpuAddress) const {
 
         return prg[mappedAddress];
     }
-    else{
-        return 0;
+    else if (canAccessPrgRam(cpuAddress) && !prgBank.prgRamDisable) {
+        return getPrgRam(cpuAddress);
     }
+
+    return 0;
 }
 
 void Mapper1::mapPRGWrite(uint16_t cpuAddress, uint8_t value) {
-    if (PRG_RAM_BANK.contains(cpuAddress)) {
-        if (!prgBank.prgRamDisable) {
-            internalRam[cpuAddress & 0x1FFF] = value;
-        }
-    }
-    else if (LOAD_REGISTER.contains(cpuAddress)) {
+    if (LOAD_REGISTER.contains(cpuAddress)) {
         // TODO: Writes to load register on consecutive cycles are ignored
         if ((value >> 7) & 1) {
             shiftRegister = SHIFT_REGISTER_RESET;
@@ -82,6 +69,9 @@ void Mapper1::mapPRGWrite(uint16_t cpuAddress, uint8_t value) {
                 shiftRegister = SHIFT_REGISTER_RESET;
             }
         }
+    }
+    else if (canAccessPrgRam(cpuAddress) && !prgBank.prgRamDisable) {
+        setPrgRam(cpuAddress, value);
     }
 }
 
@@ -115,9 +105,8 @@ uint8_t Mapper1::mapCHRView(uint16_t ppuAddress) const {
 
         return chr[mappedAddress];
     }
-    else{
-        return 0;
-    }
+
+    return 0;
 }
 
 void Mapper1::mapCHRWrite(uint16_t ppuAddress, uint8_t value) {
