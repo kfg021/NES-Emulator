@@ -204,10 +204,10 @@ uint16_t PPU::getNameTableIndex(uint16_t address) const {
     // Setting {bit10, bit11} = {0, 0} maps to nametable A
     // Setting {bit10, bit11} = {0, 1} maps to nametable B
     auto mapToNameTableA = [](uint16_t address) {
-        return address & 0xF3FF;
+        return address & 0x3FF;
     };
     auto mapToNameTableB = [](uint16_t address) {
-        return (address & 0xF3FF) | 0x0400;
+        return (address & 0x3FF) | 0x400;
     };
 
     Mapper::MirrorMode mirrorMode = cartridge->getMirrorMode();
