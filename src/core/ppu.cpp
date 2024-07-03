@@ -1,18 +1,14 @@
 #include "core/ppu.hpp"
 
-const std::array<uint32_t, PPU::NUM_SCREEN_COLORS> PPU::SCREEN_COLORS = initScreenColors();
+#include <iostream>
 
 // Screen colors taken from https://www.nesdev.org/wiki/PPU_palettes
-std::array<uint32_t, PPU::NUM_SCREEN_COLORS> PPU::initScreenColors() {
-    // Colors are 32 bit integers with 8 bits each for a = 0xFF, r, g, b
-    std::array<uint32_t, NUM_SCREEN_COLORS> screenColors = {
-        0xFF626262, 0xFF001FB2, 0xFF2404C8, 0xFF5200B2, 0xFF730076, 0xFF800024, 0xFF730B00, 0xFF522800, 0xFF244400, 0xFF005700, 0xFF005C00, 0xFF005324, 0xFF003C76, 0xFF000000, 0xFF000000, 0xFF000000,
-        0xFFABABAB, 0xFF0D57FF, 0xFF4B30FF, 0xFF8A13FF, 0xFFBC08D6, 0xFFD21269, 0xFFC72E00, 0xFF9D5400, 0xFF607B00, 0xFF209800, 0xFF00A300, 0xFF009942, 0xFF007DB4, 0xFF000000, 0xFF000000, 0xFF000000,
-        0xFFFFFFFF, 0xFF53AEFF, 0xFF9085FF, 0xFFD365FF, 0xFFFF57FF, 0xFFFF5DCF, 0xFFFF7757, 0xFFFA9E00, 0xFFBDC700, 0xFF7AE700, 0xFF43F611, 0xFF26EF7E, 0xFF2CD5F6, 0xFF4E4E4E, 0xFF000000, 0xFF000000,
-        0xFFFFFFFF, 0xFFB6E1FF, 0xFFCED1FF, 0xFFE9C3FF, 0xFFFFBCFF, 0xFFFFBDF4, 0xFFFFC6C3, 0xFFFFD59A, 0xFFE9E681, 0xFFCEF481, 0xFFB6FB9A, 0xFFA9FAC3, 0xFFA9F0F4, 0xFFB8B8B8, 0xFF000000, 0xFF000000,
-    };
-    return screenColors;
-}
+const std::array<uint32_t, PPU::NUM_SCREEN_COLORS> PPU::SCREEN_COLORS = {
+    0xFF626262, 0xFF001FB2, 0xFF2404C8, 0xFF5200B2, 0xFF730076, 0xFF800024, 0xFF730B00, 0xFF522800, 0xFF244400, 0xFF005700, 0xFF005C00, 0xFF005324, 0xFF003C76, 0xFF000000, 0xFF000000, 0xFF000000,
+    0xFFABABAB, 0xFF0D57FF, 0xFF4B30FF, 0xFF8A13FF, 0xFFBC08D6, 0xFFD21269, 0xFFC72E00, 0xFF9D5400, 0xFF607B00, 0xFF209800, 0xFF00A300, 0xFF009942, 0xFF007DB4, 0xFF000000, 0xFF000000, 0xFF000000,
+    0xFFFFFFFF, 0xFF53AEFF, 0xFF9085FF, 0xFFD365FF, 0xFFFF57FF, 0xFFFF5DCF, 0xFFFF7757, 0xFFFA9E00, 0xFFBDC700, 0xFF7AE700, 0xFF43F611, 0xFF26EF7E, 0xFF2CD5F6, 0xFF4E4E4E, 0xFF000000, 0xFF000000,
+    0xFFFFFFFF, 0xFFB6E1FF, 0xFFCED1FF, 0xFFE9C3FF, 0xFFFFBCFF, 0xFFFFBDF4, 0xFFFFC6C3, 0xFFFFD59A, 0xFFE9E681, 0xFFCEF481, 0xFFB6FB9A, 0xFFA9FAC3, 0xFFA9F0F4, 0xFFB8B8B8, 0xFF000000, 0xFF000000,
+};
 
 PPU::PPU() {
     workingDisplay = std::make_unique<Display>();
@@ -58,7 +54,9 @@ void PPU::initPPU() {
     (*workingDisplay) = {};
     (*finishedDisplay) = {};
 
-    oamBuffer = {};
+    // Reset the OAM buffer to 0xFF so that sprites start off the screen
+    std::fill(oamBuffer.begin(), oamBuffer.end(), 0xFF);
+
     oamAddress = 0;
 
     currentScanlineSprites = {};
@@ -75,7 +73,7 @@ uint8_t PPU::view(uint8_t ppuRegister) const {
     else if (ppuRegister == static_cast<int>(Register::PPUDATA)) {
         uint8_t data = ppuBusData;
 
-        // pallete addresses get returned immediately
+        // Pallete addresses get returned immediately
         if (PALLETE_RAM_RANGE.contains(vramAddress.toUInt16() & 0x3FFF)) {
             data = ppuView(vramAddress.toUInt16() & 0x3FFF);
         }
@@ -120,7 +118,18 @@ uint8_t PPU::read(uint8_t ppuRegister) {
 
 void PPU::write(uint8_t ppuRegister, uint8_t value) {
     if (ppuRegister == static_cast<int>(Register::PPUCTRL)) {
+        bool oldNmiFlag = control.nmiEnabled;
+        
         control.setFromUInt8(value);
+        
+        bool newNmiFlag = control.nmiEnabled;
+        
+        // From (https://www.nesdev.org/wiki/PPU_registers#PPUCTRL): 
+        // If the PPU is currently in vertical blank, and the PPUSTATUS ($2002) vblank flag is still set (1), changing the NMI flag in bit 7 of $2000 from 0 to 1 will immediately generate an NMI. 
+        if(status.vBlankStarted && !oldNmiFlag && newNmiFlag){
+            bus->nmiRequest = true;
+        }
+
         temporaryVramAddress.nametableX = control.nametableX;
         temporaryVramAddress.nametableY = control.nametableY;
     }
@@ -216,13 +225,16 @@ uint16_t PPU::getNameTableIndex(uint16_t address) const {
         }
     }
     else {
+        // TODO: HANDLE OTHER MIRRORING MODES
+        std::cerr << "Other mirroring not implemented\n";
+        exit(1);
         return 0;
     }
 }
 
 uint8_t PPU::ppuView(uint16_t address) const {
     if (PATTERN_TABLE_RANGE.contains(address)) {
-        return cartridge->viewCHR(address);
+        return cartridge->mapper->mapCHRView(address);
     }
     else if (NAMETABLE_RANGE.contains(address)) {
         return nameTable[getNameTableIndex(address)];
@@ -241,7 +253,7 @@ uint8_t PPU::ppuView(uint16_t address) const {
 
 uint8_t PPU::ppuRead(uint16_t address) {
     if (PATTERN_TABLE_RANGE.contains(address)) {
-        return cartridge->readFromCHR(address);
+        return cartridge->mapper->mapCHRRead(address);
     }
     else if (NAMETABLE_RANGE.contains(address)) {
         return nameTable[getNameTableIndex(address)];
@@ -260,7 +272,7 @@ uint8_t PPU::ppuRead(uint16_t address) {
 
 void PPU::ppuWrite(uint16_t address, uint8_t value) {
     if (PATTERN_TABLE_RANGE.contains(address)) {
-        cartridge->writeToCHR(address, value);
+        cartridge->mapper->mapCHRWrite(address, value);
     }
     else if (NAMETABLE_RANGE.contains(address)) {
         nameTable[getNameTableIndex(address)] = value;

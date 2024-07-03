@@ -24,6 +24,7 @@ set(HEADERS
     include/core/ppu.hpp
     include/core/mapper/mapper.hpp
     include/core/mapper/mapper0.hpp
+    include/core/mapper/mapper1.hpp
     include/core/mapper/mapper2.hpp
     include/core/mapper/mapper3.hpp
     include/core/mapper/mapper66.hpp
@@ -41,6 +42,7 @@ set(SOURCES
     src/core/ppu.cpp
     src/core/mapper/mapper.cpp
     src/core/mapper/mapper0.cpp
+    src/core/mapper/mapper1.cpp
     src/core/mapper/mapper2.cpp
     src/core/mapper/mapper3.cpp
     src/core/mapper/mapper66.cpp

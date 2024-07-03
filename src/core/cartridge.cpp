@@ -33,8 +33,8 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath) {
     // 11-15	Unused padding (should be filled with zero, but some rippers put their name across bytes 7-15)
     struct Header {
         std::array<uint8_t, 4> name;
-        uint8_t prgRomChunks;
-        uint8_t chrRomChunks;
+        uint8_t prgChunks;
+        uint8_t chrChunks;
         uint8_t flag6, flag7, flag8, flag9, flag10;
         std::array<uint8_t, 5> unused;
     };
@@ -56,8 +56,8 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath) {
         }
 
         header.name = { buffer[0], buffer[1], buffer[2], buffer[3] };
-        header.prgRomChunks = buffer[4];
-        header.chrRomChunks = buffer[5];
+        header.prgChunks = buffer[4];
+        header.chrChunks = buffer[5];
         header.flag6 = buffer[6];
         header.flag7 = buffer[7];
         header.flag8 = buffer[8];
@@ -91,24 +91,31 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath) {
 
     bool mirrorModeId = header.flag6 & 1;
 
-    uint8_t mapperIdLo = (header.flag6 >> 4) & 0xF;
-    uint8_t mapperIdHi = (header.flag7 >> 4) & 0xF;
-    uint8_t mapperId = (mapperIdHi << 4) | mapperIdLo;
-    mapper = Mapper::createMapper(mapperId, header.prgRomChunks, header.chrRomChunks, mirrorModeId);
-    if (mapper == nullptr) {
-        return { Code::UNIMPLEMENTED_MAPPER, "The requested mapper (" + std::to_string(mapperId) + ") is currently not supported." };
+    uint8_t iNESVersion = (((header.flag7 >> 2) & 0x3) == 2) ? 2 : 1;
+    
+    uint16_t mapperId;
+    if(iNESVersion == 1){
+        // In an older version of the iNES file format ("Archaic iNES"), bytes 7-15 were ignored and sometimes contain garbage information, giving an incorrect value for the mapper.
+        // So we need a way to determine if the file uses this old format.
+        // (From https://www.nesdev.org/wiki/INES): A general rule of thumb: if the last 4 bytes are not all zero, and the header is not marked for NES 2.0 format, an emulator should either mask off the upper 4 bits of the mapper number or simply refuse to load the ROM.
+        bool last4Bytes0 = (header.unused[1] | header.unused[2] | header.unused[3] | header.unused[4]) == 0;
+        uint8_t mapperIdLo = (header.flag6 >> 4) & 0xF;
+        uint8_t mapperIdHi = last4Bytes0 ? (header.flag7 >> 4) & 0xF : 0;
+        mapperId = (mapperIdHi << 4) | mapperIdLo;
     }
-
-    // TODO: Parse iNES version
-    // uint8_t iNESVersion = (((header.flag7 >> 2) & 0x3) == 2) ? 2 : 1;
-    // if(iNESVersion != 1){
-    //     return { UNSUPPORTED_INES_VERSION, "The requested iNES version (" + std::to_string(iNESVersion) + ") is currently not supported."};
-    // }
+    else { // if(iNESVersion == 2)
+        uint8_t mapperIdLo = (header.flag6 >> 4) & 0xF;
+        uint8_t mapperIdMid = (header.flag7 >> 4) & 0xF;
+        uint8_t mapperIdHi = header.flag8 & 0xF;
+        mapperId = (mapperIdHi << 8) | (mapperIdMid << 4) | mapperIdLo;
+    }
 
     // TODO: Parse alternative nametable layout
 
-    prgRom.resize(header.prgRomChunks * PRG_ROM_CHUNK_SIZE);
-    file.read(reinterpret_cast<char*>(prgRom.data()), prgRom.size() * sizeof(uint8_t));
+    // TODO: Parse iNES 2.0 fields
+
+    std::vector<uint8_t> prg(header.prgChunks * Mapper::PRG_ROM_CHUNK_SIZE);
+    file.read(reinterpret_cast<char*>(prg.data()), prg.size() * sizeof(uint8_t));
     if (!file) {
         return { Code::MISSING_PRG, "Program data missing or incomplete." };
     }
@@ -116,17 +123,21 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath) {
     // For iNES 1.0 we assume that a value of 0 for char rom chunks means we have 1 chunk of CHR RAM.
     // In iNES 2.0 the size is specified
     // TODO: Add iNES 2.0 support
-    if (header.chrRomChunks == 0) {
-        chrRom.resize(1 * CHR_ROM_CHUNK_SIZE);
-        std::fill(chrRom.begin(), chrRom.end(), 0);
+    std::vector<uint8_t> chr;
+    if (header.chrChunks == 0) {
+        chr = std::vector<uint8_t>(1 * Mapper::CHR_ROM_CHUNK_SIZE, 0);
     }
     else {
-        chrRom.resize(header.chrRomChunks * CHR_ROM_CHUNK_SIZE);
-        file.read(reinterpret_cast<char*>(chrRom.data()), chrRom.size() * sizeof(uint8_t));
+        chr = std::vector<uint8_t>(header.chrChunks * Mapper::CHR_ROM_CHUNK_SIZE);
+        file.read(reinterpret_cast<char*>(chr.data()), chr.size() * sizeof(uint8_t));
     }
-
     if (!file) {
         return { Code::MISSING_CHR, "Character data missing or incomplete." };
+    }
+
+    mapper = Mapper::createMapper(mapperId, header.prgChunks, header.chrChunks, mirrorModeId, prg, chr);
+    if (mapper == nullptr) {
+        return { Code::UNIMPLEMENTED_MAPPER, "The requested mapper (" + std::to_string(mapperId) + ") is currently not supported." };
     }
 
     return { Code::SUCCESS, "" };
@@ -134,28 +145,6 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath) {
 
 Mapper::MirrorMode Cartridge::getMirrorMode() const {
     return mapper->getMirrorMode();
-}
-
-uint8_t Cartridge::viewPRG(uint16_t preMappedAddr) const {
-    return prgRom[mapper->mapToPRGView(preMappedAddr)];
-}
-
-uint8_t Cartridge::readFromPRG(uint16_t preMappedAddr) {
-    return prgRom[mapper->mapToPRGRead(preMappedAddr)];
-}
-void Cartridge::writeToPRG(uint16_t preMappedAddr, uint8_t data) {
-    prgRom[mapper->mapToPRGWrite(preMappedAddr, data)] = data;
-}
-
-
-uint8_t Cartridge::viewCHR(uint16_t preMappedAddr) const {
-    return chrRom[mapper->mapToCHRView(preMappedAddr)];
-}
-uint8_t Cartridge::readFromCHR(uint16_t preMappedAddr) {
-    return chrRom[mapper->mapToCHRRead(preMappedAddr)];
-}
-void Cartridge::writeToCHR(uint16_t preMappedAddr, uint8_t data) {
-    chrRom[mapper->mapToCHRWrite(preMappedAddr, data)] = data;
 }
 
 Cartridge::Status Cartridge::getStatus() const {

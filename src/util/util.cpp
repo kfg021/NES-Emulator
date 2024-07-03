@@ -16,3 +16,7 @@ std::string toHexString16(uint16_t x) {
     output[0] = HEX_DIGITS[(x >> 12) & 0xF];
     return output;
 }
+
+std::string toHexString32(uint32_t x){
+    return toHexString16((x >> 16) & 0xFFFF) + toHexString16(x & 0xFFFF);
+}

@@ -228,7 +228,6 @@ private:
 
     static constexpr uint16_t NUM_SCREEN_COLORS = 0x40;
     static const std::array<uint32_t, NUM_SCREEN_COLORS> SCREEN_COLORS;
-    static std::array<uint32_t, NUM_SCREEN_COLORS> initScreenColors();
 
     std::array<uint8_t, 0x20> palleteRam;
     uint8_t getPalleteRamIndex(uint16_t address, bool read) const;

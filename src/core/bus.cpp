@@ -59,7 +59,7 @@ uint8_t Bus::view(uint16_t address) const {
 
     }
     else { // if(CARTRIDGE_ADDRESSABLE_RANGE.contains(address))
-        return cartridge->viewPRG(address);
+        return cartridge->mapper->mapPRGView(address);
     }
 }
 
@@ -84,7 +84,7 @@ uint8_t Bus::read(uint16_t address) {
         }
     }
     else { // if(CARTRIDGE_ADDRESSABLE_RANGE.contains(address))
-        return cartridge->readFromPRG(address);
+        return cartridge->mapper->mapPRGRead(address);
     }
 }
 
@@ -112,8 +112,8 @@ void Bus::write(uint16_t address, uint8_t value) {
             // TODO: Implement APU
         }
     }
-    else { // if(CARTRIDGE_ADDRESSABLE_RANGE.contains(address))
-        cartridge->writeToPRG(address, value); // TODO: what happens when write fails?
+    else { // if(CARTRIDGE_ADDRESSABLE_RANGE.contains(address)) 
+        cartridge->mapper->mapPRGWrite(address, value); // TODO: what happens when write fails?
     }
 }
 

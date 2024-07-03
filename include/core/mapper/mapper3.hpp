@@ -7,15 +7,13 @@
 
 class Mapper3 : public Mapper {
 public:
-    Mapper3(uint8_t prgRomChunks, uint8_t chrRomChunks, MirrorMode mirrorMode);
+    Mapper3(uint8_t prgChunks, uint8_t chrChunks, MirrorMode initialMirrorMode, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr);
 
-    uint32_t mapToPRGView(uint16_t cpuAddress) const override;
-    uint32_t mapToPRGRead(uint16_t cpuAddress) override;
-    uint32_t mapToPRGWrite(uint16_t cpuAddress, uint8_t value) override;
+    uint8_t mapPRGView(uint16_t cpuAddress) const override;
+    void mapPRGWrite(uint16_t cpuAddress, uint8_t value) override;
 
-    uint32_t mapToCHRView(uint16_t ppuAddress) const override;
-    uint32_t mapToCHRRead(uint16_t ppuAddress) override;
-    uint32_t mapToCHRWrite(uint16_t ppuAddress, uint8_t value) override;
+    uint8_t mapCHRView(uint16_t ppuAddress) const override;
+    void mapCHRWrite(uint16_t ppuAddress, uint8_t value) override;
 
 private:
     static constexpr MemoryRange PRG_RANGE{ 0x8000, 0xFFFF };
