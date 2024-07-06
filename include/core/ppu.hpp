@@ -273,6 +273,8 @@ private:
     void fetchPatternTableByteLo();
     void fetchPatternTableByteHi();
 
+    void drawPixel();
+
     void reloadShifters();
     void shiftShifters();
 

@@ -1,5 +1,7 @@
 #include "core/ppu.hpp"
 
+#include <iostream>
+
 // Screen colors taken from https://www.nesdev.org/wiki/PPU_palettes
 const std::array<uint32_t, PPU::NUM_SCREEN_COLORS> PPU::SCREEN_COLORS = {
     0xFF626262, 0xFF001FB2, 0xFF2404C8, 0xFF5200B2, 0xFF730076, 0xFF800024, 0xFF730B00, 0xFF522800, 0xFF244400, 0xFF005700, 0xFF005C00, 0xFF005324, 0xFF003C76, 0xFF000000, 0xFF000000, 0xFF000000,
@@ -319,7 +321,7 @@ void PPU::executeCycle() {
     if (scanline == -1) {
         preRenderScanline();
     }
-    else if (scanline >= 0 && scanline <= 240) {
+    else if (scanline >= 0 && scanline <= 239) {
         visibleScanlines();
     }
     else if (scanline == 240) {
@@ -327,143 +329,6 @@ void PPU::executeCycle() {
     }
     else { // if (scanline >= 241 && scanline <= 260) {
         verticalBlankScanlines();
-    }
-
-    // TODO: Fix potential off by one errors with cycle / cycle-1
-    if (scanline >= 0 && scanline < 240 && (cycle - 1) >= 0 && (cycle - 1) < 256) {
-        // Render the current pixel if it is within the bounds of the screen
-
-        // Before we draw anything, get the sprites that are visible on this scanline
-        if (cycle == 1) {
-            // This implementation is not at all cycle accurate
-            // TODO: Consider rendering sprites the way that the NES does
-            fillCurrentScanlineSprites();
-        }
-
-        // Get color from background
-        uint8_t backgroundPatternTable = 0;
-        uint8_t backgroundAttributeTable = 0;
-        if (mask.showBackground) {
-            if (mask.showBackgroundLeft || cycle >= 9) {
-                uint8_t shift = 15 - fineX;
-
-                bool backgroundPatternTableLo = (patternTableLoShifter >> shift) & 1;
-                bool backgroundPatternTableHi = (patternTableHiShifter >> shift) & 1;
-                backgroundPatternTable = (backgroundPatternTableHi << 1) | static_cast<uint8_t>(backgroundPatternTableLo);
-
-                bool backgroundAttributeTableLo = (attributeTableLoShifter >> shift) & 1;
-                bool backgroundAttributeTableHi = (attributeTableHiShifter >> shift) & 1;
-                backgroundAttributeTable = (backgroundAttributeTableHi << 1) | static_cast<uint8_t>(backgroundAttributeTableLo);
-            }
-        }
-        uint16_t backgroundAddr = getPalleteRamAddress(backgroundPatternTable, backgroundAttributeTable);
-        uint32_t backgroundColor = SCREEN_COLORS[ppuRead(backgroundAddr) & 0x3F];
-
-        // Get color from sprites
-        uint8_t spritePatternTable = 0;
-        uint8_t spriteAttributeTable = 0;
-        bool spritePriority = 0;
-        bool sprite0Rendered = false;
-        if (mask.showSprites) {
-            if (mask.showSpritesLeft || cycle >= 9) {
-                for (int i = 0; i < static_cast<int>(currentScanlineSprites.size()); i++) {
-                    const OAMEntry& sprite = currentScanlineSprites[i];
-                    int differenceX = (cycle - 1) - sprite.x;
-                    if (differenceX < 0 || differenceX >= 8) {
-                        continue;
-                    }
-
-                    uint8_t x = differenceX;
-                    uint8_t y = scanline - sprite.y;
-
-                    bool flipHorizontal = (sprite.attributes >> 6) & 1;
-                    if (flipHorizontal) {
-                        x = 7 - x;
-                    }
-
-                    bool flipVertical = (sprite.attributes >> 7) & 1;
-                    if (flipVertical) {
-                        y = control.spriteSize ? (15 - y) : (7 - y);
-                    }
-
-                    uint16_t spritePatternTableAddr;
-
-                    if (!control.spriteSize) {
-                        spritePatternTableAddr =
-                            (control.spritePatternTable << 12) |
-                            (sprite.tileIndex << 4) |
-                            y;
-                    }
-                    else {
-                        if (y < 8) {
-                            spritePatternTableAddr =
-                                ((sprite.tileIndex & 0x1) << 12) |
-                                ((sprite.tileIndex & 0xFE) << 4) |
-                                y;
-                        }
-                        else {
-                            spritePatternTableAddr =
-                                ((sprite.tileIndex & 0x1) << 12) |
-                                (((sprite.tileIndex & 0xFE) | 1) << 4) |
-                                (y & 0x7);
-                        }
-                    }
-
-                    uint8_t spritePatternTableLo = ppuRead(spritePatternTableAddr);
-                    uint8_t spritePatternTableHi = ppuRead(spritePatternTableAddr + 8);
-
-                    uint8_t shift = 7 - x;
-                    bool spritePatternTableBitLo = (spritePatternTableLo >> shift) & 1;
-                    bool spritePatternTableBitHi = (spritePatternTableHi >> shift) & 1;
-                    spritePatternTable = (spritePatternTableBitHi << 1) | static_cast<uint8_t>(spritePatternTableBitLo);
-
-                    spriteAttributeTable = 0x4 | (sprite.attributes & 0x3);
-                    spritePriority = !((sprite.attributes >> 5) & 1);
-
-                    // If the sprite pattern table is > 0, then it isn't transparent.
-                    // In that case we should draw it and ignore the rest of the sprites.
-                    // This is because priority between sprites is determined by their location in OAM (priority between sprite and background is determined by spritePriority variable)
-                    if (spritePatternTable) {
-                        if (i == 0 && sprite0OnCurrentScanline) {
-                            sprite0Rendered = true;
-                        }
-                        break;
-                    }
-                }
-            }
-        }
-        uint16_t spriteAddr = getPalleteRamAddress(spritePatternTable, spriteAttributeTable);
-        uint32_t spriteColor = SCREEN_COLORS[ppuRead(spriteAddr) & 0x3F];
-
-        // Now combine the background color, sprite color, and priority to get the final color
-        uint32_t finalColor;
-
-        bool bothTransparent = (backgroundPatternTable == 0 && spritePatternTable == 0);
-        // bool onlyBackgroundTransparent = (backgroundPatternTable == 0 && spritePatternTable > 0);
-        bool onlySpriteTransparent = (backgroundPatternTable > 0 && spritePatternTable == 0);
-        bool bothVisible = (backgroundPatternTable > 0 && spritePatternTable > 0);
-
-        if (bothTransparent || onlySpriteTransparent || (bothVisible && spritePriority == 0)) {
-            finalColor = backgroundColor;
-        }
-        else { // if (onlyBackgroundTransparent || (bothVisible && spritePriority == 1))
-            finalColor = spriteColor;
-        }
-
-        if (sprite0Rendered && bothVisible && mask.showBackground && mask.showSprites && (cycle - 1) != 0xFF) {
-            bool renderingLeft = mask.showBackgroundLeft && mask.showSpritesLeft;
-            if (renderingLeft || (!renderingLeft && cycle >= 9)) {
-                status.sprite0Hit = 1;
-            }
-        }
-
-        // TODO: use the PPU's emphasis bits to modify the final color
-        (*workingDisplay)[scanline][cycle - 1] = finalColor;
-
-        if (scanline == 239 && cycle == 256) {
-            // We have finished drawing all visible pixels, so the display is ready
-            std::swap(workingDisplay, finishedDisplay);
-        }
     }
 
     incrementCycle();
@@ -488,6 +353,15 @@ void PPU::preRenderScanline() {
 
 void PPU::visibleScanlines() {
     doRenderingPipeline();
+
+    if (cycle >= 1 && cycle <= 256) {
+        drawPixel();
+
+        if (scanline == 239 && cycle == 256) {
+            // We have finished drawing all visible pixels, so the display is ready
+            std::swap(workingDisplay, finishedDisplay);
+        }
+    }
 }
 
 void PPU::verticalBlankScanlines() {
@@ -599,6 +473,135 @@ void PPU::fetchPatternTableByteHi() {
         (nextNameTableByte << 4) |
         vramAddress.fineY;
     nextPatternTableHi = ppuRead(address + 8);
+}
+
+void PPU::drawPixel() {
+    // Before we draw anything, get the sprites that are visible on this scanline
+    if (cycle == 1) {
+        // This implementation is not at all cycle accurate
+        // TODO: Consider rendering sprites the way that the NES does
+        fillCurrentScanlineSprites();
+    }
+
+    // Get color from background
+    uint8_t backgroundPatternTable = 0;
+    uint8_t backgroundAttributeTable = 0;
+    if (mask.showBackground) {
+        if (mask.showBackgroundLeft || cycle >= 9) {
+            uint8_t shift = 15 - fineX;
+
+            bool backgroundPatternTableLo = (patternTableLoShifter >> shift) & 1;
+            bool backgroundPatternTableHi = (patternTableHiShifter >> shift) & 1;
+            backgroundPatternTable = (backgroundPatternTableHi << 1) | static_cast<uint8_t>(backgroundPatternTableLo);
+
+            bool backgroundAttributeTableLo = (attributeTableLoShifter >> shift) & 1;
+            bool backgroundAttributeTableHi = (attributeTableHiShifter >> shift) & 1;
+            backgroundAttributeTable = (backgroundAttributeTableHi << 1) | static_cast<uint8_t>(backgroundAttributeTableLo);
+        }
+    }
+    uint16_t backgroundAddr = getPalleteRamAddress(backgroundPatternTable, backgroundAttributeTable);
+    uint32_t backgroundColor = SCREEN_COLORS[ppuRead(backgroundAddr) & 0x3F];
+
+    // Get color from sprites
+    uint8_t spritePatternTable = 0;
+    uint8_t spriteAttributeTable = 0;
+    bool spritePriority = 0;
+    bool sprite0Rendered = false;
+    if (mask.showSprites) {
+        if (mask.showSpritesLeft || cycle >= 9) {
+            for (int i = 0; i < static_cast<int>(currentScanlineSprites.size()); i++) {
+                const OAMEntry& sprite = currentScanlineSprites[i];
+                int differenceX = (cycle - 1) - sprite.x;
+                if (differenceX < 0 || differenceX >= 8) {
+                    continue;
+                }
+
+                uint8_t x = differenceX;
+                uint8_t y = scanline - sprite.y;
+
+                bool flipHorizontal = (sprite.attributes >> 6) & 1;
+                if (flipHorizontal) {
+                    x = 7 - x;
+                }
+
+                bool flipVertical = (sprite.attributes >> 7) & 1;
+                if (flipVertical) {
+                    y = control.spriteSize ? (15 - y) : (7 - y);
+                }
+
+                uint16_t spritePatternTableAddr;
+
+                if (!control.spriteSize) {
+                    spritePatternTableAddr =
+                        (control.spritePatternTable << 12) |
+                        (sprite.tileIndex << 4) |
+                        y;
+                }
+                else {
+                    if (y < 8) {
+                        spritePatternTableAddr =
+                            ((sprite.tileIndex & 0x1) << 12) |
+                            ((sprite.tileIndex & 0xFE) << 4) |
+                            y;
+                    }
+                    else {
+                        spritePatternTableAddr =
+                            ((sprite.tileIndex & 0x1) << 12) |
+                            (((sprite.tileIndex & 0xFE) | 1) << 4) |
+                            (y & 0x7);
+                    }
+                }
+
+                uint8_t spritePatternTableLo = ppuRead(spritePatternTableAddr);
+                uint8_t spritePatternTableHi = ppuRead(spritePatternTableAddr + 8);
+
+                uint8_t shift = 7 - x;
+                bool spritePatternTableBitLo = (spritePatternTableLo >> shift) & 1;
+                bool spritePatternTableBitHi = (spritePatternTableHi >> shift) & 1;
+                spritePatternTable = (spritePatternTableBitHi << 1) | static_cast<uint8_t>(spritePatternTableBitLo);
+
+                spriteAttributeTable = 0x4 | (sprite.attributes & 0x3);
+                spritePriority = !((sprite.attributes >> 5) & 1);
+
+                // If the sprite pattern table is > 0, then it isn't transparent.
+                // In that case we should draw it and ignore the rest of the sprites.
+                // This is because priority between sprites is determined by their location in OAM (priority between sprite and background is determined by spritePriority variable)
+                if (spritePatternTable) {
+                    if (i == 0 && sprite0OnCurrentScanline) {
+                        sprite0Rendered = true;
+                    }
+                    break;
+                }
+            }
+        }
+    }
+    uint16_t spriteAddr = getPalleteRamAddress(spritePatternTable, spriteAttributeTable);
+    uint32_t spriteColor = SCREEN_COLORS[ppuRead(spriteAddr) & 0x3F];
+
+    // Now combine the background color, sprite color, and priority to get the final color
+    uint32_t finalColor;
+
+    bool bothTransparent = (backgroundPatternTable == 0 && spritePatternTable == 0);
+    // bool onlyBackgroundTransparent = (backgroundPatternTable == 0 && spritePatternTable > 0);
+    bool onlySpriteTransparent = (backgroundPatternTable > 0 && spritePatternTable == 0);
+    bool bothVisible = (backgroundPatternTable > 0 && spritePatternTable > 0);
+
+    if (bothTransparent || onlySpriteTransparent || (bothVisible && spritePriority == 0)) {
+        finalColor = backgroundColor;
+    }
+    else { // if (onlyBackgroundTransparent || (bothVisible && spritePriority == 1))
+        finalColor = spriteColor;
+    }
+
+    if (sprite0Rendered && bothVisible && mask.showBackground && mask.showSprites && (cycle - 1) != 0xFF) {
+        bool renderingLeft = mask.showBackgroundLeft && mask.showSpritesLeft;
+        if (renderingLeft || (!renderingLeft && cycle >= 9)) {
+            status.sprite0Hit = 1;
+        }
+    }
+
+    // TODO: use the PPU's emphasis bits to modify the final color
+    (*workingDisplay)[scanline][cycle - 1] = finalColor;
 }
 
 void PPU::reloadShifters() {
