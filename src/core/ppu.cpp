@@ -315,117 +315,18 @@ PPU::PatternTable PPU::getPatternTable(bool isBackground, uint8_t palleteNumber)
     return table;
 }
 
-// PPU Rendering overview (descriptions from https://www.nesdev.org/wiki/PPU_rendering, see https://www.nesdev.org/w/images/default/4/4f/Ppu.svg for diagram)
-// Line-by-line timing
-// The PPU renders 262 scanlines per frame. Each scanline lasts for 341 PPU clock cycles (113.667 CPU clock cycles; 1 CPU cycle = 3 PPU cycles), with each clock cycle producing one pixel. The line numbers given here correspond to how the internal PPU frame counters count lines.
-// The information in this section is summarized in the diagram in the next section.
-// The timing below is for NTSC PPUs. PPUs for 50 Hz TV systems differ:
-// Dendy PPUs render 51 post-render scanlines instead of 1
-// PAL NES PPUs render 70 vblank scanlines instead of 20, and they additionally run 3.2 PPU cycles per CPU cycle, or 106.5625 CPU clock cycles per scanline.
-// TODO: Break this up into functions, fix messy if logic
 void PPU::executeCycle() {
-    if (scanline >= -1 && scanline < 240) {
-        // Pre-render scanline (-1 or 261)
-        // This is a dummy scanline, whose sole purpose is to fill the shift registers with the data for the first two tiles of the next scanline. Although no pixels are rendered for this scanline, the PPU still makes the same memory accesses it would for a regular scanline, using whatever the current value of the PPU's V register is, and for the sprite fetches, whatever data is currently in secondary OAM (e.g., the results from scanline 239's sprite evaluation from the previous frame).
-        // This scanline varies in length, depending on whether an even or an odd frame is being rendered. For odd frames, the cycle at the end of the scanline is skipped (this is done internally by jumping directly from (339,261) to (0,0), replacing the idle tick at the beginning of the first visible scanline with the last tick of the last dummy nametable fetch). For even frames, the last cycle occurs normally. This is done to compensate for some shortcomings with the way the PPU physically outputs its video signal, the end result being a crisper image when the screen isn't scrolling. However, this behavior can be bypassed by keeping rendering disabled until after this scanline has passed, which results in an image with a "dot crawl" effect similar to, but not exactly like, what's seen in interlaced video.
-        // During pixels 280 through 304 of this scanline, the vertical scroll bits are reloaded if rendering is enabled.
-        if (scanline == -1) {
-            if (cycle == 1) {
-                status.vBlankStarted = 0;
-                status.sprite0Hit = 0;
-                status.spriteOverflow = 0;
-            }
-
-            if (cycle >= 280 && cycle <= 304) {
-                if (isRenderingEnabled()) {
-                    vramAddress.fineY = temporaryVramAddress.fineY;
-                    vramAddress.nametableY = temporaryVramAddress.nametableY;
-                    vramAddress.coarseY = temporaryVramAddress.coarseY;
-                }
-            }
-        }
-
-        if ((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 336)) { // if ((cycle >= 1 && cycle <= 257) || (cycle >= 321 && cycle <= 336)){
-            if (mask.showBackground) {
-                shiftShifters();
-            }
-
-            int cycleMod = (cycle - 1) % 8;
-            if (cycleMod == 0) {
-                reloadShifters();
-
-                nextNameTableByte = ppuRead(0x2000 + (vramAddress.toUInt16() & 0x0FFF));
-            }
-            else if (cycleMod == 2) {
-                uint16_t offset =
-                    (vramAddress.nametableY << 11) |
-                    (vramAddress.nametableX << 10) |
-                    ((vramAddress.coarseY >> 2) << 3) |
-                    (vramAddress.coarseX >> 2);
-                uint8_t nextAttributeTableByte = ppuRead(0x23C0 + offset);
-
-                // Extract the correct 2 bit portion of the attribute table byte
-                if (vramAddress.coarseY & 0x02) {
-                    nextAttributeTableByte >>= 4;
-                }
-                if (vramAddress.coarseX & 0x02) {
-                    nextAttributeTableByte >>= 2;
-                }
-                nextAttributeTableLo = nextAttributeTableByte & 0x1;
-                nextAttributeTableHi = nextAttributeTableByte & 0x2;
-            }
-            else if (cycleMod == 4) {
-                uint16_t address =
-                    (control.backgroundPatternTable << 12) |
-                    (nextNameTableByte << 4) |
-                    vramAddress.fineY;
-                nextPatternTableLo = ppuRead(address);
-            }
-            else if (cycleMod == 6) {
-                uint16_t address =
-                    (control.backgroundPatternTable << 12) |
-                    (nextNameTableByte << 4) |
-                    vramAddress.fineY;
-                nextPatternTableHi = ppuRead(address + 8);
-            }
-            else if (cycleMod == 7) {
-                if (isRenderingEnabled()) {
-                    incrementCoarseX();
-                }
-            }
-        }
-
-        if (cycle == 256) {
-            if (isRenderingEnabled()) {
-                incrementY();
-            }
-        }
-
-        if (cycle == 257) {
-            reloadShifters();
-
-            if (isRenderingEnabled()) {
-                vramAddress.nametableX = temporaryVramAddress.nametableX;
-                vramAddress.coarseX = temporaryVramAddress.coarseX;
-            }
-        }
-
-        if (cycle == 337 || cycle == 339) {
-            nextNameTableByte = ppuRead(0x2000 + (vramAddress.toUInt16() & 0x0FFF));
-        }
+    if (scanline == -1) {
+        preRenderScanline();
     }
-
-    if (scanline == 240) {
+    else if (scanline >= 0 && scanline <= 240) {
+        visibleScanlines();
     }
-
-    if (scanline == 241) {
-        if (cycle == 1) {
-            status.vBlankStarted = 1;
-            workingDisplay.swap(finishedDisplay);
-            if (control.nmiEnabled) {
-                bus->nmiRequest = true;
-            }
-        }
+    else if (scanline == 240) {
+        // Do nothing on this scanline
+    }
+    else { // if (scanline >= 241 && scanline <= 260) {
+        verticalBlankScanlines();
     }
 
     // TODO: Fix potential off by one errors with cycle / cycle-1
@@ -549,29 +450,204 @@ void PPU::executeCycle() {
             finalColor = spriteColor;
         }
 
-        // TODO: use the PPU's emphasis bits to modify the final color
-        (*workingDisplay)[scanline][cycle - 1] = finalColor;
-
         if (sprite0Rendered && bothVisible && mask.showBackground && mask.showSprites && (cycle - 1) != 0xFF) {
             bool renderingLeft = mask.showBackgroundLeft && mask.showSpritesLeft;
             if (renderingLeft || (!renderingLeft && cycle >= 9)) {
                 status.sprite0Hit = 1;
             }
         }
+
+        // TODO: use the PPU's emphasis bits to modify the final color
+        (*workingDisplay)[scanline][cycle - 1] = finalColor;
+
+        if (scanline == 239 && cycle == 256) {
+            // We have finished drawing all visible pixels, so the display is ready
+            std::swap(workingDisplay, finishedDisplay);
+        }
     }
 
-    // TODO: Need to skip the first cycle of scanline -1 for odd frames
+    incrementCycle();
+}
 
-    // Advance the cycle/scanline
-    cycle++;
-    if (cycle > 340) {
-        cycle = 0;
-        scanline++;
-        if (scanline > 260) {
-            scanline = -1;
+void PPU::preRenderScanline() {
+    if (cycle == 1) {
+        status.vBlankStarted = 0;
+        status.sprite0Hit = 0;
+        status.spriteOverflow = 0;
+    }
+    else if (cycle >= 280 && cycle <= 304) {
+        if (isRenderingEnabled()) {
+            vramAddress.fineY = temporaryVramAddress.fineY;
+            vramAddress.nametableY = temporaryVramAddress.nametableY;
+            vramAddress.coarseY = temporaryVramAddress.coarseY;
         }
-        else if (scanline == 0) {
-            frame++;
+    }
+
+    doRenderingPipeline();
+}
+
+void PPU::visibleScanlines() {
+    doRenderingPipeline();
+}
+
+void PPU::verticalBlankScanlines() {
+    if (scanline == 241 && cycle == 1) {
+        status.vBlankStarted = 1;
+        if (control.nmiEnabled) {
+            bus->nmiRequest = true;
+        }
+    }
+}
+
+void PPU::doRenderingPipeline() {
+    if (cycle >= 1 && cycle <= 256) {
+        doStandardFetchCycle();
+
+        if (cycle == 256) {
+            if (isRenderingEnabled()) {
+                incrementY();
+            }
+        }
+    }
+    else if (cycle >= 257 && cycle <= 320) {
+        if (cycle == 257) {
+            if (mask.showBackground) {
+                reloadShifters();
+            }
+
+            if (isRenderingEnabled()) {
+                vramAddress.coarseX = temporaryVramAddress.coarseX;
+                vramAddress.nametableX = temporaryVramAddress.nametableX;
+            }
+        }
+
+        switch (cycle % 8) {
+            // case 1: case 3: fetchNameTableByte(); break; // Garbage nametable fetches
+        }
+    }
+    else if (cycle >= 321 && cycle <= 336) {
+        doStandardFetchCycle();
+    }
+    else { // if (cycle >= 337 && cycle <= 340) {
+        // if (cycle == 337 || cycle == 339) fetchNameTableByte(); // Unused nametable fetches
+    }
+
+    // if ((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 336)) { // if ((cycle >= 1 && cycle <= 257) || (cycle >= 321 && cycle <= 336)){
+    //     if (mask.showBackground) {
+    //         shiftShifters();
+    //     }
+
+    //     int cycleMod = (cycle - 1) % 8;
+    //     if (cycleMod == 0) {
+    //         reloadShifters();
+
+    //         nextNameTableByte = ppuRead(0x2000 + (vramAddress.toUInt16() & 0x0FFF));
+    //     }
+    //     else if (cycleMod == 2) {
+    //         uint16_t offset =
+    //             (vramAddress.nametableY << 11) |
+    //             (vramAddress.nametableX << 10) |
+    //             ((vramAddress.coarseY >> 2) << 3) |
+    //             (vramAddress.coarseX >> 2);
+    //         uint8_t nextAttributeTableByte = ppuRead(0x23C0 + offset);
+
+    //         // Extract the correct 2 bit portion of the attribute table byte
+    //         if (vramAddress.coarseY & 0x02) {
+    //             nextAttributeTableByte >>= 4;
+    //         }
+    //         if (vramAddress.coarseX & 0x02) {
+    //             nextAttributeTableByte >>= 2;
+    //         }
+    //         nextAttributeTableLo = nextAttributeTableByte & 0x1;
+    //         nextAttributeTableHi = nextAttributeTableByte & 0x2;
+    //     }
+    //     else if (cycleMod == 4) {
+    //         uint16_t address =
+    //             (control.backgroundPatternTable << 12) |
+    //             (nextNameTableByte << 4) |
+    //             vramAddress.fineY;
+    //         nextPatternTableLo = ppuRead(address);
+    //     }
+    //     else if (cycleMod == 6) {
+    //         uint16_t address =
+    //             (control.backgroundPatternTable << 12) |
+    //             (nextNameTableByte << 4) |
+    //             vramAddress.fineY;
+    //         nextPatternTableHi = ppuRead(address + 8);
+    //     }
+    //     else if (cycleMod == 7) {
+    //         if (isRenderingEnabled()) {
+    //             incrementCoarseX();
+    //         }
+    //     }
+    // }
+
+    // if (cycle == 256) {
+    //     if (isRenderingEnabled()) {
+    //         incrementY();
+    //     }
+    // }
+
+    // if (cycle == 257) {
+    //     reloadShifters();
+
+    //     if (isRenderingEnabled()) {
+    //         vramAddress.nametableX = temporaryVramAddress.nametableX;
+    //         vramAddress.coarseX = temporaryVramAddress.coarseX;
+    //     }
+    // }
+
+    // if (cycle == 337 || cycle == 339) {
+    //     nextNameTableByte = ppuRead(0x2000 + (vramAddress.toUInt16() & 0x0FFF));
+    // }
+}
+
+void PPU::doStandardFetchCycle() {
+    if (mask.showBackground) {
+        shiftShifters();
+    }
+
+    int cycleMod = (cycle - 1) % 8;
+    if (cycleMod == 0) {
+        reloadShifters();
+
+        nextNameTableByte = ppuRead(0x2000 + (vramAddress.toUInt16() & 0x0FFF));
+    }
+    else if (cycleMod == 2) {
+        uint16_t offset =
+            (vramAddress.nametableY << 11) |
+            (vramAddress.nametableX << 10) |
+            ((vramAddress.coarseY >> 2) << 3) |
+            (vramAddress.coarseX >> 2);
+        uint8_t nextAttributeTableByte = ppuRead(0x23C0 + offset);
+
+        // Extract the correct 2 bit portion of the attribute table byte
+        if (vramAddress.coarseY & 0x02) {
+            nextAttributeTableByte >>= 4;
+        }
+        if (vramAddress.coarseX & 0x02) {
+            nextAttributeTableByte >>= 2;
+        }
+        nextAttributeTableLo = nextAttributeTableByte & 0x1;
+        nextAttributeTableHi = nextAttributeTableByte & 0x2;
+    }
+    else if (cycleMod == 4) {
+        uint16_t address =
+            (control.backgroundPatternTable << 12) |
+            (nextNameTableByte << 4) |
+            vramAddress.fineY;
+        nextPatternTableLo = ppuRead(address);
+    }
+    else if (cycleMod == 6) {
+        uint16_t address =
+            (control.backgroundPatternTable << 12) |
+            (nextNameTableByte << 4) |
+            vramAddress.fineY;
+        nextPatternTableHi = ppuRead(address + 8);
+    }
+    else if (cycleMod == 7) {
+        if (isRenderingEnabled()) {
+            incrementCoarseX();
         }
     }
 }

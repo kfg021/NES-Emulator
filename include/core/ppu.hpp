@@ -261,6 +261,13 @@ private:
     bool nextAttributeTableLo;
     bool nextAttributeTableHi;
 
+    void preRenderScanline();
+    void visibleScanlines();
+    void verticalBlankScanlines();
+
+    void doRenderingPipeline();
+    void doStandardFetchCycle();
+
     void reloadShifters();
     void shiftShifters();
 
