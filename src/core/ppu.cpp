@@ -1,7 +1,5 @@
 #include "core/ppu.hpp"
 
-#include <iostream>
-
 // Screen colors taken from https://www.nesdev.org/wiki/PPU_palettes
 const std::array<uint32_t, PPU::NUM_SCREEN_COLORS> PPU::SCREEN_COLORS = {
     0xFF626262, 0xFF001FB2, 0xFF2404C8, 0xFF5200B2, 0xFF730076, 0xFF800024, 0xFF730B00, 0xFF522800, 0xFF244400, 0xFF005700, 0xFF005C00, 0xFF005324, 0xFF003C76, 0xFF000000, 0xFF000000, 0xFF000000,
@@ -355,6 +353,11 @@ void PPU::visibleScanlines() {
     doRenderingPipeline();
 
     if (cycle >= 1 && cycle <= 256) {
+        if(cycle == 1){
+            // TODO: Not cycle accruate
+            fillCurrentScanlineSprites();
+        }
+
         drawPixel();
 
         if (scanline == 239 && cycle == 256) {
@@ -476,13 +479,6 @@ void PPU::fetchPatternTableByteHi() {
 }
 
 void PPU::drawPixel() {
-    // Before we draw anything, get the sprites that are visible on this scanline
-    if (cycle == 1) {
-        // This implementation is not at all cycle accurate
-        // TODO: Consider rendering sprites the way that the NES does
-        fillCurrentScanlineSprites();
-    }
-
     // Get color from background
     uint8_t backgroundPatternTable = 0;
     uint8_t backgroundAttributeTable = 0;
@@ -589,7 +585,7 @@ void PPU::drawPixel() {
     if (bothTransparent || onlySpriteTransparent || (bothVisible && spritePriority == 0)) {
         finalColor = backgroundColor;
     }
-    else { // if (onlyBackgroundTransparent || (bothVisible && spritePriority == 1))
+    else { // if (onlyBackgroundTransparent || (bothVisible && spritePriority == 1)) {
         finalColor = spriteColor;
     }
 
