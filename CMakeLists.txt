@@ -31,6 +31,7 @@ set(HEADERS
     include/gui/debugwindow.hpp
     include/gui/gamewindow.hpp
     include/gui/mainwindow.hpp
+    include/gui/renderthread.hpp
     include/util/util.hpp
 )
 
@@ -49,6 +50,7 @@ set(SOURCES
     src/gui/debugwindow.cpp
     src/gui/gamewindow.cpp
     src/gui/mainwindow.cpp
+    src/gui/renderthread.cpp
     src/util/util.cpp
     src/main.cpp
 )

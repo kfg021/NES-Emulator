@@ -38,10 +38,9 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
     setCentralWidget(parentWidget);
 
     numSteps = 0;
-    numFrames = 0;
 
     updateTimer = new QTimer(this);
-    connect(updateTimer, &QTimer::timeout, this, &MainWindow::tick);
+    connect(updateTimer, SIGNAL(timeout()), this, SLOT(tick()));
     updateTimer->setInterval(1000 / FPS);
 
     elapsedTimer = new QElapsedTimer();
@@ -59,7 +58,6 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
 void MainWindow::tick() {
     int64_t totalElapsed = elapsedTimer->nsecsElapsed();
 
-    // Step
     int64_t neededSteps = ((totalElapsed * IPS) / (int64_t)1e9) - numSteps;
     for (int i = 0; i < neededSteps; i++) {
         numSteps++;
@@ -68,17 +66,6 @@ void MainWindow::tick() {
         executeCycleAndUpdateDebugWindow();
 #else
         bus->executeCycle();
-#endif
-    }
-
-    // Draw
-    int64_t neededFrames = ((totalElapsed * FPS) / (int64_t)1e9) - numFrames;
-    for (int i = 0; i < neededFrames; i++) {
-        numFrames++;
-        gameWindow->update();
-
-#ifdef SHOW_DEBUG_WINDOW
-        debugWindow->update();
 #endif
     }
 }
@@ -92,12 +79,11 @@ void MainWindow::toggleDebugMode() {
         elapsedTimer->start();
 
         numSteps = 0;
-        numFrames = 0;
     }
     else {
         updateTimer->stop();
 
-        gameWindow->update();
+        // gameWindow->update();
         debugWindow->update();
     }
 }
@@ -114,7 +100,7 @@ void MainWindow::stepIfInDebugMode() {
             i++;
         }
 
-        gameWindow->update();
+        // gameWindow->update();
 
         debugWindow->update();
     }
@@ -148,7 +134,7 @@ void MainWindow::executeCycleAndUpdateDebugWindow() {
 void MainWindow::reset() {
     // TODO: This is technically this is not a reset. It is more like a "power on"
     bus->initDevices();
-    gameWindow->update();
+    // gameWindow->update();
 
 #ifdef SHOW_DEBUG_WINDOW
     debugWindow->reset();

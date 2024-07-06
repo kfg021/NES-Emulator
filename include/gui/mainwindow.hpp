@@ -26,18 +26,22 @@ public:
     static constexpr int DEBUG_WIDTH = 300;
 #endif
 
+    static constexpr int FPS = 60;
+    static constexpr int IPS = 1773448;
+
 protected:
     void keyPressEvent(QKeyEvent* event) override;
     void keyReleaseEvent(QKeyEvent* event) override;
+
+private slots:
+    void tick();
 
 private:
     GameWindow* gameWindow;
 
     QTimer* updateTimer;
+    QTimer* renderTimer;
     QElapsedTimer* elapsedTimer;
-
-    static constexpr int FPS = 60;
-    static constexpr int IPS = 1773448;
 
 #ifdef SHOW_DEBUG_WINDOW
     DebugWindow* debugWindow;
@@ -49,8 +53,6 @@ private:
 #endif
 
     int64_t numSteps;
-    int64_t numFrames;
-    void tick();
 
     void reset();
 
