@@ -24,18 +24,20 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
 #ifdef SHOW_DEBUG_WINDOW
     debugWindow = new DebugWindow(nullptr, bus);
     debugWindow->setFixedSize(DEBUG_WIDTH, GAME_HEIGHT);
+    debugWindow->hide();
 #endif
 
-    QHBoxLayout* layout = new QHBoxLayout();
-    layout->addWidget(gameWindow);
+    QHBoxLayout* mainLayout = new QHBoxLayout();
+    mainLayout->addWidget(gameWindow);
 
 #ifdef SHOW_DEBUG_WINDOW
-    layout->addWidget(debugWindow);
+    mainLayout->addWidget(debugWindow);
 #endif
 
     QWidget* parentWidget = new QWidget();
-    parentWidget->setLayout(layout);
+    parentWidget->setLayout(mainLayout);
     setCentralWidget(parentWidget);
+    layout()->setSizeConstraint(QLayout::SetFixedSize);
 
     numSteps = 0;
 
@@ -63,7 +65,12 @@ void MainWindow::tick() {
         numSteps++;
 
 #ifdef SHOW_DEBUG_WINDOW
-        executeCycleAndUpdateDebugWindow();
+        if (debugWindow->isVisible()) {
+            executeCycleAndUpdateDebugWindow();
+        }
+        else {
+            bus->executeCycle();
+        }
 #else
         bus->executeCycle();
 #endif
@@ -165,21 +172,34 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
     else if (event->key() == Qt::Key_R) {
         reset();
     }
-
 #ifdef SHOW_DEBUG_WINDOW
     // Debugging keys
-    else if (event->key() == Qt::Key_Space) {
-        stepIfInDebugMode();
+    else if (event->key() == Qt::Key_D) {
+        if (debugWindow->isVisible()) {
+            if (debugMode) {
+                toggleDebugMode();
+            }
+            debugWindow->hide();
+        }
+        else {
+            debugWindow->show();
+        }
     }
-    else if (event->key() == Qt::Key_C) {
-        toggleDebugMode();
+    else if (debugWindow->isVisible()) {
+        if (event->key() == Qt::Key_Space) {
+            stepIfInDebugMode();
+        }
+        else if (event->key() == Qt::Key_C) {
+            toggleDebugMode();
+        }
+        else if (event->key() == Qt::Key_O) {
+            debugWindow->backgroundPallete = (debugWindow->backgroundPallete + 1) & 3;
+        }
+        else if (event->key() == Qt::Key_P) {
+            debugWindow->spritePallete = (debugWindow->spritePallete + 1) & 3;
+        }
     }
-    else if (event->key() == Qt::Key_O) {
-        debugWindow->backgroundPallete = (debugWindow->backgroundPallete + 1) & 3;
-    }
-    else if (event->key() == Qt::Key_P) {
-        debugWindow->spritePallete = (debugWindow->spritePallete + 1) & 3;
-    }
+
 #endif
 }
 
