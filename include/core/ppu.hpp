@@ -268,6 +268,11 @@ private:
     void doRenderingPipeline();
     void doStandardFetchCycle();
 
+    void fetchNameTableByte();
+    void fetchAttributeTableByte();
+    void fetchPatternTableByteLo();
+    void fetchPatternTableByteHi();
+
     void reloadShifters();
     void shiftShifters();
 

@@ -531,75 +531,6 @@ void PPU::doRenderingPipeline() {
     else { // if (cycle >= 337 && cycle <= 340) {
         // if (cycle == 337 || cycle == 339) fetchNameTableByte(); // Unused nametable fetches
     }
-
-    // if ((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 336)) { // if ((cycle >= 1 && cycle <= 257) || (cycle >= 321 && cycle <= 336)){
-    //     if (mask.showBackground) {
-    //         shiftShifters();
-    //     }
-
-    //     int cycleMod = (cycle - 1) % 8;
-    //     if (cycleMod == 0) {
-    //         reloadShifters();
-
-    //         nextNameTableByte = ppuRead(0x2000 + (vramAddress.toUInt16() & 0x0FFF));
-    //     }
-    //     else if (cycleMod == 2) {
-    //         uint16_t offset =
-    //             (vramAddress.nametableY << 11) |
-    //             (vramAddress.nametableX << 10) |
-    //             ((vramAddress.coarseY >> 2) << 3) |
-    //             (vramAddress.coarseX >> 2);
-    //         uint8_t nextAttributeTableByte = ppuRead(0x23C0 + offset);
-
-    //         // Extract the correct 2 bit portion of the attribute table byte
-    //         if (vramAddress.coarseY & 0x02) {
-    //             nextAttributeTableByte >>= 4;
-    //         }
-    //         if (vramAddress.coarseX & 0x02) {
-    //             nextAttributeTableByte >>= 2;
-    //         }
-    //         nextAttributeTableLo = nextAttributeTableByte & 0x1;
-    //         nextAttributeTableHi = nextAttributeTableByte & 0x2;
-    //     }
-    //     else if (cycleMod == 4) {
-    //         uint16_t address =
-    //             (control.backgroundPatternTable << 12) |
-    //             (nextNameTableByte << 4) |
-    //             vramAddress.fineY;
-    //         nextPatternTableLo = ppuRead(address);
-    //     }
-    //     else if (cycleMod == 6) {
-    //         uint16_t address =
-    //             (control.backgroundPatternTable << 12) |
-    //             (nextNameTableByte << 4) |
-    //             vramAddress.fineY;
-    //         nextPatternTableHi = ppuRead(address + 8);
-    //     }
-    //     else if (cycleMod == 7) {
-    //         if (isRenderingEnabled()) {
-    //             incrementCoarseX();
-    //         }
-    //     }
-    // }
-
-    // if (cycle == 256) {
-    //     if (isRenderingEnabled()) {
-    //         incrementY();
-    //     }
-    // }
-
-    // if (cycle == 257) {
-    //     reloadShifters();
-
-    //     if (isRenderingEnabled()) {
-    //         vramAddress.nametableX = temporaryVramAddress.nametableX;
-    //         vramAddress.coarseX = temporaryVramAddress.coarseX;
-    //     }
-    // }
-
-    // if (cycle == 337 || cycle == 339) {
-    //     nextNameTableByte = ppuRead(0x2000 + (vramAddress.toUInt16() & 0x0FFF));
-    // }
 }
 
 void PPU::doStandardFetchCycle() {
@@ -609,47 +540,65 @@ void PPU::doStandardFetchCycle() {
 
     int cycleMod = (cycle - 1) % 8;
     if (cycleMod == 0) {
-        reloadShifters();
+        if (mask.showBackground) {
+            reloadShifters();
+        }
 
-        nextNameTableByte = ppuRead(0x2000 + (vramAddress.toUInt16() & 0x0FFF));
+        fetchNameTableByte();
     }
     else if (cycleMod == 2) {
-        uint16_t offset =
-            (vramAddress.nametableY << 11) |
-            (vramAddress.nametableX << 10) |
-            ((vramAddress.coarseY >> 2) << 3) |
-            (vramAddress.coarseX >> 2);
-        uint8_t nextAttributeTableByte = ppuRead(0x23C0 + offset);
-
-        // Extract the correct 2 bit portion of the attribute table byte
-        if (vramAddress.coarseY & 0x02) {
-            nextAttributeTableByte >>= 4;
-        }
-        if (vramAddress.coarseX & 0x02) {
-            nextAttributeTableByte >>= 2;
-        }
-        nextAttributeTableLo = nextAttributeTableByte & 0x1;
-        nextAttributeTableHi = nextAttributeTableByte & 0x2;
+        fetchAttributeTableByte();
     }
     else if (cycleMod == 4) {
-        uint16_t address =
-            (control.backgroundPatternTable << 12) |
-            (nextNameTableByte << 4) |
-            vramAddress.fineY;
-        nextPatternTableLo = ppuRead(address);
+        fetchPatternTableByteLo();
     }
     else if (cycleMod == 6) {
-        uint16_t address =
-            (control.backgroundPatternTable << 12) |
-            (nextNameTableByte << 4) |
-            vramAddress.fineY;
-        nextPatternTableHi = ppuRead(address + 8);
+        fetchPatternTableByteHi();
     }
     else if (cycleMod == 7) {
         if (isRenderingEnabled()) {
             incrementCoarseX();
         }
     }
+}
+
+void PPU::fetchNameTableByte() {
+    nextNameTableByte = ppuRead(0x2000 + (vramAddress.toUInt16() & 0x0FFF));
+}
+
+void PPU::fetchAttributeTableByte() {
+    uint16_t offset =
+        (vramAddress.nametableY << 11) |
+        (vramAddress.nametableX << 10) |
+        ((vramAddress.coarseY >> 2) << 3) |
+        (vramAddress.coarseX >> 2);
+    uint8_t nextAttributeTableByte = ppuRead(0x23C0 + offset);
+
+    // Extract the correct 2 bit portion of the attribute table byte
+    if (vramAddress.coarseY & 0x02) {
+        nextAttributeTableByte >>= 4;
+    }
+    if (vramAddress.coarseX & 0x02) {
+        nextAttributeTableByte >>= 2;
+    }
+    nextAttributeTableLo = nextAttributeTableByte & 0x1;
+    nextAttributeTableHi = nextAttributeTableByte & 0x2;
+}
+
+void PPU::fetchPatternTableByteLo() {
+    uint16_t address =
+        (control.backgroundPatternTable << 12) |
+        (nextNameTableByte << 4) |
+        vramAddress.fineY;
+    nextPatternTableLo = ppuRead(address);
+}
+
+void PPU::fetchPatternTableByteHi() {
+    uint16_t address =
+        (control.backgroundPatternTable << 12) |
+        (nextNameTableByte << 4) |
+        vramAddress.fineY;
+    nextPatternTableHi = ppuRead(address + 8);
 }
 
 void PPU::reloadShifters() {
