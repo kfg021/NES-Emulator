@@ -522,14 +522,14 @@ void PPU::doRenderingPipeline() {
         }
 
         switch (cycle % 8) {
-            // case 1: case 3: fetchNameTableByte(); break; // Garbage nametable fetches
+            case 1: case 3: fetchNameTableByte(); break; // Garbage nametable fetches
         }
     }
     else if (cycle >= 321 && cycle <= 336) {
         doStandardFetchCycle();
     }
     else { // if (cycle >= 337 && cycle <= 340) {
-        // if (cycle == 337 || cycle == 339) fetchNameTableByte(); // Unused nametable fetches
+        if (cycle == 337 || cycle == 339) fetchNameTableByte(); // Unused nametable fetches
     }
 }
 
@@ -538,27 +538,27 @@ void PPU::doStandardFetchCycle() {
         shiftShifters();
     }
 
-    int cycleMod = (cycle - 1) % 8;
-    if (cycleMod == 0) {
-        if (mask.showBackground) {
-            reloadShifters();
-        }
-
-        fetchNameTableByte();
-    }
-    else if (cycleMod == 2) {
-        fetchAttributeTableByte();
-    }
-    else if (cycleMod == 4) {
-        fetchPatternTableByteLo();
-    }
-    else if (cycleMod == 6) {
-        fetchPatternTableByteHi();
-    }
-    else if (cycleMod == 7) {
-        if (isRenderingEnabled()) {
-            incrementCoarseX();
-        }
+    switch (cycle % 8) {
+        case 1:
+            if (mask.showBackground) {
+                reloadShifters();
+            }
+            fetchNameTableByte();
+            break;
+        case 3:
+            fetchAttributeTableByte();
+            break;
+        case 5:
+            fetchPatternTableByteLo();
+            break;
+        case 7:
+            fetchPatternTableByteHi();
+            break;
+        case 0:
+            if (isRenderingEnabled()) {
+                incrementCoarseX();
+            }
+            break;
     }
 }
 

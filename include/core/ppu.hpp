@@ -220,7 +220,7 @@ private:
     // This is where we write addresses to in PPUSCROLL and PPUDATA (lo/hi byte is controlled by addressLatch)
     InternalRegister temporaryVramAddress;
     InternalRegister vramAddress;
-    
+
     uint8_t fineX;
 
     // Reading PPU data takes two instruction cycles, so we store data that we haven't yet read here
