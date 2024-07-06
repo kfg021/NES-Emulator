@@ -82,9 +82,6 @@ void MainWindow::toggleDebugMode() {
     }
     else {
         updateTimer->stop();
-
-        // gameWindow->update();
-        debugWindow->update();
     }
 }
 
@@ -99,10 +96,6 @@ void MainWindow::stepIfInDebugMode() {
             executeInstruction();
             i++;
         }
-
-        // gameWindow->update();
-
-        debugWindow->update();
     }
 }
 
@@ -134,7 +127,6 @@ void MainWindow::executeCycleAndUpdateDebugWindow() {
 void MainWindow::reset() {
     // TODO: This is technically this is not a reset. It is more like a "power on"
     bus->initDevices();
-    // gameWindow->update();
 
 #ifdef SHOW_DEBUG_WINDOW
     debugWindow->reset();
@@ -184,11 +176,9 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
     }
     else if (event->key() == Qt::Key_O) {
         debugWindow->backgroundPallete = (debugWindow->backgroundPallete + 1) & 3;
-        debugWindow->update();
     }
     else if (event->key() == Qt::Key_P) {
         debugWindow->spritePallete = (debugWindow->spritePallete + 1) & 3;
-        debugWindow->update();
     }
 #endif
 }

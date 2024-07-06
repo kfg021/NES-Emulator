@@ -11,10 +11,22 @@
 
 
 DebugWindow::DebugWindow(QWidget* parent, const std::shared_ptr<Bus>& bus)
-    : QWidget(parent), bus(bus) {
+    : QWidget(parent), bus(bus), renderThread(new RenderThread(this)) {
+    connect(renderThread, SIGNAL(triggerUpdate()), this, SLOT(onRenderUpdate()));
+    renderThread->start();
 
     backgroundPallete = 0;
     spritePallete = 0;
+}
+
+DebugWindow::~DebugWindow() {
+    renderThread->quit();
+    renderThread->wait();
+    renderThread->deleteLater();
+}
+
+void DebugWindow::onRenderUpdate() {
+    update();
 }
 
 void DebugWindow::paintEvent(QPaintEvent* /*event*/) {
