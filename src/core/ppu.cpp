@@ -347,11 +347,7 @@ void PPU::executeCycle() {
 
         if ((cycle >= 1 && cycle <= 256) || (cycle >= 321 && cycle <= 336)) { // if ((cycle >= 1 && cycle <= 257) || (cycle >= 321 && cycle <= 336)){
             if (mask.showBackground) {
-                patternTableLoShifter <<= 1;
-                patternTableHiShifter <<= 1;
-
-                attributeTableLoShifter <<= 1;
-                attributeTableHiShifter <<= 1;
+                shiftShifters();
             }
 
             int cycleMod = (cycle - 1) % 8;
@@ -592,6 +588,81 @@ void PPU::reloadShifters() {
     reloadShifter(attributeTableHiShifter, nextAttributeTableHi ? 0xFF : 0x00);
 }
 
+void PPU::shiftShifters() {
+    patternTableLoShifter <<= 1;
+    patternTableHiShifter <<= 1;
+    attributeTableLoShifter <<= 1;
+    attributeTableHiShifter <<= 1;
+}
+
+bool PPU::isRenderingEnabled() {
+    return mask.showBackground || mask.showSprites;
+}
+
+void PPU::incrementCycle() {
+    if (cycle < 340) {
+        cycle++;
+    }
+    else {
+        if (scanline < 260) {
+            scanline++;
+        }
+        else {
+            scanline = -1;
+            frame++;
+        }
+
+        // Skip a cycle on odd frame numbers
+        if (scanline == 0 && (frame & 1)) {
+            cycle = 1;
+        }
+        else {
+            cycle = 0;
+        }
+    }
+}
+
+// The code for this function is based on pseudocode from https://www.nesdev.org/wiki/PPU_scrolling
+void PPU::incrementCoarseX() {
+    uint16_t v = vramAddress.toUInt16();
+
+    if ((v & 0x001F) == 31) { // if coarse X == 31
+        v &= ~0x001F; // coarse X = 0
+        v ^= 0x0400; // switch horizontal nametable
+    }
+    else {
+        v += 1; // increment coarse X
+    }
+
+    vramAddress.setFromUInt16(v);
+}
+
+// The code for this function is based on pseudocode from https://www.nesdev.org/wiki/PPU_scrolling
+void PPU::incrementY() {
+    uint16_t v = vramAddress.toUInt16();
+
+    if ((v & 0x7000) != 0x7000) { // if fine Y < 7
+        v += 0x1000; // increment fine Y
+    }
+    else {
+        v &= ~0x7000; // fine Y = 0            
+        int y = (v & 0x03E0) >> 5; // let y = coarse Y 
+        if (y == 29) {
+            y = 0; // coarse Y = 0                    
+            v ^= 0x0800; // switch vertical nametable
+        }
+        else if (y == 31) {
+            y = 0; // coarse Y = 0, nametable not switched
+        }
+        else {
+            y += 1; // increment coarse Y
+        }
+        v = (v & ~0x03E0) | (y << 5); // put coarse Y back into v
+    }
+
+    vramAddress.setFromUInt16(v);
+}
+
 void PPU::fillCurrentScanlineSprites() {
     static constexpr uint8_t MAX_SPRITES = 8;
     currentScanlineSprites.clear();
@@ -622,50 +693,6 @@ void PPU::fillCurrentScanlineSprites() {
             }
         }
     }
-}
-
-bool PPU::isRenderingEnabled() {
-    return mask.showBackground || mask.showSprites;
-}
-
-// The code for these functions is based on pseudocode from https://www.nesdev.org/wiki/PPU_scrolling
-void PPU::incrementCoarseX() {
-    uint16_t v = vramAddress.toUInt16();
-
-    if ((v & 0x001F) == 31) { // if coarse X == 31
-        v &= ~0x001F; // coarse X = 0
-        v ^= 0x0400; // switch horizontal nametable
-    }
-    else {
-        v += 1; // increment coarse X
-    }
-
-    vramAddress.setFromUInt16(v);
-}
-
-void PPU::incrementY() {
-    uint16_t v = vramAddress.toUInt16();
-
-    if ((v & 0x7000) != 0x7000) { // if fine Y < 7
-        v += 0x1000; // increment fine Y
-    }
-    else {
-        v &= ~0x7000; // fine Y = 0            
-        int y = (v & 0x03E0) >> 5; // let y = coarse Y 
-        if (y == 29) {
-            y = 0; // coarse Y = 0                    
-            v ^= 0x0800; // switch vertical nametable
-        }
-        else if (y == 31) {
-            y = 0; // coarse Y = 0, nametable not switched
-        }
-        else {
-            y += 1; // increment coarse Y
-        }
-        v = (v & ~0x03E0) | (y << 5); // put coarse Y back into v
-    }
-
-    vramAddress.setFromUInt16(v);
 }
 
 uint16_t PPU::getPalleteRamAddress(uint8_t patternTable, uint8_t attributeTable) const {

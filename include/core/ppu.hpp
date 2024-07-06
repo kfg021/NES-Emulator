@@ -220,6 +220,8 @@ private:
     // This is where we write addresses to in PPUSCROLL and PPUDATA (lo/hi byte is controlled by addressLatch)
     InternalRegister temporaryVramAddress;
     InternalRegister vramAddress;
+    
+    uint8_t fineX;
 
     // Reading PPU data takes two instruction cycles, so we store data that we haven't yet read here
     uint8_t ppuBusData;
@@ -259,22 +261,22 @@ private:
     bool nextAttributeTableLo;
     bool nextAttributeTableHi;
 
-    uint8_t fineX;
-
     void reloadShifters();
-
-    void incrementCoarseX();
-    void incrementY();
+    void shiftShifters();
 
     bool isRenderingEnabled();
 
-    std::unique_ptr<Display> workingDisplay;
-
-    uint8_t oamAddress;
+    void incrementCycle();
+    void incrementCoarseX();
+    void incrementY();
 
     std::vector<OAMEntry> currentScanlineSprites;
     bool sprite0OnCurrentScanline;
     void fillCurrentScanlineSprites();
+
+    std::unique_ptr<Display> workingDisplay;
+
+    uint8_t oamAddress;
 
     uint16_t getPalleteRamAddress(uint8_t backgroundTable, uint8_t patternTable) const;
 };
