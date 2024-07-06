@@ -337,7 +337,7 @@ void PPU::executeCycle() {
             }
 
             if (cycle >= 280 && cycle <= 304) {
-                if (mask.showBackground || mask.showSprites) {
+                if (isRenderingEnabled()) {
                     vramAddress.fineY = temporaryVramAddress.fineY;
                     vramAddress.nametableY = temporaryVramAddress.nametableY;
                     vramAddress.coarseY = temporaryVramAddress.coarseY;
@@ -393,14 +393,14 @@ void PPU::executeCycle() {
                 nextPatternTableHi = ppuRead(address + 8);
             }
             else if (cycleMod == 7) {
-                if (mask.showBackground || mask.showSprites) {
+                if (isRenderingEnabled()) {
                     incrementCoarseX();
                 }
             }
         }
 
         if (cycle == 256) {
-            if (mask.showBackground || mask.showSprites) {
+            if (isRenderingEnabled()) {
                 incrementY();
             }
         }
@@ -408,7 +408,7 @@ void PPU::executeCycle() {
         if (cycle == 257) {
             reloadShifters();
 
-            if (mask.showBackground || mask.showSprites) {
+            if (isRenderingEnabled()) {
                 vramAddress.nametableX = temporaryVramAddress.nametableX;
                 vramAddress.coarseX = temporaryVramAddress.coarseX;
             }
@@ -622,6 +622,10 @@ void PPU::fillCurrentScanlineSprites() {
             }
         }
     }
+}
+
+bool PPU::isRenderingEnabled() {
+    return mask.showBackground || mask.showSprites;
 }
 
 // The code for these functions is based on pseudocode from https://www.nesdev.org/wiki/PPU_scrolling

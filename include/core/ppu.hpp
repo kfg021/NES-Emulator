@@ -266,6 +266,8 @@ private:
     void incrementCoarseX();
     void incrementY();
 
+    bool isRenderingEnabled();
+
     std::unique_ptr<Display> workingDisplay;
 
     uint8_t oamAddress;
