@@ -56,6 +56,33 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
 #endif
 }
 
+void MainWindow::tick() {
+    int64_t totalElapsed = elapsedTimer->nsecsElapsed();
+
+    // Step
+    int64_t neededSteps = ((totalElapsed * IPS) / (int64_t)1e9) - numSteps;
+    for (int i = 0; i < neededSteps; i++) {
+        numSteps++;
+
+#ifdef SHOW_DEBUG_WINDOW
+        executeCycleAndUpdateDebugWindow();
+#else
+        bus->executeCycle();
+#endif
+    }
+
+    // Draw
+    int64_t neededFrames = ((totalElapsed * FPS) / (int64_t)1e9) - numFrames;
+    for (int i = 0; i < neededFrames; i++) {
+        numFrames++;
+        gameWindow->update();
+
+#ifdef SHOW_DEBUG_WINDOW
+        debugWindow->update();
+#endif
+    }
+}
+
 #ifdef SHOW_DEBUG_WINDOW
 void MainWindow::toggleDebugMode() {
     debugMode ^= 1;
@@ -74,9 +101,7 @@ void MainWindow::toggleDebugMode() {
         debugWindow->update();
     }
 }
-#endif
 
-#ifdef SHOW_DEBUG_WINDOW
 void MainWindow::stepIfInDebugMode() {
     if (debugMode) {
         // Pressing space causes the processor to jump to the next non-repeating instruction.
@@ -84,7 +109,7 @@ void MainWindow::stepIfInDebugMode() {
         static constexpr int MAX_LOOP = 1e6;
         uint16_t lastPC = bus->cpu->getPC();
         int i = 0;
-        while(bus->cpu->getPC() == lastPC && i < MAX_LOOP){
+        while (bus->cpu->getPC() == lastPC && i < MAX_LOOP) {
             executeInstruction();
             i++;
         }
@@ -94,63 +119,29 @@ void MainWindow::stepIfInDebugMode() {
         debugWindow->update();
     }
 }
-#endif
 
-void MainWindow::tick() {
-    int64_t totalElapsed = elapsedTimer->nsecsElapsed();
-
-    // Step
-    int64_t neededSteps = ((totalElapsed * IPS) / (int64_t)1e9) - numSteps;
-    for (int i = 0; i < neededSteps; i++) {
-        numSteps++;
-
-        executeCycle();
-    }
-
-    // Draw
-    int64_t neededFrames = ((totalElapsed * FPS) / (int64_t)1e9) - numFrames;
-    for (int i = 0; i < neededFrames; i++) {
-        numFrames++;
-        gameWindow->update();
-
-#ifdef SHOW_DEBUG_WINDOW
-        debugWindow->update();
-#endif
-    }
-}
-
-void MainWindow::executeCycle() {
-    if (!bus->cpu->getRemainingCycles()) {
-
-#ifdef SHOW_DEBUG_WINDOW
-        QString currentInst = debugWindow->toString(bus->cpu->getPC());
-#endif
-
-        bus->executeCycle();
-
-#ifdef SHOW_DEBUG_WINDOW
-        if (debugWindow->prevInsts.size() == DebugWindow::NUM_INSTS) {
-            debugWindow->prevInsts.pop_back();
-        }
-        debugWindow->prevInsts.prepend(currentInst);
-#endif
-    }
-    else {
-        bus->executeCycle();
-    }
-}
-
-#ifdef SHOW_DEBUG_WINDOW
 void MainWindow::executeInstruction() {
     while (bus->cpu->getRemainingCycles()) {
         bus->executeCycle();
     }
 
-    bus->executeCycle();
-    bus->executeCycle();
-
     // We should log this one
-    executeCycle();
+    executeCycleAndUpdateDebugWindow();
+}
+
+void MainWindow::executeCycleAndUpdateDebugWindow() {
+    if (!bus->cpu->getRemainingCycles()) {
+        QString currentInst = debugWindow->toString(bus->cpu->getPC());
+        bus->executeCycle();
+
+        if (debugWindow->prevInsts.size() == DebugWindow::NUM_INSTS) {
+            debugWindow->prevInsts.pop_back();
+        }
+        debugWindow->prevInsts.prepend(currentInst);
+    }
+    else {
+        bus->executeCycle();
+    }
 }
 #endif
 

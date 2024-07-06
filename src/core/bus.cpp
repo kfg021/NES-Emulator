@@ -117,16 +117,17 @@ void Bus::write(uint16_t address, uint8_t value) {
 }
 
 void Bus::executeCycle() {
+    // Three PPU cycles for every CPU cycle
+    ppu->executeCycle();
+    ppu->executeCycle();
     ppu->executeCycle();
 
-    if (totalCycles % 3 == 0) {
-        // TODO: Implement DMA dummy cycle
-        if (dmaTransferRequested) {
-            doDmaTransferCycle();
-        }
-        else {
-            cpu->executeCycle();
-        }
+    // TODO: Implement DMA dummy cycle
+    if (dmaTransferRequested) {
+        doDmaTransferCycle();
+    }
+    else {
+        cpu->executeCycle();
     }
 
     if (nmiRequest) {

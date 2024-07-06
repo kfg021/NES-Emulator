@@ -33,19 +33,15 @@ protected:
 private:
     GameWindow* gameWindow;
 
-#ifdef SHOW_DEBUG_WINDOW
-    DebugWindow* debugWindow;
-#endif
-
     QTimer* updateTimer;
     QElapsedTimer* elapsedTimer;
 
     static constexpr int FPS = 60;
-    static constexpr int IPS = 5369318;
-
-    void executeCycle();
+    static constexpr int IPS = 1773448;
 
 #ifdef SHOW_DEBUG_WINDOW
+    DebugWindow* debugWindow;
+    void executeCycleAndUpdateDebugWindow();
     void executeInstruction();
     void toggleDebugMode();
     void stepIfInDebugMode();
