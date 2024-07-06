@@ -247,22 +247,21 @@ private:
     int64_t frame;
 
     // internal latches
-    uint16_t currentPatternTableTileLo;
-    uint16_t currentPatternTableTileHi;
-    uint16_t currentAttributeTableLo;
-    uint16_t currentAttributeTableHi;
+    uint16_t patternTableLoShifter;
+    uint16_t patternTableHiShifter;
+    uint16_t attributeTableLoShifter;
+    uint16_t attributeTableHiShifter;
 
     uint8_t nextNameTableByte;
 
-    uint8_t nextPatternTableTileLo;
-    uint8_t nextPatternTableTileHi;
+    uint8_t nextPatternTableLo;
+    uint8_t nextPatternTableHi;
     bool nextAttributeTableLo;
     bool nextAttributeTableHi;
 
     uint8_t fineX;
 
-    void updatePatternTable();
-    void updateAttributeTable();
+    void reloadShifters();
 
     void incrementCoarseX();
     void incrementY();
