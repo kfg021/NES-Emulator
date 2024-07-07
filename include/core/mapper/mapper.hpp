@@ -16,7 +16,8 @@ public:
         HORIZONTAL,
         VERTICAL,
         ONE_SCREEN_LOWER_BANK,
-        ONE_SCREEN_UPPER_BANK
+        ONE_SCREEN_UPPER_BANK,
+        FOUR_SCREEN
     };
 
     struct Config {
@@ -25,6 +26,7 @@ public:
         uint8_t chrChunks;
         MirrorMode initialMirrorMode;
         bool hasBatteryBackedPrgRam;
+        bool alternativeNametableLayout;
     };
     
     const Config config;

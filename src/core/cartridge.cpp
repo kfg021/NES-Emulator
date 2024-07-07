@@ -108,7 +108,7 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath) {
         mapperId = (mapperIdHi << 8) | (mapperIdMid << 4) | mapperIdLo;
     }
 
-    // TODO: Parse alternative nametable layout
+    bool alternativeNametableLayout = (header.flag6 >> 3) & 1;
 
     // TODO: Parse iNES 2.0 fields
 
@@ -141,7 +141,8 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath) {
         header.prgChunks,
         header.chrChunks,
         static_cast<Mapper::MirrorMode>(mirrorModeId),
-        hasBatteryBackedPrgRam
+        hasBatteryBackedPrgRam,
+        alternativeNametableLayout
     };
     mapper = Mapper::createMapper(config, prg, chr);
     if (mapper == nullptr) {

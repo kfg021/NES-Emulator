@@ -236,7 +236,7 @@ private:
     std::array<uint8_t, 0x20> palleteRam;
     uint8_t getPalleteRamIndex(uint16_t address, bool read) const;
 
-    using NameTable = std::array<uint8_t, 0x800>;
+    using NameTable = std::array<uint8_t, 2 * KB>;
     NameTable nameTable;
 
     // Pointer to the Bus instance that the PPU is attached to. The CPU is not responsible for clearing this memory as it will get deleted when the Bus goes out of scope

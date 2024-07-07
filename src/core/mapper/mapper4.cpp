@@ -1,8 +1,13 @@
 #include "core/mapper/mapper4.hpp"
 
-Mapper::Config editConfigMapper4(Mapper::Config config){
+Mapper::Config editConfigMapper4(Mapper::Config config) {
     // Mapper 4 has PRG RAM by default
     config.hasBatteryBackedPrgRam = true;
+
+    if (config.alternativeNametableLayout) {
+        config.initialMirrorMode = Mapper::MirrorMode::FOUR_SCREEN;
+    }
+
     return config;
 }
 
@@ -18,6 +23,10 @@ Mapper4::Mapper4(const Config& config, const std::vector<uint8_t>& prg, const st
 
     prgSwitchableBankSelect = {};
     chrSwitchableBankSelect = {};
+
+    if (config.alternativeNametableLayout) {
+        customNametable = std::vector<uint8_t>(4 * KB, 0);
+    }
 }
 
 bool Mapper4::irqRequestAtEndOfScanline() {
@@ -131,16 +140,30 @@ uint8_t Mapper4::mapCHRView(uint16_t ppuAddress) const {
         }
         return chr[mappedAddress];
     }
+    else if (config.alternativeNametableLayout) {
+        if (ALTERNATIVE_NAMETABLE_RANGE.contains(ppuAddress)) {
+            return customNametable[ppuAddress & MASK<4 * KB>()];
+        }
+    }
 
     return 0;
 }
 
 void Mapper4::mapCHRWrite(uint16_t ppuAddress, uint8_t value) {
-    // Mapper 4 CHR is read only
+    if (config.alternativeNametableLayout) {
+        if (ALTERNATIVE_NAMETABLE_RANGE.contains(ppuAddress)) {
+            customNametable[ppuAddress & MASK<4 * KB>()] = value;
+        }
+    }
 }
 
 Mapper::MirrorMode Mapper4::getMirrorMode() const {
-    return mirroring ? MirrorMode::HORIZONTAL : MirrorMode::VERTICAL;
+    if (!config.alternativeNametableLayout) {
+        return mirroring ? MirrorMode::HORIZONTAL : MirrorMode::VERTICAL;
+    }
+    else {
+        return config.initialMirrorMode;
+    }
 }
 
 bool Mapper4::canReadFromPRGRam() const {

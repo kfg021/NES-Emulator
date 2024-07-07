@@ -42,6 +42,10 @@ private:
     static constexpr MemoryRange IRQ_LATCH_OR_IRQ_RELOAD{ 0xC000, 0xDFFF };
     static constexpr MemoryRange IRQ_DISABLE_OR_IRQ_ENABLE{ 0xE000, 0xFFFF };
 
+    // Some games use special nametable mirroring and have custom nametables within the mapper itself
+    static constexpr MemoryRange ALTERNATIVE_NAMETABLE_RANGE{0x2000, 0x2CFF};
+    std::vector<uint8_t> customNametable;
+
     uint8_t bankSelect;
     uint8_t bankData;
     bool mirroring;

@@ -242,7 +242,13 @@ uint8_t PPU::ppuView(uint16_t address) const {
         return cartridge->mapper->mapCHRView(address);
     }
     else if (NAMETABLE_RANGE.contains(address)) {
-        return nameTable[getNameTableIndex(address)];
+        if (cartridge->getMirrorMode() != Mapper::MirrorMode::FOUR_SCREEN) {
+            return nameTable[getNameTableIndex(address)];
+        }
+        else {
+            // Mapper handles nametables in 4 screen mode
+            return cartridge->mapper->mapCHRView(address);
+        }
     }
     else if (PALLETE_RAM_RANGE.contains(address)) {
         uint8_t data = palleteRam[getPalleteRamIndex(address, true)] & 0x3F;
@@ -261,7 +267,13 @@ uint8_t PPU::ppuRead(uint16_t address) {
         return cartridge->mapper->mapCHRRead(address);
     }
     else if (NAMETABLE_RANGE.contains(address)) {
-        return nameTable[getNameTableIndex(address)];
+        if (cartridge->getMirrorMode() != Mapper::MirrorMode::FOUR_SCREEN) {
+            return nameTable[getNameTableIndex(address)];
+        }
+        else {
+            // Mapper handles nametables in 4 screen mode
+            return cartridge->mapper->mapCHRRead(address);
+        }
     }
     else if (PALLETE_RAM_RANGE.contains(address)) {
         uint8_t data = palleteRam[getPalleteRamIndex(address, true)] & 0x3F;
@@ -280,7 +292,13 @@ void PPU::ppuWrite(uint16_t address, uint8_t value) {
         cartridge->mapper->mapCHRWrite(address, value);
     }
     else if (NAMETABLE_RANGE.contains(address)) {
-        nameTable[getNameTableIndex(address)] = value;
+        if (cartridge->getMirrorMode() != Mapper::MirrorMode::FOUR_SCREEN) {
+            nameTable[getNameTableIndex(address)] = value;
+        }
+        else {
+            // Mapper handles nametables in 4 screen mode
+            cartridge->mapper->mapCHRWrite(address, value);
+        }
     }
     else if (PALLETE_RAM_RANGE.contains(address)) {
         palleteRam[getPalleteRamIndex(address, false)] = value;
@@ -335,10 +353,10 @@ void PPU::executeCycle() {
 }
 
 void PPU::handleMapper4IRQ() {
-    if(cartridge->mapper->config.id == 4){
+    if (cartridge->mapper->config.id == 4) {
         // We can static_cast instead of dynamic_cast because we explicitly checked id
         Mapper4* mapper4 = static_cast<Mapper4*>(cartridge->mapper.get());
-        if(mapper4->irqRequestAtEndOfScanline()){
+        if (mapper4->irqRequestAtEndOfScanline()) {
             bus->irqRequest = true;
         }
     }
@@ -378,7 +396,7 @@ void PPU::visibleScanlines() {
         }
     }
     else if (cycle == 260) {
-        if(isRenderingEnabled()){
+        if (isRenderingEnabled()) {
             handleMapper4IRQ();
         }
     }
