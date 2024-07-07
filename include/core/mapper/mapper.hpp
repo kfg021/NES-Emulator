@@ -53,6 +53,9 @@ protected:
 
     std::vector<uint8_t> prg;
     std::vector<uint8_t> chr;
+
+    static constexpr MemoryRange PRG_RANGE{ 0x8000, 0xFFFF };
+    static constexpr MemoryRange CHR_RANGE{ 0x0000, 0x1FFF };
 };
 
 #endif // MAPPER_HPP

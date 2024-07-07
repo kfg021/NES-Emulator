@@ -5,6 +5,8 @@
 #include <fstream>
 #include <sstream>
 
+#include <iostream>
+
 const std::array<CPU::Opcode, CPU::MAX_NUM_OPCODES> CPU::lookup = CPU::initLookup();
 
 void CPU::initCPU() {

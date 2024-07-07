@@ -19,6 +19,8 @@ void Bus::initDevices() {
     ppu->initPPU();
 
     nmiRequest = false;
+    irqRequest = false;
+
     totalCycles = 0;
 
     dmaTransferRequested = false;
@@ -130,9 +132,14 @@ void Bus::executeCycle() {
         cpu->executeCycle();
     }
 
+    // Handle interrupt requests
     if (nmiRequest) {
         cpu->NMI();
         nmiRequest = false;
+    }
+    else if (irqRequest) {
+        cpu->IRQ();
+        irqRequest = false;
     }
 
     totalCycles++;

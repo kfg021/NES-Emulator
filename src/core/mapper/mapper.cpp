@@ -5,6 +5,7 @@
 #include "core/mapper/mapper1.hpp"
 #include "core/mapper/mapper2.hpp"
 #include "core/mapper/mapper3.hpp"
+#include "core/mapper/mapper4.hpp"
 #include "core/mapper/mapper66.hpp"
 
 // TODO: Maybe it is worth refactoring to avoid having to copy prg and chr.
@@ -30,6 +31,7 @@ std::unique_ptr<Mapper> Mapper::createMapper(uint16_t id, uint8_t prgChunks, uin
         case 1:     return std::make_unique<Mapper1>(prgChunks, chrChunks, mirrorMode, hasBatteryBackedPrgRam, prg, chr);
         case 2:     return std::make_unique<Mapper2>(prgChunks, chrChunks, mirrorMode, hasBatteryBackedPrgRam, prg, chr);
         case 3:     return std::make_unique<Mapper3>(prgChunks, chrChunks, mirrorMode, hasBatteryBackedPrgRam, prg, chr);
+        case 4:     return std::make_unique<Mapper4>(prgChunks, chrChunks, mirrorMode, hasBatteryBackedPrgRam, prg, chr);
         case 66:    return std::make_unique<Mapper66>(prgChunks, chrChunks, mirrorMode, hasBatteryBackedPrgRam, prg, chr);
         default:    return nullptr; // TODO: Add more mappers
     }

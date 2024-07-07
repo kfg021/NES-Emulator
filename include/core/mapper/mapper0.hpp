@@ -14,10 +14,6 @@ public:
 
     uint8_t mapCHRView(uint16_t ppuAddress) const override;
     void mapCHRWrite(uint16_t ppuAddress, uint8_t value) override;
-
-private:
-    static constexpr MemoryRange PRG_RANGE{ 0x8000, 0xFFFF };
-    static constexpr MemoryRange CHR_RANGE{ 0x0000, 0x1FFF };
 };
 
 #endif // MAPPER0_HPP

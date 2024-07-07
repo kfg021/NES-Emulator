@@ -6,6 +6,13 @@
 
 static constexpr uint32_t KB = (1 << 10);
 
+template <uint32_t x>
+constexpr uint32_t MASK() {
+    constexpr bool isPowerOf2 = (x > 0) && !(x & (x - 1));
+    static_assert(isPowerOf2, "Input to MASK must be power of 2");
+    return x - 1;
+}
+
 struct MemoryRange {
     const uint16_t lo, hi;
     constexpr int size() const { return hi - lo + 1; }

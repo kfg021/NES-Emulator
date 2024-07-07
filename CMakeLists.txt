@@ -27,6 +27,7 @@ set(HEADERS
     include/core/mapper/mapper1.hpp
     include/core/mapper/mapper2.hpp
     include/core/mapper/mapper3.hpp
+    include/core/mapper/mapper4.hpp
     include/core/mapper/mapper66.hpp
     include/gui/debugwindow.hpp
     include/gui/gamewindow.hpp
@@ -46,6 +47,7 @@ set(SOURCES
     src/core/mapper/mapper1.cpp
     src/core/mapper/mapper2.cpp
     src/core/mapper/mapper3.cpp
+    src/core/mapper/mapper4.cpp
     src/core/mapper/mapper66.cpp
     src/gui/debugwindow.cpp
     src/gui/gamewindow.cpp

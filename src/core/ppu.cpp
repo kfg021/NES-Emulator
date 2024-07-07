@@ -1,5 +1,7 @@
 #include "core/ppu.hpp"
 
+#include "core/mapper/mapper4.hpp"
+
 // Screen colors taken from https://www.nesdev.org/wiki/PPU_palettes
 const std::array<uint32_t, PPU::NUM_SCREEN_COLORS> PPU::SCREEN_COLORS = {
     0xFF626262, 0xFF001FB2, 0xFF2404C8, 0xFF5200B2, 0xFF730076, 0xFF800024, 0xFF730B00, 0xFF522800, 0xFF244400, 0xFF005700, 0xFF005C00, 0xFF005324, 0xFF003C76, 0xFF000000, 0xFF000000, 0xFF000000,
@@ -332,6 +334,16 @@ void PPU::executeCycle() {
     incrementCycle();
 }
 
+void PPU::handleMapper4IRQ() {
+    // TODO: Check mapper id to avoid a dynamic cast check
+    Mapper4* mapper4 = dynamic_cast<Mapper4*>(cartridge->mapper.get());
+    if (mapper4 != nullptr) {
+        if(mapper4->irqRequestAtEndOfScanline()){
+            bus->irqRequest = true;
+        }
+    }
+}
+
 void PPU::preRenderScanline() {
     if (cycle == 1) {
         status.vBlankStarted = 0;
@@ -353,7 +365,7 @@ void PPU::visibleScanlines() {
     doRenderingPipeline();
 
     if (cycle >= 1 && cycle <= 256) {
-        if(cycle == 1){
+        if (cycle == 1) {
             // TODO: Not cycle accruate
             fillCurrentScanlineSprites();
         }
@@ -363,6 +375,11 @@ void PPU::visibleScanlines() {
         if (scanline == 239 && cycle == 256) {
             // We have finished drawing all visible pixels, so the display is ready
             std::swap(workingDisplay, finishedDisplay);
+        }
+    }
+    else if (cycle == 260) {
+        if(isRenderingEnabled()){
+            handleMapper4IRQ();
         }
     }
 }

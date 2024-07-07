@@ -261,10 +261,13 @@ private:
     bool nextAttributeTableLo;
     bool nextAttributeTableHi;
 
+    // Rendering helper functions
     void preRenderScanline();
     void visibleScanlines();
     void verticalBlankScanlines();
 
+    void handleMapper4IRQ();
+    
     void doRenderingPipeline();
     void doStandardFetchCycle();
 

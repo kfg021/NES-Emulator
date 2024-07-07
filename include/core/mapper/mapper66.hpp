@@ -16,9 +16,7 @@ public:
     void mapCHRWrite(uint16_t ppuAddress, uint8_t value) override;
 
 private:
-    static constexpr MemoryRange PRG_RANGE{ 0x8000, 0xFFFF };
-    static constexpr MemoryRange CHR_RANGE{ 0x0000, 0x1FFF };
-    static constexpr MemoryRange BANK_SELECT_RANGE{ 0x8000, 0xFFFF };
+    static constexpr MemoryRange BANK_SELECT_RANGE = PRG_RANGE;
     uint8_t currentPRGBank;
     uint8_t currentCHRBank;
 };

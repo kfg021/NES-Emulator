@@ -29,7 +29,9 @@ public:
     std::unique_ptr<PPU> ppu;
 
     uint64_t totalCycles;
+    
     bool nmiRequest;
+    bool irqRequest;
 
     void executeCycle();
 

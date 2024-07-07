@@ -23,11 +23,11 @@ private:
     // Banks
     static constexpr MemoryRange PRG_RAM_BANK{ 0x6000, 0x7FFF };
 
-    static constexpr MemoryRange PRG_ROM_FULL{ 0x8000, 0xFFFF };
+    static constexpr MemoryRange PRG_ROM_FULL = PRG_RANGE;
     static constexpr MemoryRange PRG_ROM_BANK_0{ 0x8000, 0xBFFF };
     static constexpr MemoryRange PRG_ROM_BANK_1{ 0xC000, 0xFFFF };
 
-    static constexpr MemoryRange CHR_ROM_FULL{ 0x0000, 0x1FFF };
+    static constexpr MemoryRange CHR_ROM_FULL = CHR_RANGE;
     static constexpr MemoryRange CHR_ROM_BANK_0{ 0x0000, 0x0FFF };
     static constexpr MemoryRange CHR_ROM_BANK_1{ 0x1000, 0x1FFF };
 
