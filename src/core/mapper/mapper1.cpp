@@ -2,14 +2,20 @@
 
 #include "util/util.hpp"
 
-Mapper1::Mapper1(uint8_t prgChunks, uint8_t chrChunks, MirrorMode mirrorMode, bool hasBatteryBackedPrgRam, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr) :
-    Mapper(prgChunks, chrChunks, mirrorMode, true, prg, chr) { // Mapper 1 has PRG RAM by default
+Mapper::Config editConfigMapper1(Mapper::Config config){
+    // Mapper 1 has PRG RAM by default
+    config.hasBatteryBackedPrgRam = true;
+    return config;
+}
+
+Mapper1::Mapper1(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr) :
+    Mapper(editConfigMapper1(config), prg, chr) {
 
     shiftRegister = SHIFT_REGISTER_RESET;
 
     control = 0;
     control.prgRomMode = 0x3;
-    control.mirroring = (initialMirrorMode == MirrorMode::HORIZONTAL) ? 0x3 : 0x2;
+    control.mirroring = (config.initialMirrorMode == MirrorMode::HORIZONTAL) ? 0x3 : 0x2;
 
     chrBank0 = 0;
     chrBank1 = 0;
@@ -38,7 +44,7 @@ uint8_t Mapper1::mapPRGView(uint16_t cpuAddress) const {
                 mappedAddress = (16 * KB) * prgBank.prgRomSelect + (cpuAddress & 0x3FFF);
             }
             else { // if (PRG_ROM_BANK_1.contains(cpuAddress))
-                mappedAddress = (16 * KB) * (prgChunks - 1) + (cpuAddress & 0x3FFF);
+                mappedAddress = (16 * KB) * (config.prgChunks - 1) + (cpuAddress & 0x3FFF);
             }
         }
 
@@ -110,7 +116,7 @@ uint8_t Mapper1::mapCHRView(uint16_t ppuAddress) const {
 }
 
 void Mapper1::mapCHRWrite(uint16_t ppuAddress, uint8_t value) {
-    if (CHR_ROM_FULL.contains(ppuAddress) && chrChunks == 0) {
+    if (CHR_ROM_FULL.contains(ppuAddress) && config.chrChunks == 0) {
         // If chrChunks == 0, we assume we have CHR RAM
         chr[ppuAddress] = value;
     }

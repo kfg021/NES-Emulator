@@ -2,8 +2,8 @@
 
 #include "core/cartridge.hpp"
 
-Mapper66::Mapper66(uint8_t prgChunks, uint8_t chrChunks, MirrorMode mirrorMode, bool hasBatteryBackedPrgRam, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr)
-    : Mapper(prgChunks, chrChunks, mirrorMode, hasBatteryBackedPrgRam, prg, chr) {
+Mapper66::Mapper66(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr)
+    : Mapper(config, prg, chr) {
 
     currentPRGBank = 0;
     currentCHRBank = 0;

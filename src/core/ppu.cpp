@@ -335,9 +335,9 @@ void PPU::executeCycle() {
 }
 
 void PPU::handleMapper4IRQ() {
-    // TODO: Check mapper id to avoid a dynamic cast check
-    Mapper4* mapper4 = dynamic_cast<Mapper4*>(cartridge->mapper.get());
-    if (mapper4 != nullptr) {
+    if(cartridge->mapper->config.id == 4){
+        // We can static_cast instead of dynamic_cast because we explicitly checked id
+        Mapper4* mapper4 = static_cast<Mapper4*>(cartridge->mapper.get());
         if(mapper4->irqRequestAtEndOfScanline()){
             bus->irqRequest = true;
         }

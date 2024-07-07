@@ -10,29 +10,23 @@
 
 // TODO: Maybe it is worth refactoring to avoid having to copy prg and chr.
 // However, since the Mapper constructor is only called once per ROM, it is not super critical
-Mapper::Mapper(uint8_t prgChunks, uint8_t chrChunks, MirrorMode initialMirrorMode, bool hasBatteryBackedPrgRam, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr)
-    : prgChunks(prgChunks),
-    chrChunks(chrChunks),
-    initialMirrorMode(initialMirrorMode),
-    hasBatteryBackedPrgRam(hasBatteryBackedPrgRam),
-    prg(prg),
-    chr(chr) {
+Mapper::Mapper(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr)
+    : config(config), prg(prg), chr(chr) {
 
-    if (hasBatteryBackedPrgRam) {
+    if (config.hasBatteryBackedPrgRam) {
         // TODO: Load this from a save file
         prgRam = std::vector<uint8_t>(PRG_RAM_RANGE.size(), 0);
     }
 }
 
-std::unique_ptr<Mapper> Mapper::createMapper(uint16_t id, uint8_t prgChunks, uint8_t chrChunks, bool mirrorModeId, bool hasBatteryBackedPrgRam, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr) {
-    MirrorMode mirrorMode = static_cast<MirrorMode>(mirrorModeId);
-    switch (id) {
-        case 0:     return std::make_unique<Mapper0>(prgChunks, chrChunks, mirrorMode, hasBatteryBackedPrgRam, prg, chr);
-        case 1:     return std::make_unique<Mapper1>(prgChunks, chrChunks, mirrorMode, hasBatteryBackedPrgRam, prg, chr);
-        case 2:     return std::make_unique<Mapper2>(prgChunks, chrChunks, mirrorMode, hasBatteryBackedPrgRam, prg, chr);
-        case 3:     return std::make_unique<Mapper3>(prgChunks, chrChunks, mirrorMode, hasBatteryBackedPrgRam, prg, chr);
-        case 4:     return std::make_unique<Mapper4>(prgChunks, chrChunks, mirrorMode, hasBatteryBackedPrgRam, prg, chr);
-        case 66:    return std::make_unique<Mapper66>(prgChunks, chrChunks, mirrorMode, hasBatteryBackedPrgRam, prg, chr);
+std::unique_ptr<Mapper> Mapper::createMapper(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr) {
+    switch (config.id) {
+        case 0:     return std::make_unique<Mapper0>(config, prg, chr);
+        case 1:     return std::make_unique<Mapper1>(config, prg, chr);
+        case 2:     return std::make_unique<Mapper2>(config, prg, chr);
+        case 3:     return std::make_unique<Mapper3>(config, prg, chr);
+        case 4:     return std::make_unique<Mapper4>(config, prg, chr);
+        case 66:    return std::make_unique<Mapper66>(config, prg, chr);
         default:    return nullptr; // TODO: Add more mappers
     }
 }
@@ -46,7 +40,7 @@ uint8_t Mapper::mapCHRRead(uint16_t ppuAddress) {
 }
 
 bool Mapper::canAccessPrgRam(uint16_t address) const {
-    return hasBatteryBackedPrgRam && PRG_RAM_RANGE.contains(address);
+    return config.hasBatteryBackedPrgRam && PRG_RAM_RANGE.contains(address);
 }
 
 uint8_t Mapper::getPrgRam(uint16_t address) const {
@@ -58,5 +52,5 @@ void Mapper::setPrgRam(uint16_t address, uint8_t value) {
 }
 
 Mapper::MirrorMode Mapper::getMirrorMode() const {
-    return initialMirrorMode;
+    return config.initialMirrorMode;
 }

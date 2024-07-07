@@ -1,15 +1,15 @@
 #include "core/mapper/mapper0.hpp"
 
-Mapper0::Mapper0(uint8_t prgChunks, uint8_t chrChunks, MirrorMode mirrorMode, bool hasBatteryBackedPrgRam, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr)
-    : Mapper(prgChunks, chrChunks, mirrorMode, hasBatteryBackedPrgRam, prg, chr) {
+Mapper0::Mapper0(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr)
+    : Mapper(config, prg, chr) {
 }
 
 uint8_t Mapper0::mapPRGView(uint16_t cpuAddress) const {
     if (PRG_RANGE.contains(cpuAddress)) {
-        if (prgChunks == 1) {
+        if (config.prgChunks == 1) {
             return prg[cpuAddress & 0x3FFF];
         }
-        else if (prgChunks == 2) {
+        else if (config.prgChunks == 2) {
             return prg[cpuAddress & 0x7FFF];
         }
     }
@@ -35,7 +35,7 @@ uint8_t Mapper0::mapCHRView(uint16_t ppuAddress) const {
 }
 
 void Mapper0::mapCHRWrite(uint16_t ppuAddress, uint8_t value) {
-    if (CHR_RANGE.contains(ppuAddress) && chrChunks == 0) {
+    if (CHR_RANGE.contains(ppuAddress) && config.chrChunks == 0) {
         // If chrChunks == 0, we assume we have CHR RAM
         chr[ppuAddress] = value;
     }

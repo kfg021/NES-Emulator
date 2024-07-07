@@ -7,7 +7,7 @@
 
 class Mapper3 : public Mapper {
 public:
-    Mapper3(uint8_t prgChunks, uint8_t chrChunks, MirrorMode initialMirrorMode, bool hasBatteryBackedPrgRam, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr);
+    Mapper3(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr);
 
     uint8_t mapPRGView(uint16_t cpuAddress) const override;
     void mapPRGWrite(uint16_t cpuAddress, uint8_t value) override;

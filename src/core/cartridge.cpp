@@ -136,7 +136,14 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath) {
     bool mirrorModeId = header.flag6 & 1;
     bool hasBatteryBackedPrgRam = (header.flag6 >> 1) & 1;
 
-    mapper = Mapper::createMapper(mapperId, header.prgChunks, header.chrChunks, mirrorModeId, hasBatteryBackedPrgRam, prg, chr);
+    Mapper::Config config = {
+        mapperId,
+        header.prgChunks,
+        header.chrChunks,
+        static_cast<Mapper::MirrorMode>(mirrorModeId),
+        hasBatteryBackedPrgRam
+    };
+    mapper = Mapper::createMapper(config, prg, chr);
     if (mapper == nullptr) {
         return { Code::UNIMPLEMENTED_MAPPER, "The requested mapper (" + std::to_string(mapperId) + ") is currently not supported." };
     }

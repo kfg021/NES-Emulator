@@ -19,10 +19,20 @@ public:
         ONE_SCREEN_UPPER_BANK
     };
 
-    Mapper(uint8_t prgChunks, uint8_t chrChunks, MirrorMode initialMirrorMode, bool hasBatteryBackedPrgRam, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr);
+    struct Config {
+        uint16_t id;
+        uint8_t prgChunks;
+        uint8_t chrChunks;
+        MirrorMode initialMirrorMode;
+        bool hasBatteryBackedPrgRam;
+    };
+    
+    const Config config;
+
+    Mapper(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr);
     virtual ~Mapper() = default;
 
-    static std::unique_ptr<Mapper> createMapper(uint16_t id, uint8_t prgChunks, uint8_t chrChunks, bool mirrorMode, bool hasBatteryBackedPrgRam, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr);
+    static std::unique_ptr<Mapper> createMapper(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr);
 
     // "View" is different from "read" because view functions do not change the state of the mapper.
     // This gives us a way to see the internals of the cartridge without modifying the state of the mapper.
@@ -40,11 +50,6 @@ public:
     virtual MirrorMode getMirrorMode() const;
 
 protected:
-    const uint8_t prgChunks;
-    const uint8_t chrChunks;
-    const MirrorMode initialMirrorMode;
-
-    const bool hasBatteryBackedPrgRam;
     static constexpr MemoryRange PRG_RAM_RANGE{ 0x6000, 0x7FFF };
     std::vector<uint8_t> prgRam;
     bool canAccessPrgRam(uint16_t address) const;

@@ -2,8 +2,8 @@
 
 #include "core/cartridge.hpp"
 
-Mapper2::Mapper2(uint8_t prgRomChunks, uint8_t chrRomChunks, MirrorMode mirrorMode, bool hasBatteryBackedPrgRam, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr)
-    : Mapper(prgRomChunks, chrRomChunks, mirrorMode, hasBatteryBackedPrgRam, prg, chr) {
+Mapper2::Mapper2(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr)
+    : Mapper(config, prg, chr) {
 
     currentBank = 0;
 }
@@ -14,7 +14,7 @@ uint8_t Mapper2::mapPRGView(uint16_t cpuAddress) const {
         return prg[mappedAddress];
     }
     else if (PRG_RANGE_FIXED.contains(cpuAddress)) {
-        uint32_t mappedAddress = PRG_ROM_CHUNK_SIZE * (prgChunks - 1) + (cpuAddress & 0x3FFF);
+        uint32_t mappedAddress = PRG_ROM_CHUNK_SIZE * (config.prgChunks - 1) + (cpuAddress & 0x3FFF);
         return prg[mappedAddress];
     }
     else if (canAccessPrgRam(cpuAddress)) {
@@ -42,7 +42,7 @@ uint8_t Mapper2::mapCHRView(uint16_t ppuAddress) const {
 }
 
 void Mapper2::mapCHRWrite(uint16_t ppuAddress, uint8_t value) {
-    if (CHR_RANGE.contains(ppuAddress) && chrChunks == 0) {
+    if (CHR_RANGE.contains(ppuAddress) && config.chrChunks == 0) {
         // If chrRomChunks == 0, we assume we have CHR RAM
         chr[ppuAddress] = value;
     }

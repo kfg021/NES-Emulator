@@ -2,18 +2,18 @@
 
 #include "core/cartridge.hpp"
 
-Mapper3::Mapper3(uint8_t prgRomChunks, uint8_t chrChunks, MirrorMode mirrorMode, bool hasBatteryBackedPrgRam, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr)
-    : Mapper(prgRomChunks, chrChunks, mirrorMode, hasBatteryBackedPrgRam, prg, chr) {
+Mapper3::Mapper3(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr)
+    : Mapper(config, prg, chr) {
 
     currentBank = 0;
 }
 
 uint8_t Mapper3::mapPRGView(uint16_t cpuAddress) const {
     if (PRG_RANGE.contains(cpuAddress)) {
-        if (prgChunks == 1) {
+        if (config.prgChunks == 1) {
             return prg[cpuAddress & 0x3FFF];
         }
-        else if (prgChunks == 2) {
+        else if (config.prgChunks == 2) {
             return prg[cpuAddress & 0x7FFF];
         }
     }

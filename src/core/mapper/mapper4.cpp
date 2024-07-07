@@ -1,10 +1,16 @@
 #include "core/mapper/mapper4.hpp"
 
-Mapper4::Mapper4(uint8_t prgChunks, uint8_t chrChunks, MirrorMode initialMirrorMode, bool hasBatteryBackedPrgRam, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr)
-    : Mapper(prgChunks, chrChunks, initialMirrorMode, true, prg, chr) { // Mapper 1 has PRG RAM by default
+Mapper::Config editConfigMapper4(Mapper::Config config){
+    // Mapper 4 has PRG RAM by default
+    config.hasBatteryBackedPrgRam = true;
+    return config;
+}
+
+Mapper4::Mapper4(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr)
+    : Mapper(editConfigMapper4(config), prg, chr) {
     bankSelect = 0;
     bankData = 0;
-    mirroring = (initialMirrorMode == MirrorMode::HORIZONTAL) ? true : false;
+    mirroring = (config.initialMirrorMode == MirrorMode::HORIZONTAL) ? true : false;
     prgRamProtect = 0;
     irqReloadValue = 0;
     irqTimer = 0;
@@ -28,7 +34,7 @@ bool Mapper4::irqRequestAtEndOfScanline() {
 uint8_t Mapper4::mapPRGView(uint16_t cpuAddress) const {
     bool prgRomBankMode = (bankSelect >> 6) & 1;
     uint16_t addressMask8KB = cpuAddress & MASK<8 * KB>();
-    uint16_t prgChunks8KB = prgChunks << 1;
+    uint16_t prgChunks8KB = config.prgChunks << 1;
 
     if (PRG_RANGE.contains(cpuAddress)) {
         uint32_t mappedAddress;
