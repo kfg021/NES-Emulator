@@ -18,7 +18,7 @@ public:
 private:
     static constexpr MemoryRange PRG_RANGE_SWICHABLE{ 0x8000, 0xBFFF };
     static constexpr MemoryRange PRG_RANGE_FIXED{ 0xC000, 0xFFFF };
-    static constexpr MemoryRange BANK_SELECT_RANGE{ 0x8000, 0xFFFF };
+    static constexpr MemoryRange BANK_SELECT_RANGE = PRG_RANGE;
     uint8_t currentBank;
 };
 

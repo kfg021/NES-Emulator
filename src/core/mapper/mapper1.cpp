@@ -23,7 +23,7 @@ Mapper1::Mapper1(const Config& config, const std::vector<uint8_t>& prg, const st
 }
 
 uint8_t Mapper1::mapPRGView(uint16_t cpuAddress) const {
-    if (PRG_ROM_FULL.contains(cpuAddress)) {
+    if (PRG_RANGE.contains(cpuAddress)) {
         uint32_t mappedAddress;
         if (control.prgRomMode == 0 || control.prgRomMode == 1) {
             // 0, 1: switch 32 KB at $8000
@@ -97,7 +97,7 @@ void Mapper1::internalRegisterWrite(uint16_t address, uint8_t value) {
 }
 
 uint8_t Mapper1::mapCHRView(uint16_t ppuAddress) const {
-    if (CHR_ROM_FULL.contains(ppuAddress)) {
+    if (CHR_RANGE.contains(ppuAddress)) {
         uint32_t mappedAddress;
         if (control.chrRomMode == 0) {
             mappedAddress = (8 * KB) * (chrBank0 >> 1) + (ppuAddress & 0x1FFF);
@@ -116,7 +116,7 @@ uint8_t Mapper1::mapCHRView(uint16_t ppuAddress) const {
 }
 
 void Mapper1::mapCHRWrite(uint16_t ppuAddress, uint8_t value) {
-    if (CHR_ROM_FULL.contains(ppuAddress) && config.chrChunks == 0) {
+    if (CHR_RANGE.contains(ppuAddress) && config.chrChunks == 0) {
         // If chrChunks == 0, we assume we have CHR RAM
         chr[ppuAddress] = value;
     }

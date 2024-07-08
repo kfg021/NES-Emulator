@@ -96,7 +96,7 @@ void MainWindow::stepIfInDebugMode() {
     if (debugMode) {
         // Pressing space causes the processor to jump to the next non-repeating instruction.
         // There is a maximum number of instructions to jump, preventing the emulator from crashing if there is an infinite loop in the code.
-        static constexpr int MAX_LOOP = 1e6;
+        static constexpr int MAX_LOOP = 1e5;
         uint16_t lastPC = bus->cpu->getPC();
         int i = 0;
         while (bus->cpu->getPC() == lastPC && i < MAX_LOOP) {

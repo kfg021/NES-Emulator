@@ -3,8 +3,6 @@
 
 #include "core/mapper/mapper.hpp"
 
-#include "util/util.hpp"
-
 class Mapper0 : public Mapper {
 public:
     Mapper0(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr);

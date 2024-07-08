@@ -15,7 +15,7 @@ Mapper4::Mapper4(const Config& config, const std::vector<uint8_t>& prg, const st
     : Mapper(editConfigMapper4(config), prg, chr) {
     bankSelect = 0;
     bankData = 0;
-    mirroring = (config.initialMirrorMode == MirrorMode::HORIZONTAL) ? true : false;
+    mirroring = (config.initialMirrorMode == MirrorMode::HORIZONTAL);
     prgRamProtect = 0;
     irqReloadValue = 0;
     irqTimer = 0;
