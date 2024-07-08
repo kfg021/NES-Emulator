@@ -28,7 +28,7 @@ public:
         bool hasBatteryBackedPrgRam;
         bool alternativeNametableLayout;
     };
-    
+
     const Config config;
 
     Mapper(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr);

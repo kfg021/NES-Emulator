@@ -2,7 +2,7 @@
 
 #include "util/util.hpp"
 
-Mapper::Config editConfigMapper1(Mapper::Config config){
+Mapper::Config editConfigMapper1(Mapper::Config config) {
     // Mapper 1 has PRG RAM by default
     config.hasBatteryBackedPrgRam = true;
     return config;
@@ -27,24 +27,24 @@ uint8_t Mapper1::mapPRGView(uint16_t cpuAddress) const {
         uint32_t mappedAddress;
         if (control.prgRomMode == 0 || control.prgRomMode == 1) {
             // 0, 1: switch 32 KB at $8000
-            mappedAddress = (32 * KB) * (prgBank.prgRomSelect >> 1) + (cpuAddress & 0x7FFF);
+            mappedAddress = (32 * KB) * (prgBank.prgRomSelect >> 1) + (cpuAddress & MASK<32 * KB>());
         }
         else if (control.prgRomMode == 2) {
             // 2: fix first bank at $8000 and switch 16 KB bank at $C000
             if (PRG_ROM_BANK_0.contains(cpuAddress)) {
-                mappedAddress = cpuAddress & 0x3FFF;
+                mappedAddress = cpuAddress & MASK<16 * KB>();
             }
             else { // if (PRG_ROM_BANK_1.contains(cpuAddress))
-                mappedAddress = (16 * KB) * prgBank.prgRomSelect + (cpuAddress & 0x3FFF);
+                mappedAddress = (16 * KB) * prgBank.prgRomSelect + (cpuAddress & MASK<16 * KB>());
             }
         }
         else { // if (control.prgRomMode == 3)
             // 3: fix last bank at $C000 and switch 16 KB bank at $8000
             if (PRG_ROM_BANK_0.contains(cpuAddress)) {
-                mappedAddress = (16 * KB) * prgBank.prgRomSelect + (cpuAddress & 0x3FFF);
+                mappedAddress = (16 * KB) * prgBank.prgRomSelect + (cpuAddress & MASK<16 * KB>());
             }
             else { // if (PRG_ROM_BANK_1.contains(cpuAddress))
-                mappedAddress = (16 * KB) * (config.prgChunks - 1) + (cpuAddress & 0x3FFF);
+                mappedAddress = (16 * KB) * (config.prgChunks - 1) + (cpuAddress & MASK<16 * KB>());
             }
         }
 
@@ -100,13 +100,13 @@ uint8_t Mapper1::mapCHRView(uint16_t ppuAddress) const {
     if (CHR_RANGE.contains(ppuAddress)) {
         uint32_t mappedAddress;
         if (control.chrRomMode == 0) {
-            mappedAddress = (8 * KB) * (chrBank0 >> 1) + (ppuAddress & 0x1FFF);
+            mappedAddress = (8 * KB) * (chrBank0 >> 1) + (ppuAddress & MASK<8 * KB>());
         }
         else if (CHR_ROM_BANK_0.contains(ppuAddress)) {
-            mappedAddress = (4 * KB) * chrBank0 + (ppuAddress & 0x0FFF);
+            mappedAddress = (4 * KB) * chrBank0 + (ppuAddress & MASK<4 * KB>());
         }
         else { // if (CHR_ROM_BANK_1.contains(ppuAddress))
-            mappedAddress = (4 * KB) * chrBank1 + (ppuAddress & 0x0FFF);
+            mappedAddress = (4 * KB) * chrBank1 + (ppuAddress & MASK<4 * KB>());
         }
 
         return chr[mappedAddress];

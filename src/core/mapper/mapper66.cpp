@@ -11,7 +11,7 @@ Mapper66::Mapper66(const Config& config, const std::vector<uint8_t>& prg, const 
 
 uint8_t Mapper66::mapPRGView(uint16_t cpuAddress) const {
     if (PRG_RANGE.contains(cpuAddress)) {
-        uint32_t mappedAddress = (PRG_ROM_CHUNK_SIZE << 1) * currentPRGBank + (cpuAddress & 0x7FFF);
+        uint32_t mappedAddress = (PRG_ROM_CHUNK_SIZE << 1) * currentPRGBank + (cpuAddress & MASK<32 * KB>());
         return prg[mappedAddress];
     }
     else if (canAccessPrgRam(cpuAddress)) {
@@ -33,7 +33,7 @@ void Mapper66::mapPRGWrite(uint16_t cpuAddress, uint8_t value) {
 
 uint8_t Mapper66::mapCHRView(uint16_t ppuAddress) const {
     if (CHR_RANGE.contains(ppuAddress)) {
-        uint32_t mappedAddress = CHR_ROM_CHUNK_SIZE * currentCHRBank + (ppuAddress & 0x1FFF);
+        uint32_t mappedAddress = CHR_ROM_CHUNK_SIZE * currentCHRBank + (ppuAddress & MASK<8 * KB>());
         return chr[mappedAddress];
     }
 

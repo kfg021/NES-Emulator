@@ -10,11 +10,11 @@ Mapper2::Mapper2(const Config& config, const std::vector<uint8_t>& prg, const st
 
 uint8_t Mapper2::mapPRGView(uint16_t cpuAddress) const {
     if (PRG_RANGE_SWICHABLE.contains(cpuAddress)) {
-        uint32_t mappedAddress = PRG_ROM_CHUNK_SIZE * currentBank + (cpuAddress & 0x3FFF);
+        uint32_t mappedAddress = PRG_ROM_CHUNK_SIZE * currentBank + (cpuAddress & MASK<PRG_ROM_CHUNK_SIZE>());
         return prg[mappedAddress];
     }
     else if (PRG_RANGE_FIXED.contains(cpuAddress)) {
-        uint32_t mappedAddress = PRG_ROM_CHUNK_SIZE * (config.prgChunks - 1) + (cpuAddress & 0x3FFF);
+        uint32_t mappedAddress = PRG_ROM_CHUNK_SIZE * (config.prgChunks - 1) + (cpuAddress & MASK<PRG_ROM_CHUNK_SIZE>());
         return prg[mappedAddress];
     }
     else if (canAccessPrgRam(cpuAddress)) {

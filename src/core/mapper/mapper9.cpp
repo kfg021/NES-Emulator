@@ -94,7 +94,7 @@ uint8_t Mapper9::mapCHRRead(uint16_t ppuAddress) {
     return 0;
 }
 
-void Mapper9::mapCHRWrite(uint16_t ppuAddress, uint8_t value) {
+void Mapper9::mapCHRWrite(uint16_t /*ppuAddress*/, uint8_t /*value*/) {
     // Mapper 9 CHR is read only
 }
 

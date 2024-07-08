@@ -16,14 +16,6 @@ public:
     Cartridge();
     Cartridge(const std::string& filePath);
 
-    // uint8_t viewPRG(uint16_t preMappedAddr) const;
-    // uint8_t readFromPRG(uint16_t preMappedAddr);
-    // void writeToPRG(uint16_t preMappedAddr, uint8_t data);
-
-    // uint8_t viewCHR(uint16_t preMappedAddr) const;
-    // uint8_t readFromCHR(uint16_t preMappedAddr);
-    // void writeToCHR(uint16_t preMappedAddr, uint8_t data);
-
     Mapper::MirrorMode getMirrorMode() const;
 
     enum class Code {

@@ -7,10 +7,10 @@ Mapper0::Mapper0(const Config& config, const std::vector<uint8_t>& prg, const st
 uint8_t Mapper0::mapPRGView(uint16_t cpuAddress) const {
     if (PRG_RANGE.contains(cpuAddress)) {
         if (config.prgChunks == 1) {
-            return prg[cpuAddress & 0x3FFF];
+            return prg[cpuAddress & MASK<16 * KB>()];
         }
         else if (config.prgChunks == 2) {
-            return prg[cpuAddress & 0x7FFF];
+            return prg[cpuAddress & MASK<32 * KB>()];
         }
     }
     else if (canAccessPrgRam(cpuAddress)) {
