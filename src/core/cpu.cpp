@@ -76,8 +76,9 @@ void CPU::reset() {
     // Set I flag
     setFlag(Flag::INTERRUPT, 1);
 
-    // Reset takes 8 cycles
-    remainingCycles = 8;
+    // Reset takes 7 cycles
+    // TODO: is it 8?
+    remainingCycles = 7;
 }
 
 // Interrupts (descriptions from https://www.masswerk.at/6502/6502_instruction_set.html)
