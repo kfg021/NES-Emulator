@@ -3,6 +3,8 @@
 
 #include "core/mapper/mapper.hpp"
 
+#include <array>
+
 class Mapper9 : public Mapper {
 public:
     Mapper9(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr);
