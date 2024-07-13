@@ -1477,9 +1477,7 @@ std::string CPU::debugString() const {
         << " Y:" << toHexString8(y) \
         << " P:" << toHexString8(sr) \
         << " SP:" << toHexString8(sp) \
-        << " CYC:" << totalCycles - 1;
-
-    // stream << std::endl;
+        << " CYC:" << totalCycles;
 
     return stream.str();
 }
