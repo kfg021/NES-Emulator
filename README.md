@@ -15,13 +15,11 @@ A Nintendo Entertainment System (NES) emulator implemented in C++ with a Qt6-bas
   - MMC2 (Mapper 9)
   - GxROM (Mapper 66)
 - Debug window for development and testing
-  - CPU instruction disassembly and registers viewer
+  - CPU instruction disassembly and register
+  viewer
   - PPU pattern table and palette viewer
   - Step-by-step execution control
 
-## Screenshot
-![NES Emulator with Debug Window](nestest_with_debug_window.png)
-*Running nestest.nes ROM with the debug window enabled, successfully passing all CPU instruction tests*
 
 ## Prerequisites
 
@@ -137,6 +135,19 @@ Debug Window Controls (when enabled):
 - O: Cycle background palette
 - P: Cycle sprite palette
 
+## Testing
+
+The emulator can be tested using the `nestest.nes` ROM, which is a comprehensive test ROM for verifying CPU instruction accuracy:
+
+```bash
+./NES_Emulator nestest.nes
+```
+
+This ROM will automatically run through all CPU instructions and verify their correct implementation.
+
+![NES Emulator with Debug Window](nestest_with_debug_window.png)
+*Running nestest.nes ROM on MacOS with the debug window enabled, successfully passing all CPU instruction tests*
+
 ## Code Structure
 
 The emulator is structured into several key components:
@@ -156,7 +167,10 @@ The following features and improvements are planned for future development:
 - APU (Audio Processing Unit) implementation for sound support
 - Fix glitches in MMC3 (Mapper 4) implementation
 - Additional mapper support
+- Complete iNES 2.0 format support
 - Support for undocumented 6502 CPU opcodes
+- Support for second controller
+- Support for NES accessories (i.e. Zapper light gun)
 
 ### Platform Support
 - Web browser support using Emscripten
