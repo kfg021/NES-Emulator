@@ -16,6 +16,10 @@ int main(int argc, char* argv[]) {
     }
     else {
         filePath = QFileDialog::getOpenFileName(nullptr, "Choose a .nes file to open.", "", "*.nes").toStdString();
+        if (filePath.empty()) {
+            // Exit if file dialog is closed without selecting a file
+            return 0;
+        }
     }
 
     MainWindow window(nullptr, filePath);

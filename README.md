@@ -1,4 +1,4 @@
-# NES Emulator
+# NES-Emulator
 
 A Nintendo Entertainment System (NES) emulator implemented in C++ with a Qt6-based GUI. This project targets correct and functional emulation of the NES hardware.
 
