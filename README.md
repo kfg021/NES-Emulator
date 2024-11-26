@@ -2,6 +2,9 @@
 
 A Nintendo Entertainment System (NES) emulator implemented in C++ with a Qt6-based GUI. This project targets correct and functional emulation of the NES hardware.
 
+![NES Emulator with Debug Window](nestest_with_debug_window.png)
+*Running nestest.nes test ROM with the debug window enabled, successfully passing all CPU instruction tests*
+
 ## Features
 
 - Accurate CPU emulation (Supports all official 6502 opcodes)
@@ -144,9 +147,6 @@ The emulator can be tested using the `nestest.nes` ROM, which is a comprehensive
 ```
 
 This ROM will automatically run through all CPU instructions and verify their correct implementation.
-
-![NES Emulator with Debug Window](nestest_with_debug_window.png)
-*Running nestest.nes ROM on MacOS with the debug window enabled, successfully passing all CPU instruction tests*
 
 ## Code Structure
 
