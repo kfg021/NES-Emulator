@@ -28,10 +28,6 @@ public:
     static constexpr int DEBUG_WIDTH = 300;
 #endif
 
-    static constexpr int FPS = 60;
-    static constexpr int IPS = 1773448;
-    constexpr static int AUDIO_SAMPLE_RATE = 44100;
-
 protected:
     void keyPressEvent(QKeyEvent* event) override;
     void keyReleaseEvent(QKeyEvent* event) override;
@@ -40,6 +36,10 @@ private slots:
     void tick();
 
 private:
+    static constexpr int TICKS_PER_SECOND = 240;
+    static constexpr int INSTRUCTIONS_PER_SECOND = 1773448;
+    constexpr static int AUDIO_SAMPLE_RATE = 44100;
+
     GameWindow* gameWindow;
 
     QTimer* updateTimer;

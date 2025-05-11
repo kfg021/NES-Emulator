@@ -21,6 +21,8 @@ private slots:
     void onTimeout();
 
 private:
+    static constexpr int FPS = 60;
+    
     QTimer* renderTimer;
 };
 

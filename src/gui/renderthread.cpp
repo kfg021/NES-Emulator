@@ -16,7 +16,7 @@ void RenderThread::run() {
     renderTimer = new QTimer();
     connect(renderTimer, SIGNAL(timeout()), this, SLOT(onTimeout()));
     renderTimer->moveToThread(this);
-    renderTimer->start(1000 / MainWindow::FPS);
+    renderTimer->start(1000 / FPS);
 
     exec();
 }

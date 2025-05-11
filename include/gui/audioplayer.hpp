@@ -13,19 +13,24 @@ class AudioPlayer : public QIODevice {
     Q_OBJECT
 
 public:
-    AudioPlayer(QWidget* parent, const QAudioFormat& audioFormat);
+    AudioPlayer(QWidget* parent, const QAudioFormat& audioFormat, bool muted);
 
+    void addSample(float sample);
+    void mute();
+    void unmute();
+
+protected:
     int64_t readData(char* data, int64_t maxSize) override;
     int64_t writeData(const char* data, int64_t maxSize) override;
     int64_t bytesAvailable() const override;
-
-    void addSample(float sample);
 
 private:
     mutable std::mutex mtx;
 
     std::queue<float> audioSamples;
     QAudioFormat audioFormat;
+
+    bool muted;
 };
 
 #endif // AUDIOPLAYER_HPP

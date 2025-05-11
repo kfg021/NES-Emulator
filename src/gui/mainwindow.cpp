@@ -48,13 +48,13 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
     audioFormat.setChannelCount(1); // Mono
     audioFormat.setSampleFormat(QAudioFormat::Float);
 
-    audioPlayer = new AudioPlayer(this, audioFormat);
+    audioPlayer = new AudioPlayer(this, audioFormat, false);
     audioSink = new QAudioSink(QMediaDevices::defaultAudioOutput(), audioFormat, this);
     audioSink->start(audioPlayer);
 
     updateTimer = new QTimer(this);
     connect(updateTimer, SIGNAL(timeout()), this, SLOT(tick()));
-    updateTimer->setInterval(1000 / FPS);
+    updateTimer->setInterval(1000 / TICKS_PER_SECOND);
 
     elapsedTimer = QElapsedTimer();
     elapsedTimer.start();
@@ -71,7 +71,7 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
 void MainWindow::tick() {
     int64_t totalElapsed = elapsedTimer.nsecsElapsed();
 
-    int64_t neededSteps = ((totalElapsed * IPS) / static_cast<int64_t>(1e9)) - numSteps;
+    int64_t neededSteps = ((totalElapsed * INSTRUCTIONS_PER_SECOND) / static_cast<int64_t>(1e9)) - numSteps;
     for (int i = 0; i < neededSteps; i++) {
 
 #ifdef SHOW_DEBUG_WINDOW
@@ -84,17 +84,17 @@ void MainWindow::tick() {
 #else
         bus->executeCycle();
 #endif
-        
-        while(scaledAudioClock >= IPS){
+
+        while (scaledAudioClock >= INSTRUCTIONS_PER_SECOND) {
             // float sample = bus->apu->getAudioSample();
-            
+
             // Use temp value for now
-            float frac = (numSteps % IPS) / static_cast<float>(IPS); 
+            float frac = (numSteps % INSTRUCTIONS_PER_SECOND) / static_cast<float>(INSTRUCTIONS_PER_SECOND);
             float sample = std::sin(440 * 2 * M_PI * frac);
 
             audioPlayer->addSample(sample);
 
-            scaledAudioClock -= IPS;
+            scaledAudioClock -= INSTRUCTIONS_PER_SECOND;
         }
 
         numSteps++;
@@ -110,10 +110,20 @@ void MainWindow::toggleDebugMode() {
         updateTimer->start();
         elapsedTimer.start();
 
+        audioPlayer->unmute();
+        if (audioSink->state() == QAudio::SuspendedState) {
+            audioSink->resume();
+        }
+
         numSteps = 0;
     }
     else {
         updateTimer->stop();
+
+        if (audioSink->state() != QAudio::SuspendedState && audioSink->state() != QAudio::StoppedState) {
+            audioSink->suspend();
+        }
+        audioPlayer->mute();
     }
 }
 
