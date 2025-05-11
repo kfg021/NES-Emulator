@@ -3,6 +3,7 @@
 
 #include "core/cpu.hpp"
 
+#include "gui/audioplayer.hpp"
 #include "gui/gamewindow.hpp"
 #include "gui/debugwindow.hpp"
 
@@ -11,6 +12,7 @@
 
 #include <QMainWindow>
 #include <QWidget>
+#include <QAudioSink>
 
 
 class MainWindow : public QMainWindow {
@@ -28,6 +30,7 @@ public:
 
     static constexpr int FPS = 60;
     static constexpr int IPS = 1773448;
+    constexpr static int AUDIO_SAMPLE_RATE = 44100;
 
 protected:
     void keyPressEvent(QKeyEvent* event) override;
@@ -40,8 +43,10 @@ private:
     GameWindow* gameWindow;
 
     QTimer* updateTimer;
-    QTimer* renderTimer;
-    QElapsedTimer* elapsedTimer;
+    QElapsedTimer elapsedTimer;
+
+    AudioPlayer* audioPlayer;
+    QAudioSink* audioSink;
 
 #ifdef SHOW_DEBUG_WINDOW
     DebugWindow* debugWindow;
@@ -53,6 +58,7 @@ private:
 #endif
 
     int64_t numSteps;
+    int32_t scaledAudioClock;
 
     void reset();
 

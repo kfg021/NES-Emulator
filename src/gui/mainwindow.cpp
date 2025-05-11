@@ -5,6 +5,7 @@
 
 #include <QHBoxLayout>
 #include <QKeyEvent>
+#include <QMediaDevices>
 
 MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
     : QMainWindow(parent) {
@@ -40,29 +41,38 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
     layout()->setSizeConstraint(QLayout::SetFixedSize);
 
     numSteps = 0;
+    scaledAudioClock = 0;
+
+    QAudioFormat audioFormat;
+    audioFormat.setSampleRate(AUDIO_SAMPLE_RATE);
+    audioFormat.setChannelCount(1); // Mono
+    audioFormat.setSampleFormat(QAudioFormat::Float);
+
+    audioPlayer = new AudioPlayer(this, audioFormat);
+    audioSink = new QAudioSink(QMediaDevices::defaultAudioOutput(), audioFormat, this);
+    audioSink->start(audioPlayer);
 
     updateTimer = new QTimer(this);
     connect(updateTimer, SIGNAL(timeout()), this, SLOT(tick()));
     updateTimer->setInterval(1000 / FPS);
 
-    elapsedTimer = new QElapsedTimer();
-    elapsedTimer->start();
+    elapsedTimer = QElapsedTimer();
+    elapsedTimer.start();
 
 #ifdef SHOW_DEBUG_WINDOW
     debugMode = true;
     toggleDebugMode();
 #else
     updateTimer->start();
-    elapsedTimer->start();
+    elapsedTimer.start();
 #endif
 }
 
 void MainWindow::tick() {
-    int64_t totalElapsed = elapsedTimer->nsecsElapsed();
+    int64_t totalElapsed = elapsedTimer.nsecsElapsed();
 
-    int64_t neededSteps = ((totalElapsed * IPS) / (int64_t)1e9) - numSteps;
+    int64_t neededSteps = ((totalElapsed * IPS) / static_cast<int64_t>(1e9)) - numSteps;
     for (int i = 0; i < neededSteps; i++) {
-        numSteps++;
 
 #ifdef SHOW_DEBUG_WINDOW
         if (debugWindow->isVisible()) {
@@ -74,6 +84,21 @@ void MainWindow::tick() {
 #else
         bus->executeCycle();
 #endif
+        
+        while(scaledAudioClock >= IPS){
+            // float sample = bus->apu->getAudioSample();
+            
+            // Use temp value for now
+            float frac = (numSteps % IPS) / static_cast<float>(IPS); 
+            float sample = std::sin(440 * 2 * M_PI * frac);
+
+            audioPlayer->addSample(sample);
+
+            scaledAudioClock -= IPS;
+        }
+
+        numSteps++;
+        scaledAudioClock += AUDIO_SAMPLE_RATE;
     }
 }
 
@@ -83,7 +108,7 @@ void MainWindow::toggleDebugMode() {
 
     if (!debugMode) {
         updateTimer->start();
-        elapsedTimer->start();
+        elapsedTimer.start();
 
         numSteps = 0;
     }

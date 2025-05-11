@@ -1,8 +1,5 @@
 #include "core/apu.hpp"
 
-#include <ctime>
-#include <cmath>
-
 APU::APU() {
 
 }
@@ -28,6 +25,6 @@ void APU::writeFrameCounter(uint8_t value) {
 
 }
 
-double APU::getAudioSample() {
-    
+float APU::getAudioSample() {
+    return 0;
 }

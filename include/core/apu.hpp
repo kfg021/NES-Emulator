@@ -17,7 +17,7 @@ public:
     // Handles writes to 0x4017
     void writeFrameCounter(uint8_t value);
 
-    double getAudioSample();
+    float getAudioSample();
 private:
 };
 
