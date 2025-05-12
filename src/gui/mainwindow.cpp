@@ -56,7 +56,7 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
     connect(mediaDevices, &QMediaDevices::audioOutputsChanged, this, &MainWindow::changeAudioOutputDevice);
 
     updateTimer = new QTimer(this);
-    connect(updateTimer, SIGNAL(timeout()), this, SLOT(tick()));
+    connect(updateTimer, &QTimer::timeout, this, &MainWindow::tick);
     updateTimer->setInterval(1000 / TICKS_PER_SECOND);
 
     elapsedTimer = QElapsedTimer();
@@ -106,9 +106,9 @@ void MainWindow::tick() {
 }
 
 void MainWindow::changeAudioOutputDevice() {
-    audioPlayer->tryToMute(); // Mute while changing output device
+    // audioPlayer->tryToMute(); // Mute while changing output device
     resetAudioSink();
-    updateAudioState(); // This will unmute the audio player if needed
+    // updateAudioState(); // This will unmute the audio player if needed
 }
 
 #ifdef SHOW_DEBUG_WINDOW
