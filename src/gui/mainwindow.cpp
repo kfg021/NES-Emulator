@@ -43,12 +43,14 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
     numSteps = 0;
     scaledAudioClock = 0;
 
+    globalMuteFlag = false;
+
     QAudioFormat audioFormat;
     audioFormat.setSampleRate(AUDIO_SAMPLE_RATE);
     audioFormat.setChannelCount(1); // Mono
     audioFormat.setSampleFormat(QAudioFormat::Float);
 
-    audioPlayer = new AudioPlayer(this, audioFormat, false);
+    audioPlayer = new AudioPlayer(this, audioFormat, globalMuteFlag);
     audioSink = new QAudioSink(QMediaDevices::defaultAudioOutput(), audioFormat, this);
     audioSink->start(audioPlayer);
 
@@ -90,7 +92,7 @@ void MainWindow::tick() {
 
             // Use temp value for now
             float frac = (numSteps % INSTRUCTIONS_PER_SECOND) / static_cast<float>(INSTRUCTIONS_PER_SECOND);
-            float sample = std::sin(440 * 2 * M_PI * frac);
+            float sample = std::sin(220 * 2 * M_PI * frac);
 
             audioPlayer->addSample(sample);
 
@@ -109,22 +111,13 @@ void MainWindow::toggleDebugMode() {
     if (!debugMode) {
         updateTimer->start();
         elapsedTimer.start();
-
-        audioPlayer->unmute();
-        if (audioSink->state() == QAudio::SuspendedState) {
-            audioSink->resume();
-        }
-
         numSteps = 0;
     }
     else {
         updateTimer->stop();
-
-        if (audioSink->state() != QAudio::SuspendedState && audioSink->state() != QAudio::StoppedState) {
-            audioSink->suspend();
-        }
-        audioPlayer->mute();
     }
+
+    updateAudioState();
 }
 
 void MainWindow::stepIfInDebugMode() {
@@ -207,6 +200,12 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
     else if (event->key() == Qt::Key_R) {
         reset();
     }
+
+    // Toggle sound
+    else if (event->key() == Qt::Key_S) {
+        globalMuteFlag ^= 1;
+        updateAudioState();
+    }
 #ifdef SHOW_DEBUG_WINDOW
     // Debugging keys
     else if (event->key() == Qt::Key_D) {
@@ -263,5 +262,35 @@ void MainWindow::keyReleaseEvent(QKeyEvent* event) {
     }
     else if (event->key() == Qt::Key_X) {
         bus->setController(0, Controller::Button::A, 0);
+    }
+}
+
+
+void MainWindow::updateAudioState() {
+    auto tryToMute = [&]() -> void {
+        if (audioSink->state() != QAudio::SuspendedState && audioSink->state() != QAudio::StoppedState) {
+            audioSink->suspend();
+        }
+        audioPlayer->tryToMute();
+    };
+
+    auto tryToUnmute = [&]() -> void {
+        audioPlayer->tryToUnmute();
+        if (audioSink->state() == QAudio::SuspendedState) {
+            audioSink->resume();
+        }
+    };
+
+#ifdef SHOW_DEBUG_WINDOW
+    bool shouldMute = globalMuteFlag || debugMode;
+#else
+    bool shouldMute = globalMuteFlag;
+#endif
+
+    if (shouldMute) {
+        tryToMute();
+    }
+    else {
+        tryToUnmute();
     }
 }

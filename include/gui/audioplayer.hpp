@@ -16,8 +16,8 @@ public:
     AudioPlayer(QWidget* parent, const QAudioFormat& audioFormat, bool muted);
 
     void addSample(float sample);
-    void mute();
-    void unmute();
+    void tryToMute();
+    void tryToUnmute();
 
 protected:
     int64_t readData(char* data, int64_t maxSize) override;

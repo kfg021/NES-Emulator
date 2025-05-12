@@ -48,6 +48,9 @@ private:
     AudioPlayer* audioPlayer;
     QAudioSink* audioSink;
 
+    bool globalMuteFlag;
+    void updateAudioState();
+
 #ifdef SHOW_DEBUG_WINDOW
     DebugWindow* debugWindow;
     void executeCycleAndUpdateDebugWindow();

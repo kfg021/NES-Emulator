@@ -44,7 +44,7 @@ void AudioPlayer::addSample(float sample) {
     }
 }
 
-void AudioPlayer::mute() {
+void AudioPlayer::tryToMute() {
     if (!muted) {
         muted = true;
         {
@@ -56,7 +56,7 @@ void AudioPlayer::mute() {
     }
 }
 
-void AudioPlayer::unmute() {
+void AudioPlayer::tryToUnmute() {
     if (muted) {
         muted = false;
     }
