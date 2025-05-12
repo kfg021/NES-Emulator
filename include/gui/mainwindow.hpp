@@ -10,9 +10,11 @@
 #include <memory>
 #include <string>
 
-#include <QMainWindow>
-#include <QWidget>
+#include <QAudioFormat>
 #include <QAudioSink>
+#include <QMainWindow>
+#include <QMediaDevices>
+#include <QWidget>
 
 
 class MainWindow : public QMainWindow {
@@ -34,6 +36,7 @@ protected:
 
 private slots:
     void tick();
+    void changeAudioOutputDevice();
 
 private:
     static constexpr int TICKS_PER_SECOND = 240;
@@ -45,11 +48,15 @@ private:
     QTimer* updateTimer;
     QElapsedTimer elapsedTimer;
 
+    QAudioFormat audioFormat;
     AudioPlayer* audioPlayer;
     QAudioSink* audioSink;
+    QMediaDevices* mediaDevices;
 
     bool globalMuteFlag;
     void updateAudioState();
+
+    void resetAudioSink();
 
 #ifdef SHOW_DEBUG_WINDOW
     DebugWindow* debugWindow;

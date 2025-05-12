@@ -44,15 +44,16 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
     scaledAudioClock = 0;
 
     globalMuteFlag = false;
-
-    QAudioFormat audioFormat;
     audioFormat.setSampleRate(AUDIO_SAMPLE_RATE);
     audioFormat.setChannelCount(1); // Mono
     audioFormat.setSampleFormat(QAudioFormat::Float);
-
     audioPlayer = new AudioPlayer(this, audioFormat, globalMuteFlag);
-    audioSink = new QAudioSink(QMediaDevices::defaultAudioOutput(), audioFormat, this);
-    audioSink->start(audioPlayer);
+
+    audioSink = nullptr;
+    resetAudioSink();
+
+    mediaDevices = new QMediaDevices(this);
+    connect(mediaDevices, &QMediaDevices::audioOutputsChanged, this, &MainWindow::changeAudioOutputDevice);
 
     updateTimer = new QTimer(this);
     connect(updateTimer, SIGNAL(timeout()), this, SLOT(tick()));
@@ -102,6 +103,12 @@ void MainWindow::tick() {
         numSteps++;
         scaledAudioClock += AUDIO_SAMPLE_RATE;
     }
+}
+
+void MainWindow::changeAudioOutputDevice() {
+    audioPlayer->tryToMute(); // Mute while changing output device
+    resetAudioSink();
+    updateAudioState(); // This will unmute the audio player if needed
 }
 
 #ifdef SHOW_DEBUG_WINDOW
@@ -293,4 +300,14 @@ void MainWindow::updateAudioState() {
     else {
         tryToUnmute();
     }
+}
+
+void MainWindow::resetAudioSink() {
+    if (audioSink != nullptr) {
+        audioSink->stop();
+        delete audioSink;
+    }
+
+    audioSink = new QAudioSink(QMediaDevices::defaultAudioOutput(), audioFormat, this);
+    audioSink->start(audioPlayer);
 }
