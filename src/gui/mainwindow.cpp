@@ -89,11 +89,7 @@ void MainWindow::tick() {
 #endif
 
         while (scaledAudioClock >= INSTRUCTIONS_PER_SECOND) {
-            // float sample = bus->apu->getAudioSample();
-
-            // Use temp value for now
-            float frac = (numSteps % INSTRUCTIONS_PER_SECOND) / static_cast<float>(INSTRUCTIONS_PER_SECOND);
-            float sample = std::sin(220 * 2 * M_PI * frac);
+            float sample = bus->apu->getAudioSample();
 
             audioPlayer->addSample(sample);
 
@@ -106,9 +102,9 @@ void MainWindow::tick() {
 }
 
 void MainWindow::changeAudioOutputDevice() {
-    // audioPlayer->tryToMute(); // Mute while changing output device
+    audioPlayer->tryToMute(); // Mute while changing output device
     resetAudioSink();
-    // updateAudioState(); // This will unmute the audio player if needed
+    updateAudioState(); // This will unmute the audio player if needed
 }
 
 #ifdef SHOW_DEBUG_WINDOW
