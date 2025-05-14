@@ -43,7 +43,7 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
 
     updateTimer = new QTimer(this);
     connect(updateTimer, &QTimer::timeout, this, &MainWindow::tick);
-    updateTimer->setInterval(1000 / FPS);
+    updateTimer->setInterval(1000 / TICKS_PER_SECOND);
 
     elapsedTimer = new QElapsedTimer();
     elapsedTimer->start();
@@ -60,7 +60,7 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
 void MainWindow::tick() {
     int64_t totalElapsed = elapsedTimer->nsecsElapsed();
 
-    int64_t neededSteps = ((totalElapsed * IPS) / (int64_t)1e9) - numSteps;
+    int64_t neededSteps = ((totalElapsed * INSTRUCTIONS_PER_SECOND) / (int64_t)1e9) - numSteps;
     for (int i = 0; i < neededSteps; i++) {
         numSteps++;
 

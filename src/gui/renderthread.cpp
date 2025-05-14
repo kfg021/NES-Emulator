@@ -4,8 +4,10 @@
 
 #include <QCoreApplication>
 
-RenderThread::RenderThread(QObject* parent) 
-    : QThread(parent), renderTimer(nullptr) {
+RenderThread::RenderThread(QObject* parent, int fps)
+    : QThread(parent),
+    renderTimer(nullptr),
+    FPS(fps) {
 }
 
 RenderThread::~RenderThread() {
@@ -16,7 +18,7 @@ void RenderThread::run() {
     renderTimer = new QTimer();
     connect(renderTimer, &QTimer::timeout, this, &RenderThread::onTimeout);
     renderTimer->moveToThread(this);
-    renderTimer->start(1000 / MainWindow::FPS);
+    renderTimer->start(1000 / FPS);
 
     exec();
 }

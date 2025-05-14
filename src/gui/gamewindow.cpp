@@ -7,7 +7,9 @@
 #include <QImage>
 
 GameWindow::GameWindow(QWidget* parent, const std::shared_ptr<Bus>& bus)
-    : QWidget(parent), bus(bus), renderThread(new RenderThread(this)) {
+    : QWidget(parent),
+    bus(bus),
+    renderThread(new RenderThread(this, FPS)) {
     connect(renderThread, &RenderThread::triggerUpdate, this, &GameWindow::onRenderUpdate);
     renderThread->start();
 }

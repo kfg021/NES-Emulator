@@ -22,6 +22,7 @@ private slots:
     void onRenderUpdate();
 
 private:
+    constexpr static int FPS = 60;
     std::shared_ptr<Bus> bus;
     RenderThread* renderThread;
 };

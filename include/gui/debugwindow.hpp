@@ -36,6 +36,7 @@ private slots:
     void onRenderUpdate();
 
 private:
+    constexpr static int DEBUG_FPS = 15;
     std::shared_ptr<Bus> bus;
     RenderThread* renderThread;
 };

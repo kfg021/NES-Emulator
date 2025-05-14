@@ -8,7 +8,7 @@ class RenderThread : public QThread {
     Q_OBJECT
 
 public:
-    RenderThread(QObject *parent = nullptr);
+    RenderThread(QObject *parent, int fps);
     ~RenderThread();
 
 signals:
@@ -21,6 +21,7 @@ private slots:
     void onTimeout();
 
 private:
+    const int FPS;
     QTimer* renderTimer;
 };
 

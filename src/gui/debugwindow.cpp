@@ -11,7 +11,9 @@
 
 
 DebugWindow::DebugWindow(QWidget* parent, const std::shared_ptr<Bus>& bus)
-    : QWidget(parent), bus(bus), renderThread(new RenderThread(this)) {
+    : QWidget(parent),
+    bus(bus),
+    renderThread(new RenderThread(this, DEBUG_FPS)) {
     connect(renderThread, &RenderThread::triggerUpdate, this, &DebugWindow::onRenderUpdate);
     renderThread->start();
 
