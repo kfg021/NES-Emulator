@@ -42,7 +42,7 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
     numSteps = 0;
 
     updateTimer = new QTimer(this);
-    connect(updateTimer, SIGNAL(timeout()), this, SLOT(tick()));
+    connect(updateTimer, &QTimer::timeout, this, &MainWindow::tick);
     updateTimer->setInterval(1000 / FPS);
 
     elapsedTimer = new QElapsedTimer();

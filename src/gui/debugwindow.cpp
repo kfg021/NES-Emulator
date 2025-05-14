@@ -12,7 +12,7 @@
 
 DebugWindow::DebugWindow(QWidget* parent, const std::shared_ptr<Bus>& bus)
     : QWidget(parent), bus(bus), renderThread(new RenderThread(this)) {
-    connect(renderThread, SIGNAL(triggerUpdate()), this, SLOT(onRenderUpdate()));
+    connect(renderThread, &RenderThread::triggerUpdate, this, &DebugWindow::onRenderUpdate);
     renderThread->start();
 
     backgroundPallete = 0;
