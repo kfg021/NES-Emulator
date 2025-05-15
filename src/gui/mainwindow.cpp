@@ -1,4 +1,5 @@
 #include "gui/mainwindow.hpp"
+#include "gui/emulatorthread.hpp"
 
 #include "core/controller.hpp"
 #include "core/cpu.hpp"
@@ -8,18 +9,9 @@
 
 MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
     : QMainWindow(parent) {
-
-    bus = std::make_shared<Bus>();
-
-    Cartridge::Status status = bus->loadROM(filePath);
-    if (status.code != Cartridge::Code::SUCCESS) {
-        qFatal("%s", status.message.c_str());
-    }
-
     setWindowTitle("NES Emulator");
 
-    gameWindow = new GameWindow(nullptr, bus);
-    gameWindow->setFixedSize(GAME_WIDTH, GAME_HEIGHT);
+    gameWindow = new GameWindow(nullptr);
 
 #ifdef SHOW_DEBUG_WINDOW
     debugWindow = new DebugWindow(nullptr, bus);
@@ -39,43 +31,42 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
     setCentralWidget(parentWidget);
     layout()->setSizeConstraint(QLayout::SetFixedSize);
 
-    numSteps = 0;
+    controllerStatus[0].store(0, std::memory_order_relaxed);
+    controllerStatus[1].store(0, std::memory_order_relaxed);
 
-    updateTimer = new QTimer(this);
-    connect(updateTimer, &QTimer::timeout, this, &MainWindow::tick);
-    updateTimer->setInterval(1000 / TICKS_PER_SECOND);
+    resetFlag.store(false, std::memory_order_relaxed);
 
-    elapsedTimer = new QElapsedTimer();
-    elapsedTimer->start();
+    GameInput gameInput{ &controllerStatus, &resetFlag };
+    emulatorThread = new EmulatorThread(this, filePath, gameInput);
 
-#ifdef SHOW_DEBUG_WINDOW
-    debugMode = true;
-    toggleDebugMode();
-#else
-    updateTimer->start();
-    elapsedTimer->start();
-#endif
+    connect(emulatorThread, &EmulatorThread::frameReadySignal, this, &MainWindow::displayNewFrame, Qt::QueuedConnection);
+
+    emulatorThread->start();
 }
 
-void MainWindow::tick() {
-    int64_t totalElapsed = elapsedTimer->nsecsElapsed();
-
-    int64_t neededSteps = ((totalElapsed * INSTRUCTIONS_PER_SECOND) / (int64_t)1e9) - numSteps;
-    for (int i = 0; i < neededSteps; i++) {
-        numSteps++;
-
-#ifdef SHOW_DEBUG_WINDOW
-        if (debugWindow->isVisible()) {
-            executeCycleAndUpdateDebugWindow();
-        }
-        else {
-            bus->executeCycle();
-        }
-#else
-        bus->executeCycle();
-#endif
-    }
+void MainWindow::displayNewFrame(const PPU::Display& display) {
+    gameWindow->setCurrentFrame(display);
 }
+
+// void MainWindow::tick() {
+//     int64_t totalElapsed = elapsedTimer->nsecsElapsed();
+
+//     int64_t neededSteps = ((totalElapsed * INSTRUCTIONS_PER_SECOND) / (int64_t)1e9) - numSteps;
+//     for (int i = 0; i < neededSteps; i++) {
+//         numSteps++;
+
+// #ifdef SHOW_DEBUG_WINDOW
+//         if (debugWindow->isVisible()) {
+//             executeCycleAndUpdateDebugWindow();
+//         }
+//         else {
+//             bus->executeCycle();
+//         }
+// #else
+//         bus->executeCycle();
+// #endif
+//     }
+// }
 
 #ifdef SHOW_DEBUG_WINDOW
 void MainWindow::toggleDebugMode() {
@@ -132,8 +123,9 @@ void MainWindow::executeCycleAndUpdateDebugWindow() {
 #endif
 
 void MainWindow::reset() {
-    // TODO: This is technically this is not a reset. It is more like a "power on"
-    bus->initDevices();
+    // // TODO: This is technically this is not a reset. It is more like a "power on"
+    // bus->initDevices();
+    resetFlag.store(true, std::memory_order_relaxed);
 
 #ifdef SHOW_DEBUG_WINDOW
     debugWindow->reset();
@@ -144,28 +136,28 @@ void MainWindow::reset() {
 void MainWindow::keyPressEvent(QKeyEvent* event) {
     // Game keys
     if (event->key() == Qt::Key_Up) {
-        bus->setController(0, Controller::Button::UP, 1);
+        setControllerData(0, Controller::Button::UP, 1);
     }
     else if (event->key() == Qt::Key_Down) {
-        bus->setController(0, Controller::Button::DOWN, 1);
+        setControllerData(0, Controller::Button::DOWN, 1);
     }
     else if (event->key() == Qt::Key_Left) {
-        bus->setController(0, Controller::Button::LEFT, 1);
+        setControllerData(0, Controller::Button::LEFT, 1);
     }
     else if (event->key() == Qt::Key_Right) {
-        bus->setController(0, Controller::Button::RIGHT, 1);
+        setControllerData(0, Controller::Button::RIGHT, 1);
     }
     else if (event->key() == Qt::Key_Shift) {
-        bus->setController(0, Controller::Button::SELECT, 1);
+        setControllerData(0, Controller::Button::SELECT, 1);
     }
     else if (event->key() == Qt::Key_Return) {
-        bus->setController(0, Controller::Button::START, 1);
+        setControllerData(0, Controller::Button::START, 1);
     }
     else if (event->key() == Qt::Key_Z) {
-        bus->setController(0, Controller::Button::B, 1);
+        setControllerData(0, Controller::Button::B, 1);
     }
     else if (event->key() == Qt::Key_X) {
-        bus->setController(0, Controller::Button::A, 1);
+        setControllerData(0, Controller::Button::A, 1);
     }
 
     // Reset button
@@ -206,27 +198,37 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 void MainWindow::keyReleaseEvent(QKeyEvent* event) {
     // Game keys
     if (event->key() == Qt::Key_Up) {
-        bus->setController(0, Controller::Button::UP, 0);
+        setControllerData(0, Controller::Button::UP, 0);
     }
     else if (event->key() == Qt::Key_Down) {
-        bus->setController(0, Controller::Button::DOWN, 0);
+        setControllerData(0, Controller::Button::DOWN, 0);
     }
     else if (event->key() == Qt::Key_Left) {
-        bus->setController(0, Controller::Button::LEFT, 0);
+        setControllerData(0, Controller::Button::LEFT, 0);
     }
     else if (event->key() == Qt::Key_Right) {
-        bus->setController(0, Controller::Button::RIGHT, 0);
+        setControllerData(0, Controller::Button::RIGHT, 0);
     }
     else if (event->key() == Qt::Key_Shift) {
-        bus->setController(0, Controller::Button::SELECT, 0);
+        setControllerData(0, Controller::Button::SELECT, 0);
     }
     else if (event->key() == Qt::Key_Return) {
-        bus->setController(0, Controller::Button::START, 0);
+        setControllerData(0, Controller::Button::START, 0);
     }
     else if (event->key() == Qt::Key_Z) {
-        bus->setController(0, Controller::Button::B, 0);
+        setControllerData(0, Controller::Button::B, 0);
     }
     else if (event->key() == Qt::Key_X) {
-        bus->setController(0, Controller::Button::A, 0);
+        setControllerData(0, Controller::Button::A, 0);
+    }
+}
+
+void MainWindow::setControllerData(bool controller, Controller::Button button, bool value) {
+    uint8_t bitToChange = (1 << static_cast<int>(button));
+    if (value) {
+        controllerStatus[controller].fetch_or(bitToChange, std::memory_order_relaxed);
+    }
+    else {
+        controllerStatus[controller].fetch_and(~bitToChange, std::memory_order_relaxed);
     }
 }

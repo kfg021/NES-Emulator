@@ -31,9 +31,9 @@ set(HEADERS
     include/core/mapper/mapper9.hpp
     include/core/mapper/mapper66.hpp
     include/gui/debugwindow.hpp
+    include/gui/emulatorthread.hpp
     include/gui/gamewindow.hpp
     include/gui/mainwindow.hpp
-    include/gui/renderthread.hpp
     include/util/util.hpp
 )
 
@@ -52,9 +52,9 @@ set(SOURCES
     src/core/mapper/mapper9.cpp
     src/core/mapper/mapper66.cpp
     src/gui/debugwindow.cpp
+    src/gui/emulatorthread.cpp
     src/gui/gamewindow.cpp
     src/gui/mainwindow.cpp
-    src/gui/renderthread.cpp
     src/util/util.cpp
     src/main.cpp
 )
@@ -78,4 +78,4 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 # This allows a side panel to be displayed, showing cpu status and pattern tables.
 # It can be toggled on/off using the D button
-target_compile_definitions(${PROJECT_NAME} PRIVATE SHOW_DEBUG_WINDOW)
+# target_compile_definitions(${PROJECT_NAME} PRIVATE SHOW_DEBUG_WINDOW)

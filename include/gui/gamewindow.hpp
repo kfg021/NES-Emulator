@@ -1,10 +1,11 @@
-#ifndef GAMEWINDOW_H
-#define GAMEWINDOW_H
+#ifndef GAMEWINDOW_HPP
+#define GAMEWINDOW_HPP
 
 #include "core/bus.hpp"
-#include "gui/renderthread.hpp"
+#include "core/ppu.hpp"
 
 #include <memory>
+#include <mutex>
 
 #include <QWidget>
 
@@ -12,19 +13,19 @@ class GameWindow : public QWidget {
     Q_OBJECT
 
 public:
-    GameWindow(QWidget *parent, const std::shared_ptr<Bus>& bus);
-    ~GameWindow();
+    GameWindow(QWidget *parent);
+    void setCurrentFrame(const PPU::Display& display);
 
 protected:
     void paintEvent(QPaintEvent *event) override;
 
-private slots:
-    void onRenderUpdate();
-
 private:
-    constexpr static int FPS = 60;
-    std::shared_ptr<Bus> bus;
-    RenderThread* renderThread;
+    static constexpr int GAME_WIDTH = 256 * 3;
+    static constexpr int GAME_HEIGHT = 240 * 3;
+
+    static constexpr int FPS = 60;
+    std::mutex mtx;
+    QImage currentFrame;
 };
 
-#endif // GAMEWINDOW_H
+#endif // GAMEWINDOW_HPP

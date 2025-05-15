@@ -168,6 +168,6 @@ void Bus::doDmaTransferCycle() {
     }
 }
 
-void Bus::setController(bool controller, Controller::Button button, bool value) {
-    controllers[controller].setButton(button, value);
+void Bus::setController(bool controller, uint8_t value) {
+    controllers[controller].setButtons(value);
 }

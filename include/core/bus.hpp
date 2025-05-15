@@ -35,7 +35,7 @@ public:
 
     void executeCycle();
 
-    void setController(bool controller, Controller::Button button, bool value);
+    void setController(bool controller, uint8_t value);
 
 private:
     static constexpr MemoryRange RAM_ADDRESSABLE_RANGE{ 0x0000, 0x1FFF };

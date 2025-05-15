@@ -61,6 +61,8 @@ public:
     using OAMBuffer = std::array<uint8_t, OAM_BUFFER_SIZE>;
     OAMBuffer oamBuffer;
 
+    bool frameReadyFlag;
+
 private:
     // PPU internal data structures (descriptions from https://www.nesdev.org/wiki/PPU_registers)
 

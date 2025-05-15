@@ -1,34 +1,24 @@
 #include "gui/gamewindow.hpp"
 
-#include "gui/mainwindow.hpp"
-
 #include <QPainter>
 #include <QPixmap>
 #include <QImage>
 
-GameWindow::GameWindow(QWidget* parent, const std::shared_ptr<Bus>& bus)
-    : QWidget(parent),
-    bus(bus),
-    renderThread(new RenderThread(this, FPS)) {
-    connect(renderThread, &RenderThread::triggerUpdate, this, &GameWindow::onRenderUpdate);
-    renderThread->start();
+GameWindow::GameWindow(QWidget* parent)
+    : QWidget(parent) {
+    this->setFixedSize(GAME_WIDTH, GAME_HEIGHT);
 }
 
-GameWindow::~GameWindow() {
-    renderThread->quit();
-    renderThread->wait();
-    renderThread->deleteLater();
-}
-
-void GameWindow::onRenderUpdate() {
+void GameWindow::setCurrentFrame(const PPU::Display& display) {
+    QImage image(reinterpret_cast<const uint8_t*>(&display), 256, 240, QImage::Format::Format_ARGB32);
+    currentFrame = image.copy();
     update();
 }
 
 void GameWindow::paintEvent(QPaintEvent* /*event*/) {
-    QPainter painter(this);
-
-    const PPU::Display& display = *(bus->ppu->finishedDisplay);
-    QImage image(reinterpret_cast<const uint8_t*>(&display), 256, 240, QImage::Format::Format_ARGB32);
-    const QPixmap pixmap = QPixmap::fromImage(image);
-    painter.drawPixmap(0, 0, MainWindow::GAME_WIDTH, MainWindow::GAME_HEIGHT, pixmap);
+    if (!currentFrame.isNull()) {
+        QPainter painter(this);
+        const QPixmap pixmap = QPixmap::fromImage(currentFrame);
+        painter.drawPixmap(0, 0, GAME_WIDTH, GAME_HEIGHT, pixmap);
+    }
 }

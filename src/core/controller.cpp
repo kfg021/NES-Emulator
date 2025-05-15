@@ -14,11 +14,8 @@ uint8_t Controller::getButtons() {
     return newButtons;
 }
 
-void Controller::setButton(Button button, bool value) {
-    buttons &= ~(1 << static_cast<int>(button));
-    if (value) {
-        buttons |= (1 << static_cast<int>(button));
-    }
+void Controller::setButtons(uint8_t buttons){
+   this->buttons = buttons;
 }
 
 void Controller::removeOppositeInputs(uint8_t& originalButtons, Button a, Button b) const {

@@ -61,6 +61,8 @@ void PPU::initPPU() {
 
     currentScanlineSprites = {};
     sprite0OnCurrentScanline = false;
+
+    frameReadyFlag = false;
 }
 
 uint8_t PPU::view(uint8_t ppuRegister) const {
@@ -393,6 +395,8 @@ void PPU::visibleScanlines() {
         if (scanline == 239 && cycle == 256) {
             // We have finished drawing all visible pixels, so the display is ready
             std::swap(workingDisplay, finishedDisplay);
+
+            frameReadyFlag = true;
         }
     }
     else if (cycle == 260) {

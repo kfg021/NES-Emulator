@@ -18,7 +18,7 @@ public:
     };
 
     uint8_t getButtons();
-    void setButton(Button button, bool value);
+    void setButtons(uint8_t buttons);
 
 private:
     uint8_t buttons;
