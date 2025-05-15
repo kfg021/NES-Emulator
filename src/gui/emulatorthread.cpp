@@ -57,7 +57,8 @@ void EmulatorThread::run() {
         
         if (bus.ppu->frameReadyFlag) {
             const PPU::Display& display = *(bus.ppu->finishedDisplay);
-            emit frameReadySignal(display);
+            QImage image(reinterpret_cast<const uint8_t*>(&display), 256, 240, QImage::Format::Format_ARGB32);
+            emit frameReadySignal(image.copy());
             bus.ppu->frameReadyFlag = false;
         }
 

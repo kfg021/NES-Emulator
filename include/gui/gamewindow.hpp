@@ -2,11 +2,8 @@
 #define GAMEWINDOW_HPP
 
 #include "core/bus.hpp"
-#include "core/ppu.hpp"
 
-#include <memory>
-#include <mutex>
-
+#include <QImage>
 #include <QWidget>
 
 class GameWindow : public QWidget {
@@ -14,7 +11,7 @@ class GameWindow : public QWidget {
 
 public:
     GameWindow(QWidget *parent);
-    void setCurrentFrame(const PPU::Display& display);
+    void setCurrentFrame(const QImage& image);
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -24,7 +21,6 @@ private:
     static constexpr int GAME_HEIGHT = 240 * 3;
 
     static constexpr int FPS = 60;
-    std::mutex mtx;
     QImage currentFrame;
 };
 

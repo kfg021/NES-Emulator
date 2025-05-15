@@ -1,17 +1,16 @@
 #include "gui/gamewindow.hpp"
 
+#include <QImage>
 #include <QPainter>
 #include <QPixmap>
-#include <QImage>
 
 GameWindow::GameWindow(QWidget* parent)
     : QWidget(parent) {
     this->setFixedSize(GAME_WIDTH, GAME_HEIGHT);
 }
 
-void GameWindow::setCurrentFrame(const PPU::Display& display) {
-    QImage image(reinterpret_cast<const uint8_t*>(&display), 256, 240, QImage::Format::Format_ARGB32);
-    currentFrame = image.copy();
+void GameWindow::setCurrentFrame(const QImage& image) {
+    currentFrame = image;
     update();
 }
 

@@ -10,6 +10,7 @@
 #include <memory>
 #include <string>
 
+#include <QImage>
 #include <QMainWindow>
 #include <QWidget>
 
@@ -32,7 +33,7 @@ public:
 #endif
 
 public slots:
-    void displayNewFrame(const PPU::Display& display);
+    void displayNewFrame(const QImage& image);
 
 protected:
     void keyPressEvent(QKeyEvent* event) override;

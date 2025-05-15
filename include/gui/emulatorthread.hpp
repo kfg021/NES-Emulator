@@ -2,12 +2,11 @@
 #define EMULATORTHREAD_HPP
 
 #include "core/bus.hpp"
-#include "core/ppu.hpp"
 #include "gui/mainwindow.hpp"
 
 #include <atomic>
-#include <memory>
 
+#include <QImage>
 #include <QObject>
 #include <QThread>
 
@@ -19,7 +18,7 @@ public:
     void run() override;
 
 signals:
-    void frameReadySignal(const PPU::Display& display);
+    void frameReadySignal(const QImage& display);
 
 private:
     constexpr static int FPS = 60;

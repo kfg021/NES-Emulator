@@ -44,8 +44,8 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
     emulatorThread->start();
 }
 
-void MainWindow::displayNewFrame(const PPU::Display& display) {
-    gameWindow->setCurrentFrame(display);
+void MainWindow::displayNewFrame(const QImage& image) {
+    gameWindow->setCurrentFrame(image);
 }
 
 // void MainWindow::tick() {
