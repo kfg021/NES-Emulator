@@ -3,6 +3,7 @@
 
 #include "core/cpu.hpp"
 #include "core/cartridge.hpp"
+#include "gui/guitypes.hpp"
 
 #include <memory>
 
@@ -13,26 +14,18 @@
 
 class DebugWindow : public QWidget {
     Q_OBJECT
-
 public:
-    DebugWindow(QWidget* parent, const std::shared_ptr<Bus>& bus);
-
-    void reset();
-
-    uint8_t backgroundPallete;
-    uint8_t spritePallete;
+    DebugWindow(QWidget* parent);
+    void setCurrentState(const DebugWindowState& state);
 
     static constexpr int NUM_INSTS = 9;
-
-    QVector<QString> prevInsts;
-    QString toString(uint16_t addr);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
 
 private:
-    static constexpr int DEBUG_FPS = 15;
-    std::shared_ptr<Bus> bus;
+    DebugWindowState state;
+    // QString toString(uint16_t addr);
 };
 
 #endif // DEBUGWINDOW_HPP

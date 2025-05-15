@@ -12,19 +12,15 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
     setWindowTitle("NES Emulator");
 
     gameWindow = new GameWindow(nullptr);
+    gameWindow->setFixedSize(GAME_WIDTH, GAME_HEIGHT);
 
-#ifdef SHOW_DEBUG_WINDOW
-    debugWindow = new DebugWindow(nullptr, bus);
+    debugWindow = new DebugWindow(nullptr);
     debugWindow->setFixedSize(DEBUG_WIDTH, GAME_HEIGHT);
     debugWindow->hide();
-#endif
 
     QHBoxLayout* mainLayout = new QHBoxLayout();
     mainLayout->addWidget(gameWindow);
-
-#ifdef SHOW_DEBUG_WINDOW
     mainLayout->addWidget(debugWindow);
-#endif
 
     QWidget* parentWidget = new QWidget();
     parentWidget->setLayout(mainLayout);
@@ -33,13 +29,26 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
 
     controllerStatus[0].store(0, std::memory_order_relaxed);
     controllerStatus[1].store(0, std::memory_order_relaxed);
-
     resetFlag.store(false, std::memory_order_relaxed);
+    debugWindowEnabled.store(false, std::memory_order_relaxed);
+    stepModeEnabled.store(false, std::memory_order_relaxed);
+    stepRequested.store(false, std::memory_order_relaxed);
+    spritePallete.store(0, std::memory_order_relaxed);
+    backgroundPallete.store(0, std::memory_order_relaxed);
 
-    GameInput gameInput{ &controllerStatus, &resetFlag };
-    emulatorThread = new EmulatorThread(this, filePath, gameInput);
+    KeyboardInput keyInput = {
+        &controllerStatus,
+        &resetFlag,
+        &debugWindowEnabled,
+        &stepModeEnabled,
+        &stepRequested,
+        &spritePallete,
+        &backgroundPallete
+    };
+    emulatorThread = new EmulatorThread(this, filePath, keyInput);
 
     connect(emulatorThread, &EmulatorThread::frameReadySignal, this, &MainWindow::displayNewFrame, Qt::QueuedConnection);
+    connect(emulatorThread, &EmulatorThread::debugFrameReadySignal, this, &MainWindow::displayNewDebugFrame, Qt::QueuedConnection);
 
     emulatorThread->start();
 }
@@ -48,89 +57,23 @@ void MainWindow::displayNewFrame(const QImage& image) {
     gameWindow->setCurrentFrame(image);
 }
 
-// void MainWindow::tick() {
-//     int64_t totalElapsed = elapsedTimer->nsecsElapsed();
+void MainWindow::displayNewDebugFrame(const DebugWindowState& state) {
+    debugWindow->setCurrentState(state);
+}
 
-//     int64_t neededSteps = ((totalElapsed * INSTRUCTIONS_PER_SECOND) / (int64_t)1e9) - numSteps;
-//     for (int i = 0; i < neededSteps; i++) {
-//         numSteps++;
-
-// #ifdef SHOW_DEBUG_WINDOW
-//         if (debugWindow->isVisible()) {
-//             executeCycleAndUpdateDebugWindow();
+// void MainWindow::stepIfInDebugMode() {
+//     if (debugMode) {
+//         // Pressing space causes the processor to jump to the next non-repeating instruction.
+//         // There is a maximum number of instructions to jump, preventing the emulator from crashing if there is an infinite loop in the code.
+//         static constexpr int MAX_LOOP = 1e5;
+//         uint16_t lastPC = bus->cpu->getPC();
+//         int i = 0;
+//         while (bus->cpu->getPC() == lastPC && i < MAX_LOOP) {
+//             executeInstruction();
+//             i++;
 //         }
-//         else {
-//             bus->executeCycle();
-//         }
-// #else
-//         bus->executeCycle();
-// #endif
 //     }
 // }
-
-#ifdef SHOW_DEBUG_WINDOW
-void MainWindow::toggleDebugMode() {
-    debugMode ^= 1;
-
-    if (!debugMode) {
-        updateTimer->start();
-        elapsedTimer->start();
-
-        numSteps = 0;
-    }
-    else {
-        updateTimer->stop();
-    }
-}
-
-void MainWindow::stepIfInDebugMode() {
-    if (debugMode) {
-        // Pressing space causes the processor to jump to the next non-repeating instruction.
-        // There is a maximum number of instructions to jump, preventing the emulator from crashing if there is an infinite loop in the code.
-        static constexpr int MAX_LOOP = 1e5;
-        uint16_t lastPC = bus->cpu->getPC();
-        int i = 0;
-        while (bus->cpu->getPC() == lastPC && i < MAX_LOOP) {
-            executeInstruction();
-            i++;
-        }
-    }
-}
-
-void MainWindow::executeInstruction() {
-    while (bus->cpu->getRemainingCycles()) {
-        bus->executeCycle();
-    }
-
-    // We should log this one
-    executeCycleAndUpdateDebugWindow();
-}
-
-void MainWindow::executeCycleAndUpdateDebugWindow() {
-    if (!bus->cpu->getRemainingCycles()) {
-        QString currentInst = debugWindow->toString(bus->cpu->getPC());
-        bus->executeCycle();
-
-        if (debugWindow->prevInsts.size() == DebugWindow::NUM_INSTS) {
-            debugWindow->prevInsts.pop_back();
-        }
-        debugWindow->prevInsts.prepend(currentInst);
-    }
-    else {
-        bus->executeCycle();
-    }
-}
-#endif
-
-void MainWindow::reset() {
-    // // TODO: This is technically this is not a reset. It is more like a "power on"
-    // bus->initDevices();
-    resetFlag.store(true, std::memory_order_relaxed);
-
-#ifdef SHOW_DEBUG_WINDOW
-    debugWindow->reset();
-#endif
-}
 
 // TODO: Key inputs for second controller
 void MainWindow::keyPressEvent(QKeyEvent* event) {
@@ -162,37 +105,34 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 
     // Reset button
     else if (event->key() == Qt::Key_R) {
-        reset();
+        resetFlag.store(true, std::memory_order_relaxed);
     }
-#ifdef SHOW_DEBUG_WINDOW
     // Debugging keys
     else if (event->key() == Qt::Key_D) {
         if (debugWindow->isVisible()) {
-            if (debugMode) {
-                toggleDebugMode();
-            }
+            debugWindowEnabled.store(false, std::memory_order_relaxed);
             debugWindow->hide();
         }
         else {
+            debugWindowEnabled.store(true, std::memory_order_relaxed);
             debugWindow->show();
         }
     }
     else if (debugWindow->isVisible()) {
-        if (event->key() == Qt::Key_Space) {
-            stepIfInDebugMode();
-        }
-        else if (event->key() == Qt::Key_C) {
-            toggleDebugMode();
-        }
-        else if (event->key() == Qt::Key_O) {
-            debugWindow->backgroundPallete = (debugWindow->backgroundPallete + 1) & 3;
+        // if (event->key() == Qt::Key_Space) {
+        //     stepIfInDebugMode();
+        // }
+        // else if (event->key() == Qt::Key_C) {
+        //     toggleDebugMode();
+        // }
+        // else 
+        if (event->key() == Qt::Key_O) {
+            backgroundPallete++;
         }
         else if (event->key() == Qt::Key_P) {
-            debugWindow->spritePallete = (debugWindow->spritePallete + 1) & 3;
+            spritePallete++;
         }
     }
-
-#endif
 }
 
 void MainWindow::keyReleaseEvent(QKeyEvent* event) {

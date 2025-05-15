@@ -33,6 +33,7 @@ set(HEADERS
     include/gui/debugwindow.hpp
     include/gui/emulatorthread.hpp
     include/gui/gamewindow.hpp
+    include/gui/guitypes.hpp
     include/gui/mainwindow.hpp
     include/util/util.hpp
 )
@@ -75,7 +76,3 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     WIN32_EXECUTABLE ON
     OUTPUT_NAME ${PROJECT_NAME}
 )
-
-# This allows a side panel to be displayed, showing cpu status and pattern tables.
-# It can be toggled on/off using the D button
-# target_compile_definitions(${PROJECT_NAME} PRIVATE SHOW_DEBUG_WINDOW)

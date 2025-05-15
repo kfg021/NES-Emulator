@@ -2,25 +2,20 @@
 #define MAINWINDOW_HPP
 
 #include "core/bus.hpp"
-#include "gui/gamewindow.hpp"
 #include "gui/debugwindow.hpp"
+#include "gui/emulatorthread.hpp"
+#include "gui/guitypes.hpp"
+#include "gui/gamewindow.hpp"
 
 #include <array>
 #include <atomic>
 #include <memory>
 #include <string>
+#include <queue>
 
 #include <QImage>
 #include <QMainWindow>
 #include <QWidget>
-
-using ControllerStatus = std::array<std::atomic<uint8_t>, 2>;
-struct GameInput {
-    const ControllerStatus* controllerStatus;
-    std::atomic<bool>* resetFlag;
-};
-
-class EmulatorThread;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -28,12 +23,13 @@ class MainWindow : public QMainWindow {
 public:
     MainWindow(QWidget* parent, const std::string& filePath);
 
-#ifdef SHOW_DEBUG_WINDOW
+    static constexpr int GAME_WIDTH = 256 * 3;
+    static constexpr int GAME_HEIGHT = 240 * 3;
     static constexpr int DEBUG_WIDTH = 300;
-#endif
 
 public slots:
     void displayNewFrame(const QImage& image);
+    void displayNewDebugFrame(const DebugWindowState& state);
 
 protected:
     void keyPressEvent(QKeyEvent* event) override;
@@ -42,19 +38,15 @@ protected:
 private:
     EmulatorThread* emulatorThread;
     GameWindow* gameWindow;
-
-#ifdef SHOW_DEBUG_WINDOW
     DebugWindow* debugWindow;
-    void executeCycleAndUpdateDebugWindow();
-    void executeInstruction();
-    void toggleDebugMode();
-    void stepIfInDebugMode();
-    bool debugMode;
-#endif
-    void reset();
 
     ControllerStatus controllerStatus;
     std::atomic<bool> resetFlag;
+    std::atomic<bool> debugWindowEnabled;
+    std::atomic<bool> stepModeEnabled;
+    std::atomic<bool> stepRequested;
+    std::atomic<uint8_t> spritePallete;
+    std::atomic<uint8_t> backgroundPallete;
 
     void setControllerData(bool controller, Controller::Button button, bool value);
 };

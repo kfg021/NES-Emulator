@@ -17,9 +17,6 @@ protected:
     void paintEvent(QPaintEvent *event) override;
 
 private:
-    static constexpr int GAME_WIDTH = 256 * 3;
-    static constexpr int GAME_HEIGHT = 240 * 3;
-
     static constexpr int FPS = 60;
     QImage currentFrame;
 };
