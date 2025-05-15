@@ -18,8 +18,6 @@ public:
     DebugWindow(QWidget* parent);
     void setCurrentState(const DebugWindowState& state);
 
-    static constexpr int NUM_INSTS = 9;
-
 protected:
     void paintEvent(QPaintEvent* event) override;
 

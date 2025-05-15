@@ -7,6 +7,8 @@
 #include <atomic>
 #include <queue>
 
+#include <QString>
+
 using ControllerStatus = std::array<std::atomic<uint8_t>, 2>;
 struct KeyboardInput {
     const ControllerStatus* controllerStatus;
@@ -14,13 +16,16 @@ struct KeyboardInput {
 
     // Debug window settings
     const std::atomic<bool>* debugWindowEnabled;
-    const std::atomic<bool>* stepModeEnabled;
-    const std::atomic<bool>* stepRequested;
+    const std::atomic<uint8_t>* stepModeEnabled; // Treated as a boolean
+    std::atomic<bool>* stepRequested;
     const std::atomic<uint8_t>* spritePallete;
     const std::atomic<uint8_t>* backgroundPallete;
 };
 
 struct DebugWindowState {
+    static constexpr int NUM_INSTS_ABOVE_AND_BELOW = 9;
+    static constexpr int NUM_INSTS_TOTAL = 2 * NUM_INSTS_ABOVE_AND_BELOW + 1;
+
     uint16_t pc;
     uint8_t a;
     uint8_t x;
@@ -31,7 +36,7 @@ struct DebugWindowState {
     uint8_t spritePallete;
     std::array<uint32_t, 0x20> palleteRamColors;
     PPU::PatternTable table1, table2;
-    std::queue<uint16_t> recentPCs;
+    std::array<QString, NUM_INSTS_TOTAL> insts;
 };
 
 #endif // GUITYPES_HPP 

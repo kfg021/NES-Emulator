@@ -43,7 +43,7 @@ private:
     ControllerStatus controllerStatus;
     std::atomic<bool> resetFlag;
     std::atomic<bool> debugWindowEnabled;
-    std::atomic<bool> stepModeEnabled;
+    std::atomic<uint8_t> stepModeEnabled;
     std::atomic<bool> stepRequested;
     std::atomic<uint8_t> spritePallete;
     std::atomic<uint8_t> backgroundPallete;

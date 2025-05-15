@@ -61,20 +61,6 @@ void MainWindow::displayNewDebugFrame(const DebugWindowState& state) {
     debugWindow->setCurrentState(state);
 }
 
-// void MainWindow::stepIfInDebugMode() {
-//     if (debugMode) {
-//         // Pressing space causes the processor to jump to the next non-repeating instruction.
-//         // There is a maximum number of instructions to jump, preventing the emulator from crashing if there is an infinite loop in the code.
-//         static constexpr int MAX_LOOP = 1e5;
-//         uint16_t lastPC = bus->cpu->getPC();
-//         int i = 0;
-//         while (bus->cpu->getPC() == lastPC && i < MAX_LOOP) {
-//             executeInstruction();
-//             i++;
-//         }
-//     }
-// }
-
 // TODO: Key inputs for second controller
 void MainWindow::keyPressEvent(QKeyEvent* event) {
     // Game keys
@@ -111,6 +97,7 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
     else if (event->key() == Qt::Key_D) {
         if (debugWindow->isVisible()) {
             debugWindowEnabled.store(false, std::memory_order_relaxed);
+            stepModeEnabled.store(0, std::memory_order_relaxed);
             debugWindow->hide();
         }
         else {
@@ -119,18 +106,17 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
         }
     }
     else if (debugWindow->isVisible()) {
-        // if (event->key() == Qt::Key_Space) {
-        //     stepIfInDebugMode();
-        // }
-        // else if (event->key() == Qt::Key_C) {
-        //     toggleDebugMode();
-        // }
-        // else 
-        if (event->key() == Qt::Key_O) {
-            backgroundPallete++;
+        if (event->key() == Qt::Key_Space) {
+            stepRequested.store(true, std::memory_order_relaxed);
+        }
+        else if (event->key() == Qt::Key_C) {
+            stepModeEnabled.fetch_xor(1, std::memory_order_relaxed);
+        }
+        else if (event->key() == Qt::Key_O) {
+            backgroundPallete.fetch_add(1, std::memory_order_relaxed);
         }
         else if (event->key() == Qt::Key_P) {
-            spritePallete++;
+            spritePallete.fetch_add(1, std::memory_order_relaxed);
         }
     }
 }

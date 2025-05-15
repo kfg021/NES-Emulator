@@ -42,10 +42,7 @@ void EmulatorThread::run() {
         bus.setController(0, controller1Value);
         bus.setController(1, controller2Value);
 
-        // Check debug window status
-        bool debugWindowOpen = keyInput.debugWindowEnabled->load(std::memory_order_relaxed);
-
-        std::queue<uint16_t> recentPCs = runCycles();
+        runCycles();
 
         if (!isRunning.load(std::memory_order_relaxed)) break;
 
@@ -56,7 +53,7 @@ void EmulatorThread::run() {
             bus.ppu->frameReadyFlag = false;
         }
 
-        if (debugWindowOpen) {
+        if (keyInput.debugWindowEnabled->load(std::memory_order_relaxed)) {
             uint8_t backgroundPallete = keyInput.backgroundPallete->load(std::memory_order_relaxed) & 3;
             uint8_t spritePallete = keyInput.spritePallete->load(std::memory_order_relaxed) & 3;
 
@@ -68,11 +65,11 @@ void EmulatorThread::run() {
                 bus.cpu->getSP(),
                 bus.cpu->getSR(),
                 backgroundPallete,
-                spritePallete,    
+                spritePallete,
                 bus.ppu->getPalleteRamColors(),
                 bus.ppu->getPatternTable(true, backgroundPallete),
                 bus.ppu->getPatternTable(false, spritePallete),
-                recentPCs
+                getInsts()
             };
 
             emit debugFrameReadySignal(state);
@@ -87,34 +84,74 @@ void EmulatorThread::run() {
     }
 }
 
-std::queue<uint16_t> EmulatorThread::runCycles() {
-    static constexpr int UPPER_LIMIT_CYCLES = EXPECTED_CPU_CYCLES * 2;
+void EmulatorThread::runCycles() {
     int cycles = 0;
-    std::queue<uint16_t> recentPCs;
 
     auto loopCondition = [&]() -> bool {
+        static constexpr int UPPER_LIMIT_CYCLES = EXPECTED_CPU_CYCLES * 2;
         return isRunning.load(std::memory_order_relaxed) && !bus.ppu->frameReadyFlag && cycles < UPPER_LIMIT_CYCLES;
     };
 
-    while (loopCondition()) {
+    auto updateRecentPCs = [&]() -> void {
+        if (!loopCondition()) return;
+
+        uint16_t pc = bus.cpu->getPC();
+
+        bus.executeCycle();
+        cycles++;
+
+        if (recentPCs.size() == DebugWindowState::NUM_INSTS_ABOVE_AND_BELOW) {
+            recentPCs.pop();
+        }
+        recentPCs.push(pc);
+    };
+
+    bool stepModeEnabled = keyInput.stepModeEnabled->load(std::memory_order_relaxed) & 1;
+    if (!stepModeEnabled) {
+        while (loopCondition()) {
+            while (bus.cpu->getRemainingCycles() && loopCondition()) {
+                bus.executeCycle();
+                cycles++;
+            }
+
+            updateRecentPCs();
+        }
+    }
+    else if (stepModeEnabled && keyInput.stepRequested->load(std::memory_order_acquire)) {
+        keyInput.stepRequested->store(false, std::memory_order_release);
+
         while (bus.cpu->getRemainingCycles() && loopCondition()) {
             bus.executeCycle();
             cycles++;
         }
 
-        if (!loopCondition()) break;
+        updateRecentPCs();
+    }
+}
 
-        // Update the list of recent PCs so we can display them in the debug window
-        uint16_t currentPC = bus.cpu->getPC();
+std::array<QString, DebugWindowState::NUM_INSTS_TOTAL> EmulatorThread::getInsts() const {
+    std::array<QString, DebugWindowState::NUM_INSTS_TOTAL> insts;
+    std::queue<uint16_t> recentPCsCopy = recentPCs;
 
-        bus.executeCycle();
-        cycles++;
+    auto toString = [&](uint16_t addr) {
+        std::string text = "$" + toHexString16(addr) + ": " + bus.cpu->toString(addr);
+        return QString(text.c_str());
+    };
 
-        if (recentPCs.size() == DebugWindow::NUM_INSTS) {
-            recentPCs.pop();
-        }
-        recentPCs.push(currentPC);
+    // Last x PCs
+    int start = DebugWindowState::NUM_INSTS_ABOVE_AND_BELOW - static_cast<int>(recentPCsCopy.size());
+    for (int i = start; i < DebugWindowState::NUM_INSTS_ABOVE_AND_BELOW; i++) {
+        insts[i] = toString(recentPCsCopy.front());
+        recentPCsCopy.pop();
     }
 
-    return recentPCs;
+    // Current PC and upcoming x PCs
+    uint16_t lastPC = bus.cpu->getPC();
+    for (int i = DebugWindowState::NUM_INSTS_ABOVE_AND_BELOW; i < DebugWindowState::NUM_INSTS_TOTAL; i++) {
+        insts[i] = toString(lastPC);
+        const CPU::Opcode& op = bus.cpu->getOpcode(lastPC);
+        lastPC += op.addressingMode.instructionSize;
+    }
+
+    return insts;
 }

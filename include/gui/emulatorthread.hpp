@@ -5,10 +5,12 @@
 #include "gui/debugwindow.hpp"
 #include "gui/guitypes.hpp"
 
+#include <array>
 #include <queue>
 
 #include <QImage>
 #include <QObject>
+#include <QString>
 #include <QThread>
 
 class EmulatorThread : public QThread {
@@ -34,7 +36,9 @@ private:
     // EmulatorThread is not responsible for managing this memory
     KeyboardInput keyInput;
 
-    std::queue<uint16_t> runCycles();
+    void runCycles();
+    std::queue<uint16_t> recentPCs;
+    std::array<QString, DebugWindowState::NUM_INSTS_TOTAL> getInsts() const;
 };
 
 #endif // EMULATORTHREAD_HPP

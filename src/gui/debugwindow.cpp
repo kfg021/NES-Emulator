@@ -64,24 +64,21 @@ void DebugWindow::paintEvent(QPaintEvent* /*event*/) {
     painter.drawText(START_X, START_Y + LETTER_HEIGHT * 5, QString(yStr.c_str()));
     painter.drawText(START_X, START_Y + LETTER_HEIGHT * 6, QString(spStr.c_str()));
 
-    // for (int i = 0; i < prevInsts.size(); i++) {
-    //     painter.drawText(START_X, START_Y + LETTER_HEIGHT * (7 + NUM_INSTS - i), prevInsts[i]);
-    // }
+    for (int i = 0; i < DebugWindowState::NUM_INSTS_TOTAL; i++) {
+        if (i == DebugWindowState::NUM_INSTS_ABOVE_AND_BELOW) {
+            painter.setPen(Qt::cyan);
+        }
+        else {
+            painter.setPen(defaultColor);
+        }
 
-    // painter.setPen(Qt::cyan);
-    // painter.drawText(START_X, START_Y + LETTER_HEIGHT * (8 + NUM_INSTS), toString(state.pc));
-    // painter.setPen(defaultColor);
-
-    // uint16_t nextPC = state.pc;
-    // for (int i = 0; i < NUM_INSTS; i++) {
-    //     const CPU::Opcode& op = bus->cpu->getOpcode(nextPC);
-    //     nextPC += op.addressingMode.instructionSize;
-    //     painter.drawText(START_X, START_Y + LETTER_HEIGHT * (9 + NUM_INSTS + i), toString(nextPC));
-    // }
+        painter.drawText(START_X, START_Y + LETTER_HEIGHT * (8 + i), state.insts[i]);
+    }
 
     const std::array<uint32_t, 0x20> palletes = state.palleteRamColors;
 
     static constexpr int PALLETE_DISPLAY_SIZE = 7;
+    static constexpr int NUM_INSTS = DebugWindowState::NUM_INSTS_ABOVE_AND_BELOW;
 
     {
         // Display each of the 4 background color palletes
@@ -118,8 +115,3 @@ void DebugWindow::paintEvent(QPaintEvent* /*event*/) {
         painter.drawPixmap(start, START_Y + LETTER_HEIGHT * (10 + 2 * NUM_INSTS), PPU::PATTERN_TABLE_SIZE, PPU::PATTERN_TABLE_SIZE, pixmap2);
     }
 }
-
-// QString DebugWindow::toString(uint16_t addr) {
-//     std::string text = "$" + toHexString16(addr) + ": " + bus->cpu->toString(addr);
-//     return QString(text.c_str());
-// }
