@@ -107,7 +107,9 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
     }
     else if (debugWindow->isVisible()) {
         if (event->key() == Qt::Key_Space) {
-            stepRequested.store(true, std::memory_order_relaxed);
+            if (stepModeEnabled.load(std::memory_order_relaxed)) {
+                stepRequested.store(true, std::memory_order_relaxed);
+            }
         }
         else if (event->key() == Qt::Key_C) {
             stepModeEnabled.fetch_xor(1, std::memory_order_relaxed);

@@ -92,7 +92,12 @@ void EmulatorThread::runCycles() {
         return isRunning.load(std::memory_order_relaxed) && !bus.ppu->frameReadyFlag && cycles < UPPER_LIMIT_CYCLES;
     };
 
-    auto updateRecentPCs = [&]() -> void {
+    auto execute1Instruction = [&]() -> void {
+        while (bus.cpu->getRemainingCycles() && loopCondition()) {
+            bus.executeCycle();
+            cycles++;
+        }
+
         if (!loopCondition()) return;
 
         uint16_t pc = bus.cpu->getPC();
@@ -109,23 +114,16 @@ void EmulatorThread::runCycles() {
     bool stepModeEnabled = keyInput.stepModeEnabled->load(std::memory_order_relaxed) & 1;
     if (!stepModeEnabled) {
         while (loopCondition()) {
-            while (bus.cpu->getRemainingCycles() && loopCondition()) {
-                bus.executeCycle();
-                cycles++;
-            }
-
-            updateRecentPCs();
+            execute1Instruction();
         }
     }
     else if (stepModeEnabled && keyInput.stepRequested->load(std::memory_order_acquire)) {
         keyInput.stepRequested->store(false, std::memory_order_release);
 
-        while (bus.cpu->getRemainingCycles() && loopCondition()) {
-            bus.executeCycle();
-            cycles++;
+        uint16_t currentPC = bus.cpu->getPC();
+        while (currentPC == bus.cpu->getPC() && loopCondition()) {
+            execute1Instruction();     
         }
-
-        updateRecentPCs();
     }
 }
 
