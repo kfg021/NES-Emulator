@@ -74,6 +74,12 @@ void EmulatorThread::run() {
 
             emit debugFrameReadySignal(state);
         }
+        else {
+            if (!recentPCs.empty()) {
+                std::queue<uint16_t> empty;
+                std::swap(recentPCs, empty);
+            }
+        }
 
         int64_t sleepTimeUs = (desiredNextFrameNs - elapsedTimer.nsecsElapsed()) / 1000;
         if (sleepTimeUs > 0) {
@@ -87,42 +93,46 @@ void EmulatorThread::run() {
 void EmulatorThread::runCycles() {
     int cycles = 0;
 
+    auto executeCycle = [&](bool debugEnabled) -> bool {
+        uint16_t currentPC = bus.cpu->getPC();
+
+        bus.executeCycle();
+        cycles++;
+
+        uint16_t nextPC = bus.cpu->getPC();
+
+        if (nextPC != currentPC) {
+            if (debugEnabled) {
+                if (recentPCs.size() == DebugWindowState::NUM_INSTS_ABOVE_AND_BELOW) {
+                    recentPCs.pop();
+                }
+                recentPCs.push(currentPC);
+            }
+
+            return true;
+        }
+
+        return false;
+    };
+
     auto loopCondition = [&]() -> bool {
         static constexpr int UPPER_LIMIT_CYCLES = EXPECTED_CPU_CYCLES * 2;
         return isRunning.load(std::memory_order_relaxed) && !bus.ppu->frameReadyFlag && cycles < UPPER_LIMIT_CYCLES;
     };
 
-    auto execute1Instruction = [&]() -> void {
-        while (bus.cpu->getRemainingCycles() && loopCondition()) {
-            bus.executeCycle();
-            cycles++;
-        }
-
-        if (!loopCondition()) return;
-
-        uint16_t pc = bus.cpu->getPC();
-
-        bus.executeCycle();
-        cycles++;
-
-        if (recentPCs.size() == DebugWindowState::NUM_INSTS_ABOVE_AND_BELOW) {
-            recentPCs.pop();
-        }
-        recentPCs.push(pc);
-    };
-
     bool stepModeEnabled = keyInput.stepModeEnabled->load(std::memory_order_relaxed) & 1;
     if (!stepModeEnabled) {
         while (loopCondition()) {
-            execute1Instruction();
+            bool debugEnabled = keyInput.debugWindowEnabled->load(std::memory_order_relaxed);
+            executeCycle(debugEnabled);
         }
     }
     else if (stepModeEnabled && keyInput.stepRequested->load(std::memory_order_acquire)) {
         keyInput.stepRequested->store(false, std::memory_order_release);
 
-        uint16_t currentPC = bus.cpu->getPC();
-        while (currentPC == bus.cpu->getPC() && loopCondition()) {
-            execute1Instruction();     
+        while (loopCondition()) {
+            bool isNewInstruction = executeCycle(true);
+            if (isNewInstruction) break;
         }
     }
 }
