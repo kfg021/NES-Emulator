@@ -88,43 +88,44 @@ void EmulatorThread::run() {
 void EmulatorThread::runCycles() {
     int cycles = 0;
 
-    auto loopCondition = [&]() -> bool {
-        static constexpr int UPPER_LIMIT_CYCLES = EXPECTED_CPU_CYCLES * 2;
-        return isRunning.load(std::memory_order_relaxed) && !bus.ppu->frameReadyFlag && cycles < UPPER_LIMIT_CYCLES;
-    };
-
-    auto execute1Instruction = [&](bool audioEnabled = false) -> void {
-        while (bus.cpu->getRemainingCycles() && loopCondition()) {
-            bus.executeCycle();
-            cycles++;
-        }
-
-        if (!loopCondition()) return;
-
-        uint16_t pc = bus.cpu->getPC();
+    auto executeCycle = [&](bool audioEnabled = false) -> bool {
+        uint16_t currentPC = bus.cpu->getPC();
 
         bus.executeCycle();
         cycles++;
 
-        if (recentPCs.size() == DebugWindowState::NUM_INSTS_ABOVE_AND_BELOW) {
-            recentPCs.pop();
+        uint16_t nextPC = bus.cpu->getPC();
+
+        if (nextPC != currentPC) {
+            if (recentPCs.size() == DebugWindowState::NUM_INSTS_ABOVE_AND_BELOW) {
+                recentPCs.pop();
+            }
+            recentPCs.push(currentPC);
+
+            return true;
         }
-        recentPCs.push(pc);
+
+        return false;
+    };
+
+    auto loopCondition = [&]() -> bool {
+        static constexpr int UPPER_LIMIT_CYCLES = EXPECTED_CPU_CYCLES * 2;
+        return isRunning.load(std::memory_order_relaxed) && !bus.ppu->frameReadyFlag && cycles < UPPER_LIMIT_CYCLES;
     };
 
     bool stepModeEnabled = keyInput.stepModeEnabled->load(std::memory_order_relaxed) & 1;
     if (!stepModeEnabled) {
         while (loopCondition()) {
             bool audioEnabled = keyInput.globalMuteFlag->load(std::memory_order_relaxed) & 1;
-            execute1Instruction(audioEnabled);
+            executeCycle();
         }
     }
     else if (stepModeEnabled && keyInput.stepRequested->load(std::memory_order_acquire)) {
         keyInput.stepRequested->store(false, std::memory_order_release);
 
-        uint16_t currentPC = bus.cpu->getPC();
-        while (currentPC == bus.cpu->getPC() && loopCondition()) {
-            execute1Instruction();
+        while (loopCondition()) {
+            bool isNewInstruction = executeCycle();
+            if (isNewInstruction) break;
         }
     }
 }
