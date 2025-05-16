@@ -6,6 +6,7 @@
 
 #include <QHBoxLayout>
 #include <QKeyEvent>
+#include <QMediaDevices>
 
 MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
     : QMainWindow(parent) {
@@ -35,6 +36,7 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
     stepRequested.store(false, std::memory_order_relaxed);
     spritePallete.store(0, std::memory_order_relaxed);
     backgroundPallete.store(0, std::memory_order_relaxed);
+    globalMuteFlag.store(0, std::memory_order_relaxed);
 
     KeyboardInput keyInput = {
         &controllerStatus,
@@ -43,14 +45,25 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
         &stepModeEnabled,
         &stepRequested,
         &spritePallete,
-        &backgroundPallete
+        &backgroundPallete,
+        &globalMuteFlag
     };
-    emulatorThread = new EmulatorThread(this, filePath, keyInput);
+    emulatorThread = new EmulatorThread(this, filePath, keyInput, &queue);
 
     connect(emulatorThread, &EmulatorThread::frameReadySignal, this, &MainWindow::displayNewFrame, Qt::QueuedConnection);
     connect(emulatorThread, &EmulatorThread::debugFrameReadySignal, this, &MainWindow::displayNewDebugFrame, Qt::QueuedConnection);
 
     emulatorThread->start();
+
+    audioFormat.setSampleRate(AUDIO_SAMPLE_RATE);
+    audioFormat.setChannelCount(1); // Mono
+    audioFormat.setSampleFormat(QAudioFormat::Float);
+
+    bool muted = globalMuteFlag.load(std::memory_order_relaxed) & 1;
+    audioPlayer = new AudioPlayer(this, audioFormat, muted, &queue);
+
+    audioSink = nullptr;
+    resetAudioSink();
 }
 
 void MainWindow::displayNewFrame(const QImage& image) {
@@ -93,6 +106,13 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
     else if (event->key() == Qt::Key_R) {
         resetFlag.store(true, std::memory_order_relaxed);
     }
+
+    // Mute button
+    else if (event->key() == Qt::Key_M) {
+        globalMuteFlag.fetch_xor(1, std::memory_order_relaxed);
+        updateAudioState();
+    }
+
     // Debugging keys
     else if (event->key() == Qt::Key_D) {
         if (debugWindow->isVisible()) {
@@ -159,4 +179,40 @@ void MainWindow::setControllerData(bool controller, Controller::Button button, b
     else {
         controllerStatus[controller].fetch_and(~bitToChange, std::memory_order_relaxed);
     }
+}
+
+
+void MainWindow::updateAudioState() {
+    auto tryToMute = [&]() -> void {
+        if (audioSink->state() != QAudio::SuspendedState && audioSink->state() != QAudio::StoppedState) {
+            audioSink->suspend();
+        }
+        audioPlayer->tryToMute();
+    };
+
+    auto tryToUnmute = [&]() -> void {
+        audioPlayer->tryToUnmute();
+        if (audioSink->state() == QAudio::SuspendedState) {
+            audioSink->resume();
+        }
+    };
+
+    bool globalMute = globalMuteFlag.load(std::memory_order_relaxed) & 1;
+    bool debugMode = debugWindowEnabled.load(std::memory_order_relaxed);
+    if (globalMute || debugMode) {
+        tryToMute();
+    }
+    else {
+        tryToUnmute();
+    }
+}
+
+void MainWindow::resetAudioSink() {
+    if (audioSink != nullptr) {
+        audioSink->stop();
+        delete audioSink;
+    }
+
+    audioSink = new QAudioSink(QMediaDevices::defaultAudioOutput(), audioFormat, this);
+    audioSink->start(audioPlayer);
 }

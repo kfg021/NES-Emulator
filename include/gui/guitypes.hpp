@@ -11,6 +11,7 @@
 
 using ControllerStatus = std::array<std::atomic<uint8_t>, 2>;
 struct KeyboardInput {
+    // Game input
     const ControllerStatus* controllerStatus;
     std::atomic<bool>* resetFlag;
 
@@ -20,6 +21,9 @@ struct KeyboardInput {
     std::atomic<bool>* stepRequested;
     const std::atomic<uint8_t>* spritePallete;
     const std::atomic<uint8_t>* backgroundPallete;
+
+    // Sound settings
+    const std::atomic<uint8_t>* globalMuteFlag; // Treated as a boolean
 };
 
 struct DebugWindowState {

@@ -4,6 +4,7 @@
 #include "core/bus.hpp"
 #include "gui/debugwindow.hpp"
 #include "gui/guitypes.hpp"
+#include "util/threadsafequeue.hpp"
 
 #include <array>
 #include <queue>
@@ -16,7 +17,7 @@
 class EmulatorThread : public QThread {
     Q_OBJECT
 public:
-    EmulatorThread(QObject* parent, const std::string& filePath, const KeyboardInput& keyInput);
+    EmulatorThread(QObject* parent, const std::string& filePath, const KeyboardInput& keyInput, ThreadSafeQueue<float>* queue);
     ~EmulatorThread() override;
     void run() override;
 
@@ -39,6 +40,8 @@ private:
     void runCycles();
     std::queue<uint16_t> recentPCs;
     std::array<QString, DebugWindowState::NUM_INSTS_TOTAL> getInsts() const;
+
+    ThreadSafeQueue<float>* queue;
 };
 
 #endif // EMULATORTHREAD_HPP

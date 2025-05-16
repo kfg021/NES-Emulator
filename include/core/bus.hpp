@@ -1,6 +1,7 @@
 #ifndef BUS_HPP
 #define BUS_HPP
 
+#include "core/apu.hpp"
 #include "core/cartridge.hpp"
 #include "core/controller.hpp"
 #include "core/cpu.hpp"
@@ -13,6 +14,7 @@
 
 class CPU;
 class PPU;
+class APU;
 
 class Bus {
 public:
@@ -25,11 +27,13 @@ public:
     uint8_t read(uint16_t address);
     void write(uint16_t address, uint8_t value);
 
+    // Devices connected to bus
     std::unique_ptr<CPU> cpu;
     std::unique_ptr<PPU> ppu;
+    std::unique_ptr<APU> apu;
 
     uint64_t totalCycles;
-    
+
     bool nmiRequest;
     bool irqRequest;
 
@@ -38,6 +42,7 @@ public:
     void setController(bool controller, uint8_t value);
 
 private:
+    // Memory ranges for devices
     static constexpr MemoryRange RAM_ADDRESSABLE_RANGE{ 0x0000, 0x1FFF };
     static constexpr MemoryRange PPU_ADDRESSABLE_RANGE{ 0x2000, 0x3FFF };
     static constexpr MemoryRange IO_ADDRESSABLE_RANGE{ 0x4000, 0x401F };
@@ -64,6 +69,10 @@ private:
     uint8_t dmaOffset;
     uint8_t dmaData;
     void doDmaTransferCycle();
+
+    static constexpr MemoryRange APU_ADDRESSABLE_RANGE{ 0x4000, 0x4013 };
+    static constexpr uint16_t APU_STATUS = 0x4015;
+    static constexpr uint16_t APU_FRAME_COUNTER = 0x4017;
 };
 
 #endif // BUS_HPP

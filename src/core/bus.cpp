@@ -6,6 +6,8 @@ Bus::Bus() {
 
     ppu = std::make_unique<PPU>();
     ppu->setBus(this);
+
+    apu = std::make_unique<APU>();
 }
 
 void Bus::initDevices() {
@@ -54,11 +56,12 @@ uint8_t Bus::view(uint16_t address) const {
             // The view mode returns all controller outputs at once
             return controllerData[address & 1];
         }
+        else if (address == APU_STATUS) {
+            return apu->viewStatus();
+        }
         else {
-            // TODO: Implement APU
             return 0;
         }
-
     }
     else { // if (CARTRIDGE_ADDRESSABLE_RANGE.contains(address))
         return cartridge->mapper->mapPRGView(address);
@@ -80,8 +83,10 @@ uint8_t Bus::read(uint16_t address) {
             }
             return data;
         }
+        else if (address == APU_STATUS) {
+            return apu->readStatus();
+        }
         else {
-            // TODO: Implement APU
             return 0;
         }
     }
@@ -98,7 +103,10 @@ void Bus::write(uint16_t address, uint8_t value) {
         ppu->write(address & 0x7, value); // TODO: what happens when write fails?
     }
     else if (IO_ADDRESSABLE_RANGE.contains(address)) {
-        if (address == CONTROLLER_1_DATA) {
+        if (APU_ADDRESSABLE_RANGE.contains(address)) {
+            apu->write(address, value);
+        }
+        else if (address == CONTROLLER_1_DATA) {
             strobe = value & 1;
             if (strobe) {
                 controllerData[0] = controllers[0].getButtons();
@@ -109,8 +117,11 @@ void Bus::write(uint16_t address, uint8_t value) {
             dmaTransferRequested = true;
             dmaPage = value;
         }
-        else {
-            // TODO: Implement APU
+        else if (address == APU_STATUS) {
+            apu->writeStatus(value);
+        }
+        else if (address == APU_FRAME_COUNTER) {
+            apu->writeFrameCounter(value);
         }
     }
     else { // if (CARTRIDGE_ADDRESSABLE_RANGE.contains(address)) 
@@ -130,6 +141,10 @@ void Bus::executeCycle() {
     }
     else {
         cpu->executeCycle();
+    }
+
+    if (totalCycles & 1) {
+        apu->executeCycle();
     }
 
     // Handle interrupt requests

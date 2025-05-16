@@ -2,10 +2,12 @@
 #define MAINWINDOW_HPP
 
 #include "core/bus.hpp"
+#include "gui/audioplayer.hpp"
 #include "gui/debugwindow.hpp"
 #include "gui/emulatorthread.hpp"
 #include "gui/guitypes.hpp"
 #include "gui/gamewindow.hpp"
+#include "util/threadsafequeue.hpp"
 
 #include <array>
 #include <atomic>
@@ -13,8 +15,11 @@
 #include <string>
 #include <queue>
 
+#include <QAudioSink>
+#include <QAudioFormat>
 #include <QImage>
 #include <QMainWindow>
+#include <QMediaDevices>
 #include <QWidget>
 
 class MainWindow : public QMainWindow {
@@ -26,6 +31,7 @@ public:
     static constexpr int GAME_WIDTH = 256 * 3;
     static constexpr int GAME_HEIGHT = 240 * 3;
     static constexpr int DEBUG_WIDTH = 300;
+    static constexpr int AUDIO_SAMPLE_RATE = 44100;
 
 public slots:
     void displayNewFrame(const QImage& image);
@@ -47,8 +53,16 @@ private:
     std::atomic<bool> stepRequested;
     std::atomic<uint8_t> spritePallete;
     std::atomic<uint8_t> backgroundPallete;
+    std::atomic<uint8_t> globalMuteFlag;
 
     void setControllerData(bool controller, Controller::Button button, bool value);
+
+    QAudioFormat audioFormat;
+    QAudioSink* audioSink;
+    AudioPlayer* audioPlayer;
+    ThreadSafeQueue<float> queue;
+    void updateAudioState();
+    void resetAudioSink();
 };
 
 #endif // MAINWINDOW_HPP

@@ -4,9 +4,10 @@
 
 #include <QElapsedTimer>
 
-EmulatorThread::EmulatorThread(QObject* parent, const std::string& filePath, const KeyboardInput& keyInput) :
+EmulatorThread::EmulatorThread(QObject* parent, const std::string& filePath, const KeyboardInput& keyInput, ThreadSafeQueue<float>* queue) :
     QThread(parent),
-    keyInput(keyInput) {
+    keyInput(keyInput),
+    queue(queue) {
     isRunning.store(false, std::memory_order_relaxed);
 
     Cartridge::Status status = bus.loadROM(filePath);
@@ -92,7 +93,7 @@ void EmulatorThread::runCycles() {
         return isRunning.load(std::memory_order_relaxed) && !bus.ppu->frameReadyFlag && cycles < UPPER_LIMIT_CYCLES;
     };
 
-    auto execute1Instruction = [&]() -> void {
+    auto execute1Instruction = [&](bool audioEnabled = false) -> void {
         while (bus.cpu->getRemainingCycles() && loopCondition()) {
             bus.executeCycle();
             cycles++;
@@ -114,7 +115,8 @@ void EmulatorThread::runCycles() {
     bool stepModeEnabled = keyInput.stepModeEnabled->load(std::memory_order_relaxed) & 1;
     if (!stepModeEnabled) {
         while (loopCondition()) {
-            execute1Instruction();
+            bool audioEnabled = keyInput.globalMuteFlag->load(std::memory_order_relaxed) & 1;
+            execute1Instruction(audioEnabled);
         }
     }
     else if (stepModeEnabled && keyInput.stepRequested->load(std::memory_order_acquire)) {
@@ -122,7 +124,7 @@ void EmulatorThread::runCycles() {
 
         uint16_t currentPC = bus.cpu->getPC();
         while (currentPC == bus.cpu->getPC() && loopCondition()) {
-            execute1Instruction();     
+            execute1Instruction();
         }
     }
 }
