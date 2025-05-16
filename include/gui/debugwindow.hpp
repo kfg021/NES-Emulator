@@ -23,7 +23,6 @@ protected:
 
 private:
     DebugWindowState state;
-    // QString toString(uint16_t addr);
 };
 
 #endif // DEBUGWINDOW_HPP
