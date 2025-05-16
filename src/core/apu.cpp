@@ -1,6 +1,10 @@
 #include "core/apu.hpp"
 
 APU::APU() {
+    initAPU();
+}
+
+void APU::initAPU() {
     pulses[0] = {};
     pulses[1] = {};
 

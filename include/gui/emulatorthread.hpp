@@ -21,6 +21,10 @@ public:
     ~EmulatorThread() override;
     void run() override;
 
+    void requestStop();
+
+    static constexpr int AUDIO_SAMPLE_RATE = 44100;
+
 signals:
     void frameReadySignal(const QImage& display);
     void debugFrameReadySignal(const DebugWindowState& state);
@@ -42,6 +46,8 @@ private:
     std::array<QString, DebugWindowState::NUM_INSTS_TOTAL> getInsts() const;
 
     ThreadSafeQueue<float>* queue;
+
+    int scaledAudioClock;
 };
 
 #endif // EMULATORTHREAD_HPP

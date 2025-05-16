@@ -19,6 +19,7 @@ void Bus::initDevices() {
 
     cpu->initCPU();
     ppu->initPPU();
+    apu->initAPU();
 
     nmiRequest = false;
     irqRequest = false;

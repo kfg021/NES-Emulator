@@ -10,6 +10,7 @@ class APU {
 public:
     APU();
 
+    void initAPU();
     void write(uint16_t addr, uint8_t value);
 
     // Handles reads to/writes from 0x4015
@@ -54,8 +55,6 @@ private:
         uint8_t dutyCycleIndex : 3;
     };
 
-    std::array<Pulse, 2> pulses;
-
     const std::array<uint8_t, 4> DUTY_CYCLES = {
         0b00000010,
         0b00000110,
@@ -63,6 +62,7 @@ private:
         0b11111001
     };
 
+    std::array<Pulse, 2> pulses;
     uint8_t status;
     uint8_t frameCounter;
 };

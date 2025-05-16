@@ -27,11 +27,11 @@ class MainWindow : public QMainWindow {
 
 public:
     MainWindow(QWidget* parent, const std::string& filePath);
+    ~MainWindow() override;
 
     static constexpr int GAME_WIDTH = 256 * 3;
     static constexpr int GAME_HEIGHT = 240 * 3;
     static constexpr int DEBUG_WIDTH = 300;
-    static constexpr int AUDIO_SAMPLE_RATE = 44100;
 
 public slots:
     void displayNewFrame(const QImage& image);
@@ -57,12 +57,14 @@ private:
 
     void setControllerData(bool controller, Controller::Button button, bool value);
 
-    QAudioFormat audioFormat;
+    const QAudioFormat audioFormat;
     QAudioSink* audioSink;
     AudioPlayer* audioPlayer;
     ThreadSafeQueue<float> queue;
     void updateAudioState();
     void resetAudioSink();
+
+    static QAudioFormat defaultAudioFormat();
 };
 
 #endif // MAINWINDOW_HPP

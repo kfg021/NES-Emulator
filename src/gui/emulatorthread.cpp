@@ -14,11 +14,17 @@ EmulatorThread::EmulatorThread(QObject* parent, const std::string& filePath, con
     if (status.code != Cartridge::Code::SUCCESS) {
         qFatal("%s", status.message.c_str());
     }
+
+    scaledAudioClock = 0;
 }
 
 EmulatorThread::~EmulatorThread() {
     isRunning.store(false, std::memory_order_release);
     wait();
+}
+
+void EmulatorThread::requestStop() {
+    isRunning.store(false, std::memory_order_release);
 }
 
 void EmulatorThread::run() {
@@ -75,6 +81,12 @@ void EmulatorThread::run() {
 
             emit debugFrameReadySignal(state);
         }
+        else {
+            if (!recentPCs.empty()) {
+                std::queue<uint16_t> empty;
+                std::swap(recentPCs, empty);
+            }
+        }
 
         int64_t sleepTimeUs = (desiredNextFrameNs - elapsedTimer.nsecsElapsed()) / 1000;
         if (sleepTimeUs > 0) {
@@ -88,7 +100,7 @@ void EmulatorThread::run() {
 void EmulatorThread::runCycles() {
     int cycles = 0;
 
-    auto executeCycle = [&](bool audioEnabled = false) -> bool {
+    auto executeCycle = [&](bool debugEnabled, bool audioEnabled) -> bool {
         uint16_t currentPC = bus.cpu->getPC();
 
         bus.executeCycle();
@@ -96,15 +108,27 @@ void EmulatorThread::runCycles() {
 
         uint16_t nextPC = bus.cpu->getPC();
 
-        if (nextPC != currentPC) {
-            if (recentPCs.size() == DebugWindowState::NUM_INSTS_ABOVE_AND_BELOW) {
-                recentPCs.pop();
+        if (audioEnabled) {
+            while (scaledAudioClock >= INSTRUCTIONS_PER_SECOND) {
+                float sample = bus.apu->getAudioSample();
+                queue->push(sample);
+                scaledAudioClock -= INSTRUCTIONS_PER_SECOND;
             }
-            recentPCs.push(currentPC);
-
-            return true;
+            scaledAudioClock += AUDIO_SAMPLE_RATE;
+        }
+        else {
+            scaledAudioClock = 0;
         }
 
+        if (nextPC != currentPC) {
+            if (debugEnabled) {
+                if (recentPCs.size() == DebugWindowState::NUM_INSTS_ABOVE_AND_BELOW) {
+                    recentPCs.pop();
+                }
+                recentPCs.push(currentPC);
+            }
+            return true;
+        }
         return false;
     };
 
@@ -115,16 +139,17 @@ void EmulatorThread::runCycles() {
 
     bool stepModeEnabled = keyInput.stepModeEnabled->load(std::memory_order_relaxed) & 1;
     if (!stepModeEnabled) {
+        bool debugEnabled = keyInput.debugWindowEnabled->load(std::memory_order_relaxed);
+        bool audioEnabled = !(keyInput.globalMuteFlag->load(std::memory_order_relaxed) & 1);
         while (loopCondition()) {
-            bool audioEnabled = keyInput.globalMuteFlag->load(std::memory_order_relaxed) & 1;
-            executeCycle();
+            executeCycle(debugEnabled, audioEnabled);
         }
     }
     else if (stepModeEnabled && keyInput.stepRequested->load(std::memory_order_acquire)) {
         keyInput.stepRequested->store(false, std::memory_order_release);
 
         while (loopCondition()) {
-            bool isNewInstruction = executeCycle();
+            bool isNewInstruction = executeCycle(true, false);
             if (isNewInstruction) break;
         }
     }

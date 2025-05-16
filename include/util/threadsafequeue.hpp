@@ -68,7 +68,7 @@ public:
         size_t numEntries = 0;
         {
             std::lock_guard<std::mutex> guard(mtx);
-            numEntries = std::min(queue.size(), maxSize);
+            numEntries = std::min(queue.size(), maxEntries);
             for (int i = 0; i < numEntries; i++) {
                 T item = queue.front();
                 queue.pop();

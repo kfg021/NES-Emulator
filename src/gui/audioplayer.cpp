@@ -9,8 +9,11 @@ AudioPlayer::AudioPlayer(QWidget* parent, const QAudioFormat& audioFormat, bool 
         open(QIODevice::ReadOnly);
     }
 
-    int64_t AudioPlayer::readData(char* data, int64_t maxSize) {
+    int64_t AudioPlayer::readData(char* data, int64_t maxSize) {      
         return queue->popManyIntoBuffer(data, maxSize);
+        // size_t amt = queue->popManyIntoBuffer(data, maxSize);
+        // qDebug() << "requesting " << maxSize << " " << "bytes of audio, got: " << amt << "\n";
+        // return amt;
     }
 
     int64_t AudioPlayer::writeData(const char* /*data*/, int64_t /*maxSize*/) {

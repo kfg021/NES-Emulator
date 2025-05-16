@@ -8,8 +8,17 @@
 #include <QKeyEvent>
 #include <QMediaDevices>
 
+QAudioFormat MainWindow::defaultAudioFormat() {
+    QAudioFormat audioFormat;
+    audioFormat.setSampleRate(EmulatorThread::AUDIO_SAMPLE_RATE);
+    audioFormat.setChannelCount(1); // Mono
+    audioFormat.setSampleFormat(QAudioFormat::Float);
+    return audioFormat;
+}
+
 MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
-    : QMainWindow(parent) {
+    : QMainWindow(parent),
+    audioFormat(defaultAudioFormat()) {
     setWindowTitle("NES Emulator");
 
     gameWindow = new GameWindow(nullptr);
@@ -55,15 +64,23 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
 
     emulatorThread->start();
 
-    audioFormat.setSampleRate(AUDIO_SAMPLE_RATE);
-    audioFormat.setChannelCount(1); // Mono
-    audioFormat.setSampleFormat(QAudioFormat::Float);
-
     bool muted = globalMuteFlag.load(std::memory_order_relaxed) & 1;
     audioPlayer = new AudioPlayer(this, audioFormat, muted, &queue);
 
     audioSink = nullptr;
     resetAudioSink();
+}
+
+MainWindow::~MainWindow() {
+    if (emulatorThread) {
+        emulatorThread->requestStop();
+    }
+
+    if (audioSink) {
+        if (audioSink->state() != QAudio::StoppedState) {
+            audioSink->stop();
+        }
+    }
 }
 
 void MainWindow::displayNewFrame(const QImage& image) {
@@ -109,8 +126,10 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 
     // Mute button
     else if (event->key() == Qt::Key_M) {
-        globalMuteFlag.fetch_xor(1, std::memory_order_relaxed);
-        updateAudioState();
+        if (!stepModeEnabled.load(std::memory_order_relaxed)) {
+            globalMuteFlag.fetch_xor(1, std::memory_order_relaxed);
+            updateAudioState();
+        }
     }
 
     // Debugging keys
@@ -198,8 +217,8 @@ void MainWindow::updateAudioState() {
     };
 
     bool globalMute = globalMuteFlag.load(std::memory_order_relaxed) & 1;
-    bool debugMode = debugWindowEnabled.load(std::memory_order_relaxed);
-    if (globalMute || debugMode) {
+    bool stepMode = stepModeEnabled.load(std::memory_order_relaxed) & 1;
+    if (globalMute || stepMode) {
         tryToMute();
     }
     else {
