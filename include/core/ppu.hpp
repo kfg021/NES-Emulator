@@ -283,13 +283,19 @@ private:
     void reloadShifters();
     void shiftShifters();
 
-    bool isRenderingEnabled();
+    bool isRenderingEnabled() const;
 
     void incrementCycle();
     void incrementCoarseX();
     void incrementY();
 
-    std::vector<OAMEntry> currentScanlineSprites;
+    struct SpriteData {
+        OAMEntry oam;
+        uint8_t patternTableLo;
+        uint8_t patternTableHi;
+    };
+
+    std::vector<SpriteData> currentScanlineSprites;
     bool sprite0OnCurrentScanline;
     void fillCurrentScanlineSprites();
 

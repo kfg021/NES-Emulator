@@ -545,54 +545,24 @@ void PPU::drawPixel() {
     if (mask.showSprites) {
         if (mask.showSpritesLeft || cycle >= 9) {
             for (int i = 0; i < static_cast<int>(currentScanlineSprites.size()); i++) {
-                const OAMEntry& sprite = currentScanlineSprites[i];
+                const SpriteData& spriteData = currentScanlineSprites[i];
+                const OAMEntry& sprite = spriteData.oam;
+
                 int differenceX = (cycle - 1) - sprite.x;
                 if (differenceX < 0 || differenceX >= 8) {
                     continue;
                 }
 
                 uint8_t x = differenceX;
-                uint8_t y = scanline - sprite.y;
 
                 bool flipHorizontal = (sprite.attributes >> 6) & 1;
                 if (flipHorizontal) {
                     x = 7 - x;
                 }
 
-                bool flipVertical = (sprite.attributes >> 7) & 1;
-                if (flipVertical) {
-                    y = control.spriteSize ? (15 - y) : (7 - y);
-                }
-
-                uint16_t spritePatternTableAddr;
-
-                if (!control.spriteSize) {
-                    spritePatternTableAddr =
-                        (control.spritePatternTable << 12) |
-                        (sprite.tileIndex << 4) |
-                        y;
-                }
-                else {
-                    if (y < 8) {
-                        spritePatternTableAddr =
-                            ((sprite.tileIndex & 0x1) << 12) |
-                            ((sprite.tileIndex & 0xFE) << 4) |
-                            y;
-                    }
-                    else {
-                        spritePatternTableAddr =
-                            ((sprite.tileIndex & 0x1) << 12) |
-                            (((sprite.tileIndex & 0xFE) | 1) << 4) |
-                            (y & 0x7);
-                    }
-                }
-
-                uint8_t spritePatternTableLo = ppuRead(spritePatternTableAddr);
-                uint8_t spritePatternTableHi = ppuRead(spritePatternTableAddr + 8);
-
                 uint8_t shift = 7 - x;
-                bool spritePatternTableBitLo = (spritePatternTableLo >> shift) & 1;
-                bool spritePatternTableBitHi = (spritePatternTableHi >> shift) & 1;
+                bool spritePatternTableBitLo = (spriteData.patternTableLo >> shift) & 1;
+                bool spritePatternTableBitHi = (spriteData.patternTableHi >> shift) & 1;
                 spritePatternTable = (spritePatternTableBitHi << 1) | static_cast<uint8_t>(spritePatternTableBitLo);
 
                 spriteAttributeTable = 0x4 | (sprite.attributes & 0x3);
@@ -658,7 +628,7 @@ void PPU::shiftShifters() {
     attributeTableHiShifter <<= 1;
 }
 
-bool PPU::isRenderingEnabled() {
+bool PPU::isRenderingEnabled() const {
     return mask.showBackground || mask.showSprites;
 }
 
@@ -736,7 +706,7 @@ void PPU::fillCurrentScanlineSprites() {
 
         // NES sprite renders are delayed by one scanline, so they will end up one scanline below where it is specified in OAM
         // As a result, NES programmers place their sprite value MINUS 1 into OAM.
-        // I manually remove this offset by adding because I determine which sprites will be rendered for a particular scanline at the start of a scanline, not during a previous one.
+        // I manually remove this offset by adding 1 because I determine which sprites will be rendered for a particular scanline at the start of a scanline, not during a previous one.
         int differenceY = scanline - (sprite.y + 1);
 
         if (differenceY >= 0 && differenceY < spriteHeight) {
@@ -745,10 +715,43 @@ void PPU::fillCurrentScanlineSprites() {
                 break;
             }
             else {
-                currentScanlineSprites.push_back(sprite);
-
                 // Adding 1 to the y value of visible sprites for aforementioned reason
-                currentScanlineSprites.back().y++;
+                sprite.y++;
+
+                uint8_t y = scanline - sprite.y;
+
+                bool flipVertical = (sprite.attributes >> 7) & 1;
+                if (flipVertical) {
+                    y = control.spriteSize ? (15 - y) : (7 - y);
+                }
+
+                uint16_t spritePatternTableAddr;
+
+                if (!control.spriteSize) {
+                    spritePatternTableAddr =
+                        (control.spritePatternTable << 12) |
+                        (sprite.tileIndex << 4) |
+                        y;
+                }
+                else {
+                    if (y < 8) {
+                        spritePatternTableAddr =
+                            ((sprite.tileIndex & 0x1) << 12) |
+                            ((sprite.tileIndex & 0xFE) << 4) |
+                            y;
+                    }
+                    else {
+                        spritePatternTableAddr =
+                            ((sprite.tileIndex & 0x1) << 12) |
+                            (((sprite.tileIndex & 0xFE) | 1) << 4) |
+                            (y & 0x7);
+                    }
+                }
+
+                uint8_t spritePatternTableLo = ppuRead(spritePatternTableAddr);
+                uint8_t spritePatternTableHi = ppuRead(spritePatternTableAddr + 8);
+
+                currentScanlineSprites.push_back({ sprite, spritePatternTableLo, spritePatternTableHi });
 
                 if (i == 0) {
                     sprite0OnCurrentScanline = true;
