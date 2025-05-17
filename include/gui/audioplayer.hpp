@@ -16,8 +16,7 @@ class AudioPlayer : public QIODevice {
 
 public:
     AudioPlayer(QWidget* parent, const QAudioFormat& audioFormat, bool muted, ThreadSafeQueue<float>* queue);
-
-    void addSample(float sample);
+    
     void tryToMute();
     void tryToUnmute();
 
