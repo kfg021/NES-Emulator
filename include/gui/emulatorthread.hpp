@@ -2,7 +2,6 @@
 #define EMULATORTHREAD_HPP
 
 #include "core/bus.hpp"
-#include "gui/debugwindow.hpp"
 #include "gui/guitypes.hpp"
 
 #include <array>
@@ -29,8 +28,6 @@ private:
     static constexpr int INSTRUCTIONS_PER_SECOND = 1773448;
     static constexpr int TARGET_FRAME_NS = static_cast<int>(1e9) / FPS;
     static constexpr int EXPECTED_CPU_CYCLES = INSTRUCTIONS_PER_SECOND / FPS;
-
-    static constexpr int DEBUG_WINDOW_TARGET_FPS = 20;
 
     Bus bus;
     std::atomic<bool> isRunning;

@@ -53,42 +53,43 @@ void EmulatorThread::run() {
             bus.ppu->frameReadyFlag = false;
         }
 
-        static constexpr int DEBUG_WINDOW_RENDER_RATIO = FPS / DEBUG_WINDOW_TARGET_FPS;
-        static int cycleNum = 0;
-        if (!cycleNum) {
-            if (keyInput.debugWindowEnabled->load(std::memory_order_relaxed)) {
-                uint8_t backgroundPallete = keyInput.backgroundPallete->load(std::memory_order_relaxed) & 3;
-                uint8_t spritePallete = keyInput.spritePallete->load(std::memory_order_relaxed) & 3;
+        if (keyInput.debugWindowEnabled->load(std::memory_order_relaxed)) {
+            uint8_t backgroundPallete = keyInput.backgroundPallete->load(std::memory_order_relaxed) & 3;
+            uint8_t spritePallete = keyInput.spritePallete->load(std::memory_order_relaxed) & 3;
 
-                DebugWindowState state = {
-                    bus.cpu->getPC(),
-                    bus.cpu->getA(),
-                    bus.cpu->getX(),
-                    bus.cpu->getY(),
-                    bus.cpu->getSP(),
-                    bus.cpu->getSR(),
-                    backgroundPallete,
-                    spritePallete,
-                    bus.ppu->getPalleteRamColors(),
-                    bus.ppu->getPatternTable(true, backgroundPallete),
-                    bus.ppu->getPatternTable(false, spritePallete),
-                    getInsts()
-                };
+            DebugWindowState state = {
+                bus.cpu->getPC(),
+                bus.cpu->getA(),
+                bus.cpu->getX(),
+                bus.cpu->getY(),
+                bus.cpu->getSP(),
+                bus.cpu->getSR(),
+                backgroundPallete,
+                spritePallete,
+                bus.ppu->getPalleteRamColors(),
+                bus.ppu->getPatternTable(true, backgroundPallete),
+                bus.ppu->getPatternTable(false, spritePallete),
+                getInsts()
+            };
 
-                emit debugFrameReadySignal(state);
-            }
-            else {
-                if (!recentPCs.empty()) {
-                    std::queue<uint16_t> empty;
-                    std::swap(recentPCs, empty);
-                }
+            emit debugFrameReadySignal(state);
+        }
+        else {
+            if (!recentPCs.empty()) {
+                std::queue<uint16_t> empty;
+                std::swap(recentPCs, empty);
             }
         }
-        cycleNum = (cycleNum + 1) % DEBUG_WINDOW_RENDER_RATIO;
 
         int64_t sleepTimeUs = (desiredNextFrameNs - elapsedTimer.nsecsElapsed()) / 1000;
-        if (sleepTimeUs > 0) {
+        
+        // Small sleep times are generally unreliable
+        static constexpr int MIN_SLEEP_TIME_US = 1000;
+        if (sleepTimeUs > MIN_SLEEP_TIME_US) {
             QThread::usleep(sleepTimeUs);
+        }
+        else if (sleepTimeUs > 0) {
+            QThread::yieldCurrentThread();
         }
 
         desiredNextFrameNs += TARGET_FRAME_NS;
