@@ -65,7 +65,7 @@ private:
     const QAudioFormat audioFormat;
     QAudioSink* audioSink;
     AudioPlayer* audioPlayer;
-    ThreadSafeQueue<float> queue;
+    ThreadSafeQueue<float> audioSamples;
     void updateAudioState();
     void resetAudioSink();
 

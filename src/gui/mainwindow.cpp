@@ -45,7 +45,7 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
         &backgroundPallete,
         &globalMuteFlag
     };
-    emulatorThread = new EmulatorThread(this, filePath, keyInput, &queue);
+    emulatorThread = new EmulatorThread(this, filePath, keyInput, &audioSamples);
 
     connect(emulatorThread, &EmulatorThread::frameReadySignal, this, &MainWindow::displayNewFrame, Qt::QueuedConnection);
     connect(emulatorThread, &EmulatorThread::debugFrameReadySignal, this, &MainWindow::displayNewDebugFrame, Qt::QueuedConnection);
@@ -53,7 +53,7 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
     emulatorThread->start();
 
     bool muted = globalMuteFlag.load(std::memory_order_relaxed) & 1;
-    audioPlayer = new AudioPlayer(this, audioFormat, muted, &queue);
+    audioPlayer = new AudioPlayer(this, audioFormat, muted, &audioSamples);
 
     audioSink = nullptr;
     resetAudioSink();

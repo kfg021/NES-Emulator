@@ -4,10 +4,10 @@
 
 #include <QElapsedTimer>
 
-EmulatorThread::EmulatorThread(QObject* parent, const std::string& filePath, const KeyboardInput& keyInput, ThreadSafeQueue<float>* queue) :
+EmulatorThread::EmulatorThread(QObject* parent, const std::string& filePath, const KeyboardInput& keyInput, ThreadSafeQueue<float>* audioSamples) :
     QThread(parent),
     keyInput(keyInput),
-    queue(queue) {
+    audioSamples(audioSamples) {
     isRunning.store(false, std::memory_order_relaxed);
 
     Cartridge::Status status = bus.loadROM(filePath);
@@ -40,6 +40,7 @@ void EmulatorThread::run() {
         if (resetRequested) {
             // TODO: This is technically this is not a reset. It is more like a "power on"
             bus.initDevices();
+            audioSamples->erase();
             keyInput.resetFlag->store(false, std::memory_order_relaxed);
         }
 
@@ -124,7 +125,7 @@ void EmulatorThread::runCycles() {
         if (audioEnabled) {
             while (scaledAudioClock >= INSTRUCTIONS_PER_SECOND) {
                 float sample = bus.apu->getAudioSample();
-                queue->push(sample);
+                audioSamples->push(sample);
                 scaledAudioClock -= INSTRUCTIONS_PER_SECOND;
             }
             scaledAudioClock += AUDIO_SAMPLE_RATE;

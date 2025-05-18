@@ -1,28 +1,28 @@
 #include "gui/audioplayer.hpp"
 
-AudioPlayer::AudioPlayer(QWidget* parent, const QAudioFormat& audioFormat, bool muted, ThreadSafeQueue<float>* queue)
+AudioPlayer::AudioPlayer(QWidget* parent, const QAudioFormat& audioFormat, bool muted, ThreadSafeQueue<float>* audioSamples)
     : QIODevice(parent),
     audioFormat(audioFormat),
     muted(muted),
-    queue(queue) {
+    audioSamples(audioSamples) {
 
     open(QIODevice::ReadOnly);
 }
 
 int64_t AudioPlayer::readData(char* data, int64_t maxSize) {
-    return queue->popManyIntoBuffer(data, maxSize);
-    // size_t amt = queue->popManyIntoBuffer(data, maxSize);
+    // return audioSamples->popManyIntoBuffer(data, maxSize);
+    size_t amt = audioSamples->popManyIntoBuffer(data, maxSize);
     // if (amt < maxSize) {
     //     qDebug() << "requesting " << maxSize << " " << "bytes of audio, only got: " << amt << "!";
     // }
     // else if (maxSize > 0 && maxSize < 16384){
     //     qDebug() << "only requesting " << maxSize << " " << "bytes!";
     // }
-    // size_t s = queue->size();
-    // if (s) {
-    //     qDebug() << "queue has " << s << " samples left!";
-    // }
-    // return amt;
+    size_t s = audioSamples->size();
+    if (s) {
+        qDebug() << "queue has " << s << " samples left!";
+    }
+    return amt;
 }
 
 int64_t AudioPlayer::writeData(const char* /*data*/, int64_t /*maxSize*/) {
@@ -30,13 +30,13 @@ int64_t AudioPlayer::writeData(const char* /*data*/, int64_t /*maxSize*/) {
 }
 
 int64_t AudioPlayer::bytesAvailable() const {
-    return queue->size() * sizeof(float);
+    return audioSamples->size() * sizeof(float);
 }
 
 void AudioPlayer::tryToMute() {
     if (!muted) {
         muted = true;
-        queue->erase();
+        audioSamples->erase();
     }
 }
 

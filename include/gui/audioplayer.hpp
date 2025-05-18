@@ -15,7 +15,7 @@ class AudioPlayer : public QIODevice {
     Q_OBJECT
 
 public:
-    AudioPlayer(QWidget* parent, const QAudioFormat& audioFormat, bool muted, ThreadSafeQueue<float>* queue);
+    AudioPlayer(QWidget* parent, const QAudioFormat& audioFormat, bool muted, ThreadSafeQueue<float>* audioSamples);
     
     void tryToMute();
     void tryToUnmute();
@@ -28,7 +28,7 @@ protected:
 private:
     QAudioFormat audioFormat;
     bool muted;
-    ThreadSafeQueue<float>* queue;
+    ThreadSafeQueue<float>* audioSamples;
 };
 
 #endif // AUDIOPLAYER_HPP

@@ -16,7 +16,7 @@
 class EmulatorThread : public QThread {
     Q_OBJECT
 public:
-    EmulatorThread(QObject* parent, const std::string& filePath, const KeyboardInput& keyInput, ThreadSafeQueue<float>* queue);
+    EmulatorThread(QObject* parent, const std::string& filePath, const KeyboardInput& keyInput, ThreadSafeQueue<float>* audioSamples);
     ~EmulatorThread() override;
     void run() override;
 
@@ -44,7 +44,7 @@ private:
     std::queue<uint16_t> recentPCs;
     std::array<QString, DebugWindowState::NUM_INSTS_TOTAL> getInsts() const;
 
-    ThreadSafeQueue<float>* queue;
+    ThreadSafeQueue<float>* audioSamples;
 
     int scaledAudioClock;
 };
