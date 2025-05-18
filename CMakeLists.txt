@@ -68,7 +68,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
-    MACOSX_BUNDLE ON
-    WIN32_EXECUTABLE ON
     OUTPUT_NAME ${PROJECT_NAME}
 )
