@@ -3,10 +3,8 @@
 
 #include "core/bus.hpp"
 #include "gui/audioplayer.hpp"
-#include "gui/debugwindow.hpp"
 #include "gui/emulatorthread.hpp"
 #include "gui/guitypes.hpp"
-#include "gui/gamewindow.hpp"
 #include "util/threadsafequeue.hpp"
 
 #include <array>
@@ -32,6 +30,7 @@ public:
     static constexpr int GAME_WIDTH = 256 * 3;
     static constexpr int GAME_HEIGHT = 240 * 3;
     static constexpr int DEBUG_WIDTH = 300;
+    static constexpr int TOTAL_WIDTH = GAME_WIDTH + DEBUG_WIDTH;
 
 public slots:
     void displayNewFrame(const QImage& image);
@@ -40,11 +39,10 @@ public slots:
 protected:
     void keyPressEvent(QKeyEvent* event) override;
     void keyReleaseEvent(QKeyEvent* event) override;
+    void paintEvent(QPaintEvent* event) override;
 
 private:
     EmulatorThread* emulatorThread;
-    GameWindow* gameWindow;
-    DebugWindow* debugWindow;
 
     ControllerStatus controllerStatus;
     std::atomic<bool> resetFlag;
@@ -56,7 +54,14 @@ private:
     std::atomic<uint8_t> globalMuteFlag;
 
     void setControllerData(bool controller, Controller::Button button, bool value);
+    void toggleDebugMode();
 
+    // Rendering
+    QImage mainWindowData;
+    DebugWindowState debugWindowData;
+    void renderDebugWindow();
+
+    // Audio
     const QAudioFormat audioFormat;
     QAudioSink* audioSink;
     AudioPlayer* audioPlayer;

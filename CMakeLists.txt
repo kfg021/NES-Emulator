@@ -32,9 +32,7 @@ set(HEADERS
     include/core/mapper/mapper9.hpp
     include/core/mapper/mapper66.hpp
     include/gui/audioplayer.hpp
-    include/gui/debugwindow.hpp
     include/gui/emulatorthread.hpp
-    include/gui/gamewindow.hpp
     include/gui/guitypes.hpp
     include/gui/mainwindow.hpp
     include/util/threadsafequeue.hpp
@@ -57,9 +55,7 @@ set(SOURCES
     src/core/mapper/mapper9.cpp
     src/core/mapper/mapper66.cpp
     src/gui/audioplayer.cpp
-    src/gui/debugwindow.cpp
     src/gui/emulatorthread.cpp
-    src/gui/gamewindow.cpp
     src/gui/mainwindow.cpp
     src/util/util.cpp
     src/main.cpp
@@ -78,7 +74,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
-    MACOSX_BUNDLE ON
-    WIN32_EXECUTABLE ON
     OUTPUT_NAME ${PROJECT_NAME}
 )
