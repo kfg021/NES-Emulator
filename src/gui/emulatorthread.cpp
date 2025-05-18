@@ -23,7 +23,7 @@ EmulatorThread::~EmulatorThread() {
 void EmulatorThread::run() {
     isRunning.store(true, std::memory_order_relaxed);
 
-    int64_t desiredNextFrameNs = TARGET_FRAME_NS;
+    int desiredNextFrameUs = TARGET_FRAME_US;
     QElapsedTimer elapsedTimer;
     elapsedTimer.start();
 
@@ -81,18 +81,25 @@ void EmulatorThread::run() {
             }
         }
 
-        int64_t sleepTimeUs = (desiredNextFrameNs - elapsedTimer.nsecsElapsed()) / 1000;
-        
+        int currentTimeUs = elapsedTimer.nsecsElapsed() / 1000;
+        int sleepTimeUs = desiredNextFrameUs - currentTimeUs;
+
         // Small sleep times are generally unreliable
         static constexpr int MIN_SLEEP_TIME_US = 1000;
         if (sleepTimeUs > MIN_SLEEP_TIME_US) {
             QThread::usleep(sleepTimeUs);
         }
-        else if (sleepTimeUs > 0) {
+        else if(sleepTimeUs > 0) {
+            QThread::yieldCurrentThread();
+        }
+        else {
+            // We missed the deadline for this frame, so reset the frame deadline.
+            desiredNextFrameUs = currentTimeUs;
+            
             QThread::yieldCurrentThread();
         }
 
-        desiredNextFrameNs += TARGET_FRAME_NS;
+        desiredNextFrameUs += TARGET_FRAME_US;
     }
 }
 

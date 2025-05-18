@@ -26,7 +26,7 @@ signals:
 private:
     static constexpr int FPS = 60;
     static constexpr int INSTRUCTIONS_PER_SECOND = 1773448;
-    static constexpr int TARGET_FRAME_NS = static_cast<int>(1e9) / FPS;
+    static constexpr int TARGET_FRAME_US = 1000000 / FPS;
     static constexpr int EXPECTED_CPU_CYCLES = INSTRUCTIONS_PER_SECOND / FPS;
 
     Bus bus;
