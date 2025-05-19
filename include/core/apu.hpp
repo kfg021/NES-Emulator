@@ -14,14 +14,15 @@ public:
     void write(uint16_t addr, uint8_t value);
 
     // Handles reads to/writes from 0x4015
-    uint8_t viewStatus();
+    uint8_t viewStatus() const;
     uint8_t readStatus();
     void writeStatus(uint8_t value);
 
     // Handles writes to 0x4017
     void writeFrameCounter(uint8_t value);
 
-    void executeCycle();
+    void executeHalfCycle();
+    bool irqRequested() const;
 
     float getAudioSample();
 private:
@@ -53,15 +54,18 @@ private:
         // Internal state
         uint16_t timerCounter : 11;
         uint8_t dutyCycleIndex : 3;
+        uint8_t lengthCounter;
+        bool envelopeStartFlag;
         uint8_t envelope : 4;
-        uint8_t lengthCounter : 5;
+        uint8_t envelopeDividerCounter;
     };
 
+    // TODO: confirm duty cycle orientation
     const std::array<uint8_t, 4> DUTY_CYCLES = {
-        0b00000010,
-        0b00000110,
-        0b00011110,
-        0b11111001
+        0b00000001,
+        0b00000011,
+        0b00001111,
+        0b11111100
     };
 
     std::array<Pulse, 2> pulses;
@@ -77,6 +81,14 @@ private:
     constexpr static std::array<int, 5> STEP_SEQUENCE = { 7457, 14913, 22371, 29829, 37281 };
     constexpr static int FOUR_STEP_SEQUENCE_LENGTH = 29830;
     constexpr static int FIVE_STEP_SEQUENCE_LENGTH = 37282;
+
+    constexpr static std::array<uint8_t, 0x20> LENGTH_COUNTER_TABLE = {
+        10, 254, 20,  2, 40,  4, 80,  6, 160,  8, 60, 10, 14, 12, 26, 14,
+        12,  16, 24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32, 30
+    };
+
+    void quarterClock();
+    void halfClock();
 };
 
 #endif // APU_HPP

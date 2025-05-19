@@ -43,18 +43,23 @@ void APU::write(uint16_t addr, uint8_t value) {
 
             default: // 0x4003 / 0x4007
                 pulse.timerHigh = value & 0x7;
-
                 uint16_t timerReload = (pulse.timerHigh << 8) | pulse.timerLow;
                 pulse.timerCounter = timerReload;
 
                 pulse.lengthCounterLoad = (value >> 3) & 0x1F;
-                pulse.lengthCounter = pulse.lengthCounterLoad;
+                bool channelEnabled = (status >> pulseNum) & 1;
+                if (channelEnabled) {
+                    pulse.lengthCounter = LENGTH_COUNTER_TABLE[pulse.lengthCounterLoad];
+                }
+
+                pulse.envelopeStartFlag = true;
+                pulse.dutyCycleIndex = 0;
                 break;
         }
     }
 }
 
-uint8_t APU::viewStatus() {
+uint8_t APU::viewStatus() const {
     uint8_t tempStatus = 0;
 
     for (int i = 0; i < 2; i++) {
@@ -80,6 +85,11 @@ uint8_t APU::readStatus() {
 }
 
 void APU::writeStatus(uint8_t value) {
+    if (!((value >> 0) & 1)) pulses[0].lengthCounter = 0;
+    if (!((value >> 1) & 1)) pulses[1].lengthCounter = 0;
+
+    // TODO: Other channels
+
     status = value;
 }
 
@@ -87,36 +97,42 @@ void APU::writeFrameCounter(uint8_t value) {
     frameSequenceMode = (value >> 7) & 1;
     interruptInhibitFlag = (value >> 6) & 1;
 
+    if (interruptInhibitFlag) {
+        frameInterruptFlag = false;
+    }
+
+    if (!frameSequenceMode) {
+        quarterClock();
+        halfClock();
+    }
+
     frameCounter = 0;
 }
 
-void APU::executeCycle() {
-    bool quarterClock = false;
-    bool halfClock = false;
+void APU::executeHalfCycle() {
+    bool quarterClockCycle = false;
+    bool halfClockCycle = false;
 
     if (!frameSequenceMode) {
         // 4 step sequence
         switch (frameCounter % FOUR_STEP_SEQUENCE_LENGTH) {
             case STEP_SEQUENCE[0]:
-                quarterClock = true;
+                quarterClockCycle = true;
                 break;
             case STEP_SEQUENCE[1]:
-                quarterClock = true;
-                halfClock = true;
+                quarterClockCycle = true;
+                halfClockCycle = true;
                 break;
             case STEP_SEQUENCE[2]:
-                quarterClock = true;
+                quarterClockCycle = true;
                 break;
             case STEP_SEQUENCE[3] - 1:
                 frameInterruptFlag = !interruptInhibitFlag;
                 break;
             case STEP_SEQUENCE[3]:
-                quarterClock = true;
-                halfClock = true;
+                quarterClockCycle = true;
+                halfClockCycle = true;
                 frameInterruptFlag = !interruptInhibitFlag;
-                break;
-            case 0:
-                if (frameCounter) frameInterruptFlag = !interruptInhibitFlag;
                 break;
             default:
                 break;
@@ -126,21 +142,21 @@ void APU::executeCycle() {
         // 5 step sequence
         switch (frameCounter % FIVE_STEP_SEQUENCE_LENGTH) {
             case STEP_SEQUENCE[0]:
-                quarterClock = true;
+                quarterClockCycle = true;
                 break;
             case STEP_SEQUENCE[1]:
-                quarterClock = true;
-                halfClock = true;
+                quarterClockCycle = true;
+                halfClockCycle = true;
                 break;
             case STEP_SEQUENCE[2]:
-                quarterClock = true;
+                quarterClockCycle = true;
                 break;
             case STEP_SEQUENCE[3]:
                 // Do nothing
                 break;
             case STEP_SEQUENCE[4]:
-                quarterClock = true;
-                halfClock = true;
+                quarterClockCycle = true;
+                halfClockCycle = true;
                 frameInterruptFlag = !interruptInhibitFlag;
                 break;
             default:
@@ -148,39 +164,12 @@ void APU::executeCycle() {
         }
     }
 
-    if (quarterClock) {
-        // Clock envelope
-        {
-            for (int i = 0; i < 2; i++) {
-                if (pulses[i].envelope) pulses[i].envelope--;
-
-                if (!pulses[i].envelope && pulses[i].envelopeLoopOrLengthCounterHalt) {
-                    pulses[i].envelope = 0xF;
-                }
-            }
-
-        }
-
-        // Clock triangle linear counter
-        {
-
-        }
+    if (quarterClockCycle) {
+        quarterClock();
     }
 
-    if (halfClock) {
-        // Clock length counters
-        {
-            for (int i = 0; i < 2; i++) {
-                bool statusBit = (status >> i) & 1;
-                if (statusBit && pulses[i].lengthCounter) pulses[i].lengthCounter--;
-            }
-
-        }
-
-        // Clock sweep units
-        {
-
-        }
+    if (halfClockCycle) {
+        halfClock();
     }
 
     if (totalCycles & 1) {
@@ -204,6 +193,61 @@ void APU::executeCycle() {
     totalCycles++;
 }
 
+void APU::quarterClock() {
+    // Clock envelope
+    {
+        for (int i = 0; i < 2; ++i) {
+            Pulse& p = pulses[i];
+            if (p.envelopeStartFlag) {
+                p.envelopeStartFlag = false;
+                p.envelope = 0xF;
+                p.envelopeDividerCounter = p.volumeOrEnvelopeRate;
+            }
+            else {
+                if (p.envelopeDividerCounter > 0) {
+                    p.envelopeDividerCounter--;
+                }
+                else {
+                    p.envelopeDividerCounter = p.volumeOrEnvelopeRate;
+                    if (p.envelope) {
+                        p.envelope--;
+                    }
+                    else if (p.envelopeLoopOrLengthCounterHalt) {
+                        p.envelope = 15;
+                    }
+                }
+            }
+        }
+
+        // TODO: Triangle envelope
+    }
+
+    // TODO: Clock triangle linear counter
+    {
+
+    }
+}
+
+void APU::halfClock() {
+    // Clock length counters
+    {
+        for (int i = 0; i < 2; i++) {
+            bool statusBit = (status >> i) & 1;
+            if (statusBit && pulses[i].lengthCounter && !pulses[i].envelopeLoopOrLengthCounterHalt) pulses[i].lengthCounter--;
+        }
+
+    }
+
+    // TODO: Clock sweep units
+    {
+
+    }
+}
+
+bool APU::irqRequested() const {
+    return frameInterruptFlag;
+}
+
 float APU::getAudioSample() {
     float output = 0.0f;
 
@@ -211,7 +255,7 @@ float APU::getAudioSample() {
     {
         Pulse& pulse = pulses[0];
         bool statusBit = (status >> 0) & 1;
-        if (statusBit && pulse.timerCounter >= 8) {
+        if (statusBit && pulse.lengthCounter > 0 && pulse.timerCounter >= 8) {
             uint8_t dutyCycle = DUTY_CYCLES[pulse.duty];
             bool dutyOutput = (dutyCycle >> pulse.dutyCycleIndex) & 1;
 
@@ -221,6 +265,8 @@ float APU::getAudioSample() {
             }
         }
     }
+
+    // TODO: mix other channels
 
     return output / 7.5f - 1; // Range [-1, 1]
 }
