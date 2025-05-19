@@ -1,18 +1,14 @@
 #ifndef PPU_HPP
 #define PPU_HPP
 
-#include "core/bus.hpp"
 #include "core/cartridge.hpp"
 #include "util/util.hpp"
 
 #include <memory>
 
-class Bus;
-
 class PPU {
 public:
     PPU();
-    void setBus(Bus* bus);
     void setCartridge(std::shared_ptr<Cartridge>& cartridge);
     void initPPU();
 
@@ -62,6 +58,9 @@ public:
     OAMBuffer oamBuffer;
 
     bool frameReadyFlag;
+
+    bool nmiRequested;
+    bool irqRequested;
 
 private:
     // PPU internal data structures (descriptions from https://www.nesdev.org/wiki/PPU_registers)
@@ -240,9 +239,6 @@ private:
 
     using NameTable = std::array<uint8_t, 2 * KB>;
     NameTable nameTable;
-
-    // Pointer to the Bus instance that the PPU is attached to. The CPU is not responsible for clearing this memory as it will get deleted when the Bus goes out of scope
-    Bus* bus;
 
     std::shared_ptr<Cartridge> cartridge;
 

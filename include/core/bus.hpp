@@ -12,7 +12,6 @@
 #include <memory>
 
 class CPU;
-class PPU;
 
 class Bus {
 public:
@@ -29,7 +28,6 @@ public:
     std::unique_ptr<PPU> ppu;
 
     uint64_t totalCycles;
-    
     bool nmiRequest;
     bool irqRequest;
 
