@@ -10,19 +10,7 @@ AudioPlayer::AudioPlayer(QWidget* parent, const QAudioFormat& audioFormat, bool 
 }
 
 int64_t AudioPlayer::readData(char* data, int64_t maxSize) {
-    // return audioSamples->popManyIntoBuffer(data, maxSize);
-    size_t amt = audioSamples->popManyIntoBuffer(data, maxSize);
-    // if (amt < maxSize) {
-    //     qDebug() << "requesting " << maxSize << " " << "bytes of audio, only got: " << amt << "!";
-    // }
-    // else if (maxSize > 0 && maxSize < 16384){
-    //     qDebug() << "only requesting " << maxSize << " " << "bytes!";
-    // }
-    size_t s = audioSamples->size();
-    if (s) {
-        qDebug() << "queue has " << s << " samples left!";
-    }
-    return amt;
+    return audioSamples->popManyIntoBuffer(data, maxSize);
 }
 
 int64_t AudioPlayer::writeData(const char* /*data*/, int64_t /*maxSize*/) {

@@ -144,9 +144,7 @@ void Bus::executeCycle() {
         cpu->executeCycle();
     }
 
-    if (totalCycles & 1) {
-        apu->executeCycle();
-    }
+    apu->executeCycle();
 
     // Handle interrupt requests
     if (nmiRequest) {

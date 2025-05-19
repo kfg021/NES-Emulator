@@ -32,16 +32,16 @@ private:
 
     struct Pulse {
         // 0x4000 / 0x4004
-        uint8_t volumeEnvelope : 4;
+        uint8_t volumeOrEnvelopeRate : 4;
         uint8_t constantVolume : 1;
-        uint8_t lengthCounter : 1;
+        uint8_t envelopeLoopOrLengthCounterHalt : 1;
         uint8_t duty : 2;
 
         // 0x4001 / 0x4005
-        uint8_t shift : 3;
-        uint8_t negate : 1;
-        uint8_t period : 3;
-        uint8_t enabled : 1;
+        uint8_t sweepUnitShift : 3;
+        uint8_t sweepUnitNegate : 1;
+        uint8_t sweepUnitPeriod : 3;
+        uint8_t sweepUnitEnabled : 1;
 
         // 0x4002 / 0x4006
         uint8_t timerLow;
@@ -53,6 +53,8 @@ private:
         // Internal state
         uint16_t timerCounter : 11;
         uint8_t dutyCycleIndex : 3;
+        uint8_t envelope : 4;
+        uint8_t lengthCounter : 5;
     };
 
     const std::array<uint8_t, 4> DUTY_CYCLES = {
@@ -64,7 +66,17 @@ private:
 
     std::array<Pulse, 2> pulses;
     uint8_t status;
-    uint8_t frameCounter;
+
+    bool frameSequenceMode;
+    bool interruptInhibitFlag;
+    bool frameInterruptFlag;
+
+    uint64_t frameCounter;
+    uint64_t totalCycles;
+
+    constexpr static std::array<int, 5> STEP_SEQUENCE = { 7457, 14913, 22371, 29829, 37281 };
+    constexpr static int FOUR_STEP_SEQUENCE_LENGTH = 29830;
+    constexpr static int FIVE_STEP_SEQUENCE_LENGTH = 37282;
 };
 
 #endif // APU_HPP

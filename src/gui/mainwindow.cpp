@@ -35,6 +35,11 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
     backgroundPallete.store(0, std::memory_order_relaxed);
     globalMuteFlag.store(0, std::memory_order_relaxed);
 
+    bool muted = globalMuteFlag.load(std::memory_order_relaxed) & 1;
+    audioPlayer = new AudioPlayer(this, audioFormat, muted, &audioSamples);
+    audioSink = nullptr;
+    resetAudioSink();
+
     KeyboardInput keyInput = {
         &controllerStatus,
         &resetFlag,
@@ -51,12 +56,6 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
     connect(emulatorThread, &EmulatorThread::debugFrameReadySignal, this, &MainWindow::displayNewDebugFrame, Qt::QueuedConnection);
 
     emulatorThread->start();
-
-    bool muted = globalMuteFlag.load(std::memory_order_relaxed) & 1;
-    audioPlayer = new AudioPlayer(this, audioFormat, muted, &audioSamples);
-
-    audioSink = nullptr;
-    resetAudioSink();
 }
 
 MainWindow::~MainWindow() {
@@ -138,6 +137,7 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
         }
         else if (event->key() == Qt::Key_C) {
             stepModeEnabled.fetch_xor(1, std::memory_order_relaxed);
+            updateAudioState();
         }
         else if (event->key() == Qt::Key_O) {
             backgroundPallete.fetch_add(1, std::memory_order_relaxed);
