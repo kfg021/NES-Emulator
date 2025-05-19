@@ -60,8 +60,20 @@ void PPU::initPPU() {
 
     frameReadyFlag = false;
 
-    nmiRequested = false;
-    irqRequested = false;
+    nmiRequest = false;
+    irqRequest = false;
+}
+
+bool PPU::nmiRequested(){
+    return nmiRequest;
+}
+
+void PPU::clearNMIRequest(){
+    nmiRequest = false;
+}
+
+bool PPU::irqRequested(){
+    return irqRequest;
 }
 
 uint8_t PPU::view(uint8_t ppuRegister) const {
@@ -128,7 +140,7 @@ void PPU::write(uint8_t ppuRegister, uint8_t value) {
         // From (https://www.nesdev.org/wiki/PPU_registers#PPUCTRL): 
         // If the PPU is currently in vertical blank, and the PPUSTATUS ($2002) vblank flag is still set (1), changing the NMI flag in bit 7 of $2000 from 0 to 1 will immediately generate an NMI. 
         if (status.vBlankStarted && !oldNmiFlag && newNmiFlag) {
-            nmiRequested = true;
+            nmiRequest = true;
         }
 
         temporaryVramAddress.nametableX = control.nametableX;
@@ -337,6 +349,8 @@ PPU::PatternTable PPU::getPatternTable(bool isBackground, uint8_t palleteNumber)
 }
 
 void PPU::executeCycle() {
+    irqRequest = false;
+
     if (scanline == -1) {
         preRenderScanline();
     }
@@ -357,9 +371,8 @@ void PPU::handleMapper4IRQ() {
     if (cartridge->mapper->config.id == 4) {
         // We can static_cast instead of dynamic_cast because we explicitly checked id
         Mapper4* mapper4 = static_cast<Mapper4*>(cartridge->mapper.get());
-        if (mapper4->irqRequestAtEndOfScanline()) {
-            irqRequested = true;
-        }
+        mapper4->clockIRQTimer();
+        irqRequest = mapper4->irqRequested();
     }
 }
 
@@ -409,7 +422,7 @@ void PPU::verticalBlankScanlines() {
     if (scanline == 241 && cycle == 1) {
         status.vBlankStarted = 1;
         if (control.nmiEnabled) {
-            nmiRequested = true;
+            nmiRequest = true;
         }
     }
 }

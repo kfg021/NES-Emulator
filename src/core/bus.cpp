@@ -5,7 +5,6 @@ Bus::Bus() {
     cpu->setBus(this);
 
     ppu = std::make_unique<PPU>();
-    apu = std::make_unique<APU>();
 }
 
 void Bus::initDevices() {
@@ -129,18 +128,16 @@ void Bus::executeCycle() {
         cpu->executeCycle();
     }
 
-    // Two CPU cycles for every APU cycle
-    apu->executeHalfCycle();
-
-    bool nmiRequested = ppu->nmiRequested;
-    bool irqRequested = ppu->irqRequested || apu->irqRequested();
+    bool nmiRequested = ppu->nmiRequested();
+    bool irqRequested = ppu->irqRequested();
 
     // Handle interrupt requests
     if (nmiRequested) {
         cpu->NMI();
-        ppu->nmiRequested = false;
+        ppu->clearNMIRequest();
     }
-    else if (irqRequested) {
+    
+    if (irqRequested) {
         cpu->IRQ();
     }
 

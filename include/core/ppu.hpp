@@ -58,9 +58,10 @@ public:
     OAMBuffer oamBuffer;
 
     bool frameReadyFlag;
-
-    bool nmiRequested;
-    bool irqRequested;
+    
+    bool nmiRequested();
+    void clearNMIRequest();
+    bool irqRequested();
 
 private:
     // PPU internal data structures (descriptions from https://www.nesdev.org/wiki/PPU_registers)
@@ -300,6 +301,9 @@ private:
     uint8_t oamAddress;
 
     uint16_t getPalleteRamAddress(uint8_t backgroundTable, uint8_t patternTable) const;
+
+    bool nmiRequest;
+    bool irqRequest;
 };
 
 #endif // PPU_HPP

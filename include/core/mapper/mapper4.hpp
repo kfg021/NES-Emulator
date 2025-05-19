@@ -17,9 +17,8 @@ public:
 
     MirrorMode getMirrorMode() const override;
 
-    // The PPU will call this function on cycle 260 of every scanline.
-    // It returns true if the mapper would like to trigger an IRQ
-    bool irqRequestAtEndOfScanline();
+    void clockIRQTimer();
+    bool irqRequested();
 
 private:
     // PRG banks
@@ -53,6 +52,8 @@ private:
     uint8_t irqReloadValue;
     uint8_t irqTimer;
     bool irqEnabled;
+    bool irqReloadPending;
+    bool irqRequest;
 
     std::array<uint8_t, 2> prgSwitchableBankSelect;
     std::array<uint8_t, 6> chrSwitchableBankSelect;
