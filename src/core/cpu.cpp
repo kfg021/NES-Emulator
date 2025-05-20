@@ -39,7 +39,7 @@ void CPU::executeCycle() {
         const Instruction& inst = currentOpcode.instruction;
         const AddressingMode& mode = currentOpcode.addressingMode;
         const AddressingMode::ReturnType& operand = (this->*mode.getOperand)();
-        
+
         (this->*inst.execute)(operand);
 
         if (shouldAdvancePC) {
@@ -89,11 +89,10 @@ void CPU::reset() {
 // The RTI instruction restores the status register from the stack and behaves otherwise like the JSR instruction. (The break flag is always ignored as the status is read from the stack, as it isn't a real processor flag anyway.)
 bool CPU::IRQ() {
     if (!getFlag(Flag::INTERRUPT)) {
-        setFlag(Flag::INTERRUPT, 1);
-        setFlag(Flag::BREAK, 0);
-
         push16BitDataToStack(pc);
-        push8BitDataToStack(sr);
+        push8BitDataToStack(sr | getFlagMask(Flag::BREAK));
+
+        setFlag(Flag::INTERRUPT, 1);
 
         pc = read16BitData(IRQ_BRK_VECTOR);
         shouldAdvancePC = false;
@@ -107,17 +106,16 @@ bool CPU::IRQ() {
 }
 
 void CPU::NMI() {
-    setFlag(Flag::INTERRUPT, 1);
-    setFlag(Flag::BREAK, 0);
-
     push16BitDataToStack(pc);
-    push8BitDataToStack(sr);
+    push8BitDataToStack(sr | getFlagMask(Flag::BREAK));
+
+    setFlag(Flag::INTERRUPT, 1);
 
     pc = read16BitData(NMI_VECTOR);
     shouldAdvancePC = false;
 
-    // NMI takes 8 cycles
-    remainingCycles = 8;
+    // NMI takes 7 cycles
+    remainingCycles = 7;
 }
 
 uint16_t CPU::getPC() const {
@@ -140,6 +138,9 @@ uint8_t CPU::getSP() const {
 }
 bool CPU::getFlag(Flag flag) const {
     return (sr >> static_cast<int>(flag)) & 1;
+}
+uint8_t CPU::getFlagMask(Flag flag) const {
+    return (1 << static_cast<int>(flag)) & 1;
 }
 uint8_t CPU::getRemainingCycles() const {
     return remainingCycles;
@@ -836,13 +837,10 @@ void CPU::BPL(const AddressingMode::ReturnType& operand) {
 //  N	Z	C	I	D	V
 //  -	-	-	1	-	-
 void CPU::BRK(const AddressingMode::ReturnType& /*operand*/) {
-    setFlag(Flag::INTERRUPT, 1);
-
     push16BitDataToStack(pc + 2);
+    push8BitDataToStack(sr | getFlagMask(Flag::BREAK));
 
-    setFlag(Flag::BREAK, 1);
-    push8BitDataToStack(sr);
-    setFlag(Flag::BREAK, 0);
+    setFlag(Flag::INTERRUPT, 1);
 
     pc = read16BitData(IRQ_BRK_VECTOR);
     shouldAdvancePC = false;
@@ -1150,9 +1148,7 @@ void CPU::PHA(const AddressingMode::ReturnType& /*operand*/) {
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	-
 void CPU::PHP(const AddressingMode::ReturnType& /*operand*/) {
-    setFlag(Flag::BREAK, 1);
-    push8BitDataToStack(sr);
-    setFlag(Flag::BREAK, 0);
+    push8BitDataToStack(sr | getFlagMask(Flag::BREAK));
 }
 
 // PLA

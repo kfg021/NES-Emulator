@@ -64,15 +64,15 @@ void PPU::initPPU() {
     irqRequest = false;
 }
 
-bool PPU::nmiRequested(){
+bool PPU::nmiRequested() {
     return nmiRequest;
 }
 
-void PPU::clearNMIRequest(){
+void PPU::clearNMIRequest() {
     nmiRequest = false;
 }
 
-bool PPU::irqRequested(){
+bool PPU::irqRequested() {
     return irqRequest;
 }
 
@@ -349,8 +349,6 @@ PPU::PatternTable PPU::getPatternTable(bool isBackground, uint8_t palleteNumber)
 }
 
 void PPU::executeCycle() {
-    irqRequest = false;
-
     if (scanline == -1) {
         preRenderScanline();
     }

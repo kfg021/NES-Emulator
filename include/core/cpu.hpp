@@ -73,6 +73,7 @@ public:
     uint8_t getSP() const;
     uint8_t getSR() const;
     bool getFlag(Flag flag) const;
+    uint8_t getFlagMask(Flag flag) const;
     uint8_t getRemainingCycles() const;
     int64_t getTotalCycles() const;
 
