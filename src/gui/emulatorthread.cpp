@@ -31,7 +31,6 @@ void EmulatorThread::run() {
         // Check reset
         bool resetRequested = keyInput.resetFlag->load(std::memory_order_relaxed);
         if (resetRequested) {
-            // TODO: This is technically this is not a reset. It is more like a "power on"
             bus.initDevices();
             keyInput.resetFlag->store(false, std::memory_order_relaxed);
         }

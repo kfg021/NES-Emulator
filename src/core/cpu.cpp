@@ -77,7 +77,6 @@ void CPU::reset() {
     setFlag(Flag::INTERRUPT, 1);
 
     // Reset takes 7 cycles
-    // TODO: is it 8?
     remainingCycles = 7;
 }
 
@@ -1389,7 +1388,7 @@ void CPU::TYA(const AddressingMode::ReturnType& /*operand*/) {
 // UNI
 // Unimplemented Instruction
 void CPU::UNI(const AddressingMode::ReturnType& /*operand*/) {
-    // TODO: handle illegal opcodes
+    // TODO: Handle illegal opcodes
 }
 
 // Addressing mode string function definitions

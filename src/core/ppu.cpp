@@ -615,7 +615,7 @@ void PPU::drawPixel() {
         }
     }
 
-    // TODO: use the PPU's emphasis bits to modify the final color
+    // TODO: Use the PPU's emphasis bits to modify the final color
     (*workingDisplay)[scanline][cycle - 1] = finalColor;
 }
 
