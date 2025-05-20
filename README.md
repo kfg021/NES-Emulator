@@ -14,7 +14,7 @@ A Nintendo Entertainment System (NES) emulator implemented in C++ with a Qt6-bas
   - MMC1 (Mapper 1)
   - UxROM (Mapper 2)
   - CNROM (Mapper 3)
-  - MMC3 (Mapper 4) - Preliminary support, some glitches
+  - MMC3 (Mapper 4)
   - MMC2 (Mapper 9)
   - GxROM (Mapper 66)
 - Debug window for development and testing
@@ -119,9 +119,7 @@ The emulator window will show:
 - Debug window (if enabled with 'D' key) showing:
   - CPU state and registers
   - Current instruction and next instructions
-  - Memory viewer
-  - Pattern tables
-  - Palette information
+  - Pattern tables / Palettes
 
 ### Controls
 - Arrow keys: D-pad
@@ -130,11 +128,11 @@ The emulator window will show:
 - Return/Enter: Start
 - Shift: Select
 - R: Reset game
-- D: Toggle debug window (if enabled)
+- D: Toggle debug window
 
-Debug Window Controls (when enabled):
-- C: Toggle debug mode
-- Space (when debug mode enabled): Step to next instruction
+Debug Window controls (when open):
+- C: Toggle step mode
+- Space (If step mode enabled): Step to next instruction
 - O: Cycle background palette
 - P: Cycle sprite palette
 
@@ -165,7 +163,6 @@ The following features and improvements are planned for future development:
 
 ### Core Emulation
 - APU (Audio Processing Unit) implementation for sound support
-- Fix glitches in MMC3 (Mapper 4) implementation
 - Additional mapper support
 - Complete iNES 2.0 format support
 - Support for undocumented 6502 CPU opcodes
