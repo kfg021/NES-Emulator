@@ -27,11 +27,10 @@ void Bus::initDevices() {
 }
 
 Cartridge::Status Bus::loadROM(const std::string& filePath) {
-    cartridge = std::make_shared<Cartridge>(filePath);
+    ppu->cartridge = Cartridge(filePath);
 
-    Cartridge::Status status = cartridge->getStatus();
+    const Cartridge::Status& status = ppu->cartridge.getStatus();
     if (status.code == Cartridge::Code::SUCCESS) {
-        ppu->setCartridge(cartridge);
         initDevices();
     }
 
@@ -57,7 +56,7 @@ uint8_t Bus::view(uint16_t address) const {
 
     }
     else { // if (CARTRIDGE_ADDRESSABLE_RANGE.contains(address))
-        return cartridge->mapper->mapPRGView(address);
+        return ppu->cartridge.mapper->mapPRGView(address);
     }
 }
 
@@ -82,7 +81,7 @@ uint8_t Bus::read(uint16_t address) {
         }
     }
     else { // if (CARTRIDGE_ADDRESSABLE_RANGE.contains(address))
-        return cartridge->mapper->mapPRGRead(address);
+        return ppu->cartridge.mapper->mapPRGRead(address);
     }
 }
 
@@ -110,7 +109,7 @@ void Bus::write(uint16_t address, uint8_t value) {
         }
     }
     else { // if (CARTRIDGE_ADDRESSABLE_RANGE.contains(address)) 
-        cartridge->mapper->mapPRGWrite(address, value);
+        ppu->cartridge.mapper->mapPRGWrite(address, value);
     }
 }
 
@@ -136,7 +135,7 @@ void Bus::executeCycle() {
         cpu->NMI();
         ppu->clearNMIRequest();
     }
-    
+
     if (irqRequested) {
         cpu->IRQ();
     }

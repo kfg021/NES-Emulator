@@ -9,7 +9,6 @@
 
 #include <array>
 #include <cstdint>
-#include <memory>
 
 class CPU;
 
@@ -42,7 +41,6 @@ private:
     static constexpr MemoryRange CARTRIDGE_ADDRESSABLE_RANGE{ 0x4020, 0xFFFF };
 
     std::array<uint8_t, 0x800> ram;
-    std::shared_ptr<Cartridge> cartridge;
 
     static constexpr uint16_t CONTROLLER_1_DATA = 0x4016;
     static constexpr uint16_t CONTROLLER_2_DATA = 0x4017;

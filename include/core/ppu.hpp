@@ -9,7 +9,6 @@
 class PPU {
 public:
     PPU();
-    void setCartridge(std::shared_ptr<Cartridge>& cartridge);
     void initPPU();
 
     enum class Register {
@@ -30,6 +29,8 @@ public:
     uint8_t ppuView(uint16_t address) const;
     uint8_t ppuRead(uint16_t address);
     void ppuWrite(uint16_t address, uint8_t value);
+
+    Cartridge cartridge;
 
     // Width/height of an tile in the pattern table
     static constexpr uint16_t PATTERN_TABLE_TILE_SIZE = 0x8;
@@ -58,7 +59,7 @@ public:
     OAMBuffer oamBuffer;
 
     bool frameReadyFlag;
-    
+
     bool nmiRequested();
     void clearNMIRequest();
     bool irqRequested();
@@ -241,8 +242,6 @@ private:
     using NameTable = std::array<uint8_t, 2 * KB>;
     NameTable nameTable;
 
-    std::shared_ptr<Cartridge> cartridge;
-
     int scanline;
     int cycle;
     int64_t frame;
@@ -266,7 +265,7 @@ private:
     void verticalBlankScanlines();
 
     void handleMapper4IRQ();
-    
+
     void doRenderingPipeline();
     void doStandardFetchCycle();
 
