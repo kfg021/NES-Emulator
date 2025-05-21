@@ -1,6 +1,7 @@
 #include "gui/mainwindow.hpp"
 
 #include <QApplication>
+#include <QDir>
 #include <QFileDialog>
 
 // Testing can be done using nestest.nes rom:
@@ -15,7 +16,7 @@ int main(int argc, char* argv[]) {
         filePath = argv[1];
     }
     else {
-        filePath = QFileDialog::getOpenFileName(nullptr, "Choose a .nes file to open.", "", "*.nes").toStdString();
+        filePath = QFileDialog::getOpenFileName(nullptr, "Choose a .nes file to open.", QDir::homePath(), "(*.nes)").toStdString();
         if (filePath.empty()) {
             // Exit if file dialog is closed without selecting a file
             return 0;
