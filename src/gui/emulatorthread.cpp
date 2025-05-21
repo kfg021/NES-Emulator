@@ -39,8 +39,16 @@ void EmulatorThread::run() {
         bool resetRequested = keyInput.resetFlag->load(std::memory_order_relaxed);
         if (resetRequested) {
             bus.initDevices();
+
             audioSamples->erase();
+            scaledAudioClock = 0;
+
+            std::queue<uint16_t> empty;
+            std::swap(recentPCs, empty);
+
             keyInput.resetFlag->store(false, std::memory_order_relaxed);
+
+            desiredNextFrameUs = (elapsedTimer.nsecsElapsed() / 1000) + TARGET_FRAME_US;
         }
 
         // Handle controller input
@@ -96,13 +104,13 @@ void EmulatorThread::run() {
         if (sleepTimeUs > MIN_SLEEP_TIME_US) {
             QThread::usleep(sleepTimeUs);
         }
-        else if(sleepTimeUs > 0) {
+        else if (sleepTimeUs > 0) {
             QThread::yieldCurrentThread();
         }
         else {
             // We missed the deadline for this frame, so reset the frame deadline.
             desiredNextFrameUs = currentTimeUs;
-            
+
             QThread::yieldCurrentThread();
         }
 
@@ -146,7 +154,7 @@ void EmulatorThread::runCycles() {
     };
 
     auto loopCondition = [&]() -> bool {
-        static constexpr int UPPER_LIMIT_CYCLES = EXPECTED_CPU_CYCLES * 2;
+        static constexpr int UPPER_LIMIT_CYCLES = EXPECTED_CPU_CYCLES_PER_FRAME * 2;
         return isRunning.load(std::memory_order_relaxed) && !bus.ppu->frameReadyFlag && cycles < UPPER_LIMIT_CYCLES;
     };
 

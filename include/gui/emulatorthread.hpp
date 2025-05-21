@@ -30,9 +30,11 @@ signals:
 
 private:
     static constexpr int FPS = 60;
-    static constexpr int INSTRUCTIONS_PER_SECOND = 1773448;
     static constexpr int TARGET_FRAME_US = 1000000 / FPS;
-    static constexpr int EXPECTED_CPU_CYCLES = INSTRUCTIONS_PER_SECOND / FPS;
+
+    // 262 scanlines, 341 cycles per scanline, 3 PPU cycles per CPU cycle
+    static constexpr int EXPECTED_CPU_CYCLES_PER_FRAME = (262 * 341) / 3;
+    static constexpr int INSTRUCTIONS_PER_SECOND = EXPECTED_CPU_CYCLES_PER_FRAME * FPS;
 
     Bus bus;
     std::atomic<bool> isRunning;

@@ -63,6 +63,13 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
 MainWindow::~MainWindow() {
     if (emulatorThread) {
         emulatorThread->requestStop();
+
+        static constexpr int MAX_WAIT_MS = 1000;
+        if (!emulatorThread->wait(MAX_WAIT_MS)) {
+            // Thread still running, terminate it as a last resort
+            emulatorThread->terminate();
+            emulatorThread->wait();
+        }
     }
 
     if (audioSink) {
