@@ -19,7 +19,7 @@ void APU::initAPU() {
 
 void APU::write(uint16_t addr, uint8_t value) {
     if (PULSE_RANGE.contains(addr)) {
-        bool pulseNum = (addr >> 3) & 1;
+        bool pulseNum = (addr >> 2) & 1;
         Pulse& pulse = pulses[pulseNum];
 
         switch (addr & 0x3) {
@@ -134,6 +134,8 @@ void APU::executeHalfCycle() {
                 halfClockCycle = true;
                 frameInterruptFlag = !interruptInhibitFlag;
                 break;
+            case 0: /*STEP_SEQUENCE[3] + 1*/
+                if (frameCounter > 0) frameInterruptFlag = !interruptInhibitFlag;
             default:
                 break;
         }
@@ -251,10 +253,10 @@ bool APU::irqRequested() const {
 float APU::getAudioSample() {
     float output = 0.0f;
 
-    // Get pulse 1 output
-    {
-        Pulse& pulse = pulses[0];
-        bool statusBit = (status >> 0) & 1;
+    // TODO: Implement correct mixing formula
+    for (int i = 0; i < 2; i++) {
+        Pulse& pulse = pulses[i];
+        bool statusBit = (status >> i) & 1;
         if (statusBit && pulse.lengthCounter > 0 && pulse.timerCounter >= 8) {
             uint8_t dutyCycle = DUTY_CYCLES[pulse.duty];
             bool dutyOutput = (dutyCycle >> pulse.dutyCycleIndex) & 1;
