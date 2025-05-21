@@ -268,5 +268,5 @@ float APU::getAudioSample() {
 
     // TODO: mix other channels
 
-    return output / 7.5f - 1; // Range [-1, 1]
+    return 0.1f * (output / 15.0f);
 }

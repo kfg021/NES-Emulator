@@ -63,11 +63,13 @@ private:
 
     // Audio
     const QAudioFormat audioFormat;
+    QMediaDevices* mediaDevices;
     QAudioSink* audioSink;
     AudioPlayer* audioPlayer;
     ThreadSafeQueue<float> audioSamples;
     void updateAudioState();
     void resetAudioSink();
+    void onDefaultAudioDeviceChanged();
 
     static QAudioFormat defaultAudioFormat();
 };

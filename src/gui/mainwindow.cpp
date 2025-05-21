@@ -8,7 +8,6 @@
 #include <QFont>
 #include <QFontDatabase>
 #include <QKeyEvent>
-#include <QMediaDevices>
 #include <QPainter>
 
 QAudioFormat MainWindow::defaultAudioFormat() {
@@ -39,6 +38,9 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
     audioPlayer = new AudioPlayer(this, audioFormat, muted, &audioSamples);
     audioSink = nullptr;
     resetAudioSink();
+
+    mediaDevices = new QMediaDevices(this);
+    connect(mediaDevices, &QMediaDevices::audioOutputsChanged, this, &MainWindow::onDefaultAudioDeviceChanged);
 
     KeyboardInput keyInput = {
         &controllerStatus,
@@ -220,6 +222,23 @@ void MainWindow::resetAudioSink() {
 
     audioSink = new QAudioSink(QMediaDevices::defaultAudioOutput(), audioFormat, this);
     audioSink->start(audioPlayer);
+}
+
+void MainWindow::onDefaultAudioDeviceChanged() {
+    bool unmuted = !(globalMuteFlag.load(std::memory_order_relaxed) & 1);
+    if (unmuted) {
+        // Mute audio while we switch over audio sink to prevent audio delay
+        globalMuteFlag.store(true, std::memory_order_relaxed);
+        updateAudioState();
+
+        resetAudioSink();
+
+        globalMuteFlag.store(false, std::memory_order_relaxed);
+        updateAudioState();
+    }
+    else {
+        resetAudioSink();
+    }
 }
 
 void MainWindow::toggleDebugMode() {
