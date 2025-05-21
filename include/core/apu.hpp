@@ -58,9 +58,11 @@ private:
         bool envelopeStartFlag;
         uint8_t envelope : 4;
         uint8_t envelopeDividerCounter;
+        uint8_t sweepDividerCounter;
+        bool sweepMutesChannel;
+        bool sweepReloadFlag;
     };
 
-    // TODO: confirm duty cycle orientation
     const std::array<uint8_t, 4> DUTY_CYCLES = {
         0b00000001,
         0b00000011,

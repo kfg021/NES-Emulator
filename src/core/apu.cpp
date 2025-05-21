@@ -35,6 +35,7 @@ void APU::write(uint16_t addr, uint8_t value) {
                 pulse.sweepUnitNegate = (value >> 3) & 0x1;
                 pulse.sweepUnitPeriod = (value >> 4) & 0x7;
                 pulse.sweepUnitEnabled = (value >> 7) & 0x1;
+                pulse.sweepReloadFlag = true;
                 break;
 
             case 2: // 0x4002 / 0x4006
@@ -240,9 +241,56 @@ void APU::halfClock() {
 
     }
 
-    // TODO: Clock sweep units
+    // Clock sweep units
     {
+        for (int i = 0; i < 2; i++) {
+            Pulse& pulse = pulses[i];
+            bool sweepClockedThisTick = false;
 
+            if (pulse.sweepReloadFlag) {
+                pulse.sweepDividerCounter = pulse.sweepUnitPeriod + 1;
+                sweepClockedThisTick = true;
+                pulse.sweepReloadFlag = false;
+            }
+
+            if (pulse.sweepDividerCounter) {
+                pulse.sweepDividerCounter--;
+            }
+
+            if (!pulse.sweepDividerCounter) {
+                sweepClockedThisTick = true;
+                pulse.sweepDividerCounter = pulse.sweepUnitPeriod + 1;
+            }
+
+            if (sweepClockedThisTick) {
+                if (pulse.sweepUnitEnabled && pulse.sweepUnitShift > 0 && pulse.lengthCounter > 0) {
+                    uint16_t currentPeriod = (static_cast<uint16_t>(pulse.timerHigh) << 8) | pulse.timerLow;
+                    uint16_t changeAmount = currentPeriod >> pulse.sweepUnitShift;
+                    uint16_t targetPeriod;
+
+                    if (pulse.sweepUnitNegate) {
+                        targetPeriod = currentPeriod - changeAmount;
+
+                        // Pulse 1 and pulse 2 are treated differently
+                        if (i == 0) {
+                            targetPeriod--;
+                        }
+                    }
+                    else {
+                        targetPeriod = currentPeriod + changeAmount;
+                    }
+
+                    if (currentPeriod < 8 || targetPeriod > 0x7FF) {
+                        pulse.sweepMutesChannel = true;
+                    }
+                    else {
+                        pulse.sweepMutesChannel = false;
+                        pulse.timerLow = targetPeriod & 0xFF;
+                        pulse.timerHigh = (targetPeriod >> 8) & 0x07;
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -257,7 +305,8 @@ float APU::getAudioSample() {
     for (int i = 0; i < 2; i++) {
         Pulse& pulse = pulses[i];
         bool statusBit = (status >> i) & 1;
-        if (statusBit && pulse.lengthCounter > 0 && pulse.timerCounter >= 8) {
+
+        if (statusBit && pulse.lengthCounter > 0 && pulse.timerCounter >= 8 && !pulse.sweepMutesChannel) {
             uint8_t dutyCycle = DUTY_CYCLES[pulse.duty];
             bool dutyOutput = (dutyCycle >> pulse.dutyCycleIndex) & 1;
 
