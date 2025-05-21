@@ -36,6 +36,10 @@ void APU::write(uint16_t addr, uint8_t value) {
                 pulse.sweepUnitPeriod = (value >> 4) & 0x7;
                 pulse.sweepUnitEnabled = (value >> 7) & 0x1;
                 pulse.sweepReloadFlag = true;
+
+                if (!pulse.sweepUnitEnabled || !pulse.sweepUnitShift) {
+                    pulse.sweepMutesChannel = false;
+                }
                 break;
 
             case 2: // 0x4002 / 0x4006
@@ -299,25 +303,28 @@ bool APU::irqRequested() const {
 }
 
 float APU::getAudioSample() {
-    float output = 0.0f;
+    auto mixPulse = [](uint8_t pulse1, uint8_t pulse2) -> float {
+        if (pulse1 + pulse2 == 0) return 0.0f;
+        return 95.88f / ((8128.0f / (pulse1 + pulse2)) + 100.0f);
+    };
 
-    // TODO: Implement correct mixing formula
+    std::array<uint8_t, 2> pulseOutputs = {};
     for (int i = 0; i < 2; i++) {
         Pulse& pulse = pulses[i];
         bool statusBit = (status >> i) & 1;
 
-        if (statusBit && pulse.lengthCounter > 0 && pulse.timerCounter >= 8 && !pulse.sweepMutesChannel) {
+        if (statusBit && pulse.lengthCounter > 0 && pulse.timerCounter >= 9 && !pulse.sweepMutesChannel) {
             uint8_t dutyCycle = DUTY_CYCLES[pulse.duty];
             bool dutyOutput = (dutyCycle >> pulse.dutyCycleIndex) & 1;
 
             if (dutyOutput) {
                 uint8_t volume = pulse.constantVolume ? pulse.volumeOrEnvelopeRate : pulse.envelope;
-                output += volume;
+                pulseOutputs[i] = volume;
             }
         }
     }
 
     // TODO: mix other channels
 
-    return 0.1f * (output / 15.0f);
+    return mixPulse(pulseOutputs[0], pulseOutputs[1]);
 }
