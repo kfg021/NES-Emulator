@@ -15,14 +15,6 @@ PPU::PPU() {
     finishedDisplay = std::make_unique<Display>();
 }
 
-void PPU::setBus(Bus* bus) {
-    this->bus = bus;
-}
-
-void PPU::setCartridge(std::shared_ptr<Cartridge>& cartridge) {
-    this->cartridge = cartridge;
-}
-
 void PPU::initPPU() {
     control = 0;
     mask = 0;
@@ -63,6 +55,21 @@ void PPU::initPPU() {
     sprite0OnCurrentScanline = false;
 
     frameReadyFlag = false;
+
+    nmiRequest = false;
+    irqRequest = false;
+}
+
+bool PPU::nmiRequested() {
+    return nmiRequest;
+}
+
+void PPU::clearNMIRequest() {
+    nmiRequest = false;
+}
+
+bool PPU::irqRequested() {
+    return irqRequest;
 }
 
 uint8_t PPU::view(uint8_t ppuRegister) const {
@@ -129,7 +136,7 @@ void PPU::write(uint8_t ppuRegister, uint8_t value) {
         // From (https://www.nesdev.org/wiki/PPU_registers#PPUCTRL): 
         // If the PPU is currently in vertical blank, and the PPUSTATUS ($2002) vblank flag is still set (1), changing the NMI flag in bit 7 of $2000 from 0 to 1 will immediately generate an NMI. 
         if (status.vBlankStarted && !oldNmiFlag && newNmiFlag) {
-            bus->nmiRequest = true;
+            nmiRequest = true;
         }
 
         temporaryVramAddress.nametableX = control.nametableX;
@@ -214,7 +221,7 @@ uint16_t PPU::getNameTableIndex(uint16_t address) const {
         return (address & 0x3FF) | 0x400;
     };
 
-    Mapper::MirrorMode mirrorMode = cartridge->getMirrorMode();
+    Mapper::MirrorMode mirrorMode = cartridge.getMirrorMode();
     if (mirrorMode == Mapper::MirrorMode::HORIZONTAL) {
         if (NAMETABLE_QUAD_1.contains(address) || NAMETABLE_QUAD_2.contains(address)) {
             return mapToNameTableA(address);
@@ -241,15 +248,15 @@ uint16_t PPU::getNameTableIndex(uint16_t address) const {
 
 uint8_t PPU::ppuView(uint16_t address) const {
     if (PATTERN_TABLE_RANGE.contains(address)) {
-        return cartridge->mapper->mapCHRView(address);
+        return cartridge.mapper->mapCHRView(address);
     }
     else if (NAMETABLE_RANGE.contains(address)) {
-        if (cartridge->getMirrorMode() != Mapper::MirrorMode::FOUR_SCREEN) {
+        if (cartridge.getMirrorMode() != Mapper::MirrorMode::FOUR_SCREEN) {
             return nameTable[getNameTableIndex(address)];
         }
         else {
             // Mapper handles nametables in 4 screen mode
-            return cartridge->mapper->mapCHRView(address);
+            return cartridge.mapper->mapCHRView(address);
         }
     }
     else if (PALLETE_RAM_RANGE.contains(address)) {
@@ -266,15 +273,15 @@ uint8_t PPU::ppuView(uint16_t address) const {
 
 uint8_t PPU::ppuRead(uint16_t address) {
     if (PATTERN_TABLE_RANGE.contains(address)) {
-        return cartridge->mapper->mapCHRRead(address);
+        return cartridge.mapper->mapCHRRead(address);
     }
     else if (NAMETABLE_RANGE.contains(address)) {
-        if (cartridge->getMirrorMode() != Mapper::MirrorMode::FOUR_SCREEN) {
+        if (cartridge.getMirrorMode() != Mapper::MirrorMode::FOUR_SCREEN) {
             return nameTable[getNameTableIndex(address)];
         }
         else {
             // Mapper handles nametables in 4 screen mode
-            return cartridge->mapper->mapCHRRead(address);
+            return cartridge.mapper->mapCHRRead(address);
         }
     }
     else if (PALLETE_RAM_RANGE.contains(address)) {
@@ -291,15 +298,15 @@ uint8_t PPU::ppuRead(uint16_t address) {
 
 void PPU::ppuWrite(uint16_t address, uint8_t value) {
     if (PATTERN_TABLE_RANGE.contains(address)) {
-        cartridge->mapper->mapCHRWrite(address, value);
+        cartridge.mapper->mapCHRWrite(address, value);
     }
     else if (NAMETABLE_RANGE.contains(address)) {
-        if (cartridge->getMirrorMode() != Mapper::MirrorMode::FOUR_SCREEN) {
+        if (cartridge.getMirrorMode() != Mapper::MirrorMode::FOUR_SCREEN) {
             nameTable[getNameTableIndex(address)] = value;
         }
         else {
             // Mapper handles nametables in 4 screen mode
-            cartridge->mapper->mapCHRWrite(address, value);
+            cartridge.mapper->mapCHRWrite(address, value);
         }
     }
     else if (PALLETE_RAM_RANGE.contains(address)) {
@@ -355,12 +362,11 @@ void PPU::executeCycle() {
 }
 
 void PPU::handleMapper4IRQ() {
-    if (cartridge->mapper->config.id == 4) {
+    if (cartridge.mapper->config.id == 4) {
         // We can static_cast instead of dynamic_cast because we explicitly checked id
-        Mapper4* mapper4 = static_cast<Mapper4*>(cartridge->mapper.get());
-        if (mapper4->irqRequestAtEndOfScanline()) {
-            bus->irqRequest = true;
-        }
+        Mapper4* mapper4 = static_cast<Mapper4*>(cartridge.mapper.get());
+        mapper4->clockIRQTimer();
+        irqRequest = mapper4->irqRequested();
     }
 }
 
@@ -410,7 +416,7 @@ void PPU::verticalBlankScanlines() {
     if (scanline == 241 && cycle == 1) {
         status.vBlankStarted = 1;
         if (control.nmiEnabled) {
-            bus->nmiRequest = true;
+            nmiRequest = true;
         }
     }
 }
@@ -605,7 +611,7 @@ void PPU::drawPixel() {
         }
     }
 
-    // TODO: use the PPU's emphasis bits to modify the final color
+    // TODO: Use the PPU's emphasis bits to modify the final color
     (*workingDisplay)[scanline][cycle - 1] = finalColor;
 }
 

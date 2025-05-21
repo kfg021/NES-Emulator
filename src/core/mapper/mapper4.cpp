@@ -20,6 +20,8 @@ Mapper4::Mapper4(const Config& config, const std::vector<uint8_t>& prg, const st
     irqReloadValue = 0;
     irqTimer = 0;
     irqEnabled = 0;
+    irqReloadPending = 0;
+    irqRequest = 0;
 
     prgSwitchableBankSelect = {};
     chrSwitchableBankSelect = {};
@@ -29,15 +31,20 @@ Mapper4::Mapper4(const Config& config, const std::vector<uint8_t>& prg, const st
     }
 }
 
-bool Mapper4::irqRequestAtEndOfScanline() {
-    if (irqTimer == 0) {
+void Mapper4::clockIRQTimer() {
+    if (irqTimer == 0 || irqReloadPending) {
         irqTimer = irqReloadValue;
+        irqReloadPending = false;
     }
     else {
         irqTimer--;
     }
 
-    return irqEnabled && (irqTimer == 0);
+    irqRequest = irqEnabled && (irqTimer == 0);
+}
+
+bool Mapper4::irqRequested(){
+    return irqRequest;
 }
 
 uint8_t Mapper4::mapPRGView(uint16_t cpuAddress) const {
@@ -98,11 +105,13 @@ void Mapper4::mapPRGWrite(uint16_t cpuAddress, uint8_t value) {
         }
         else {
             irqTimer = 0;
+            irqReloadPending = true;
         }
     }
     else if (IRQ_DISABLE_OR_IRQ_ENABLE.contains(cpuAddress)) {
         if ((cpuAddress & 1) == 0) {
             irqEnabled = false;
+            irqRequest = false;
         }
         else {
             irqEnabled = true;

@@ -17,9 +17,8 @@ public:
 
     MirrorMode getMirrorMode() const override;
 
-    // The PPU will call this function on cycle 260 of every scanline.
-    // It returns true if the mapper would like to trigger an IRQ
-    bool irqRequestAtEndOfScanline();
+    void clockIRQTimer();
+    bool irqRequested();
 
 private:
     // PRG banks
@@ -43,7 +42,7 @@ private:
     static constexpr MemoryRange IRQ_DISABLE_OR_IRQ_ENABLE{ 0xE000, 0xFFFF };
 
     // Some games use special nametable mirroring and have custom nametables within the mapper itself
-    static constexpr MemoryRange ALTERNATIVE_NAMETABLE_RANGE{0x2000, 0x2CFF};
+    static constexpr MemoryRange ALTERNATIVE_NAMETABLE_RANGE{0x2000, 0x2FFF};
     std::vector<uint8_t> customNametable;
 
     uint8_t bankSelect;
@@ -53,6 +52,8 @@ private:
     uint8_t irqReloadValue;
     uint8_t irqTimer;
     bool irqEnabled;
+    bool irqReloadPending;
+    bool irqRequest;
 
     std::array<uint8_t, 2> prgSwitchableBankSelect;
     std::array<uint8_t, 6> chrSwitchableBankSelect;

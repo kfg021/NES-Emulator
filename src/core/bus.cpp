@@ -5,8 +5,6 @@ Bus::Bus() {
     cpu->setBus(this);
 
     ppu = std::make_unique<PPU>();
-    ppu->setBus(this);
-
     apu = std::make_unique<APU>();
 }
 
@@ -34,11 +32,10 @@ void Bus::initDevices() {
 }
 
 Cartridge::Status Bus::loadROM(const std::string& filePath) {
-    cartridge = std::make_shared<Cartridge>(filePath);
+    ppu->cartridge = Cartridge(filePath);
 
-    Cartridge::Status status = cartridge->getStatus();
+    const Cartridge::Status& status = ppu->cartridge.getStatus();
     if (status.code == Cartridge::Code::SUCCESS) {
-        ppu->setCartridge(cartridge);
         initDevices();
     }
 
@@ -65,7 +62,7 @@ uint8_t Bus::view(uint16_t address) const {
         }
     }
     else { // if (CARTRIDGE_ADDRESSABLE_RANGE.contains(address))
-        return cartridge->mapper->mapPRGView(address);
+        return ppu->cartridge.mapper->mapPRGView(address);
     }
 }
 
@@ -92,7 +89,7 @@ uint8_t Bus::read(uint16_t address) {
         }
     }
     else { // if (CARTRIDGE_ADDRESSABLE_RANGE.contains(address))
-        return cartridge->mapper->mapPRGRead(address);
+        return ppu->cartridge.mapper->mapPRGRead(address);
     }
 }
 
@@ -126,7 +123,7 @@ void Bus::write(uint16_t address, uint8_t value) {
         }
     }
     else { // if (CARTRIDGE_ADDRESSABLE_RANGE.contains(address)) 
-        cartridge->mapper->mapPRGWrite(address, value);
+        ppu->cartridge.mapper->mapPRGWrite(address, value);
     }
 }
 
@@ -143,17 +140,21 @@ void Bus::executeCycle() {
     else {
         cpu->executeCycle();
     }
+    
+    // 2 CPU Cycles for every APU cycle
+    apu->executeHalfCycle();
 
-    apu->executeCycle();
+    bool nmiRequested = ppu->nmiRequested();
+    bool irqRequested = ppu->irqRequested();
 
     // Handle interrupt requests
-    if (nmiRequest) {
+    if (nmiRequested) {
         cpu->NMI();
-        nmiRequest = false;
+        ppu->clearNMIRequest();
     }
-    else if (irqRequest) {
+
+    if (irqRequested) {
         cpu->IRQ();
-        irqRequest = false;
     }
 
     totalCycles++;

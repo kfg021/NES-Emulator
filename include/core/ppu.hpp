@@ -1,19 +1,14 @@
 #ifndef PPU_HPP
 #define PPU_HPP
 
-#include "core/bus.hpp"
 #include "core/cartridge.hpp"
 #include "util/util.hpp"
 
 #include <memory>
 
-class Bus;
-
 class PPU {
 public:
     PPU();
-    void setBus(Bus* bus);
-    void setCartridge(std::shared_ptr<Cartridge>& cartridge);
     void initPPU();
 
     enum class Register {
@@ -34,6 +29,8 @@ public:
     uint8_t ppuView(uint16_t address) const;
     uint8_t ppuRead(uint16_t address);
     void ppuWrite(uint16_t address, uint8_t value);
+
+    Cartridge cartridge;
 
     // Width/height of an tile in the pattern table
     static constexpr uint16_t PATTERN_TABLE_TILE_SIZE = 0x8;
@@ -62,6 +59,10 @@ public:
     OAMBuffer oamBuffer;
 
     bool frameReadyFlag;
+
+    bool nmiRequested();
+    void clearNMIRequest();
+    bool irqRequested();
 
 private:
     // PPU internal data structures (descriptions from https://www.nesdev.org/wiki/PPU_registers)
@@ -241,11 +242,6 @@ private:
     using NameTable = std::array<uint8_t, 2 * KB>;
     NameTable nameTable;
 
-    // Pointer to the Bus instance that the PPU is attached to. The CPU is not responsible for clearing this memory as it will get deleted when the Bus goes out of scope
-    Bus* bus;
-
-    std::shared_ptr<Cartridge> cartridge;
-
     int scanline;
     int cycle;
     int64_t frame;
@@ -269,7 +265,7 @@ private:
     void verticalBlankScanlines();
 
     void handleMapper4IRQ();
-    
+
     void doRenderingPipeline();
     void doStandardFetchCycle();
 
@@ -304,6 +300,9 @@ private:
     uint8_t oamAddress;
 
     uint16_t getPalleteRamAddress(uint8_t backgroundTable, uint8_t patternTable) const;
+
+    bool nmiRequest;
+    bool irqRequest;
 };
 
 #endif // PPU_HPP

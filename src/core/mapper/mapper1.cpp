@@ -24,10 +24,12 @@ Mapper1::Mapper1(const Config& config, const std::vector<uint8_t>& prg, const st
 
 uint8_t Mapper1::mapPRGView(uint16_t cpuAddress) const {
     if (PRG_RANGE.contains(cpuAddress)) {
+        uint8_t prgRomSelect = prgBank.prgRomSelect % config.prgChunks;
+
         uint32_t mappedAddress;
         if (control.prgRomMode == 0 || control.prgRomMode == 1) {
             // 0, 1: switch 32 KB at $8000
-            mappedAddress = (32 * KB) * (prgBank.prgRomSelect >> 1) + (cpuAddress & MASK<32 * KB>());
+            mappedAddress = (32 * KB) * (prgRomSelect >> 1) + (cpuAddress & MASK<32 * KB>());
         }
         else if (control.prgRomMode == 2) {
             // 2: fix first bank at $8000 and switch 16 KB bank at $C000
@@ -35,13 +37,13 @@ uint8_t Mapper1::mapPRGView(uint16_t cpuAddress) const {
                 mappedAddress = cpuAddress & MASK<16 * KB>();
             }
             else { // if (PRG_ROM_BANK_1.contains(cpuAddress))
-                mappedAddress = (16 * KB) * prgBank.prgRomSelect + (cpuAddress & MASK<16 * KB>());
+                mappedAddress = (16 * KB) * prgRomSelect + (cpuAddress & MASK<16 * KB>());
             }
         }
         else { // if (control.prgRomMode == 3)
             // 3: fix last bank at $C000 and switch 16 KB bank at $8000
             if (PRG_ROM_BANK_0.contains(cpuAddress)) {
-                mappedAddress = (16 * KB) * prgBank.prgRomSelect + (cpuAddress & MASK<16 * KB>());
+                mappedAddress = (16 * KB) * prgRomSelect + (cpuAddress & MASK<16 * KB>());
             }
             else { // if (PRG_ROM_BANK_1.contains(cpuAddress))
                 mappedAddress = (16 * KB) * (config.prgChunks - 1) + (cpuAddress & MASK<16 * KB>());
