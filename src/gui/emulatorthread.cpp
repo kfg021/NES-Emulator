@@ -16,7 +16,7 @@ EmulatorThread::EmulatorThread(QObject* parent, const std::string& filePath, con
 	}
 
 	scaledAudioClock = 0;
-	soundReady = false;
+	soundActivated.store(false, std::memory_order_relaxed);
 }
 
 EmulatorThread::~EmulatorThread() {
@@ -26,6 +26,10 @@ EmulatorThread::~EmulatorThread() {
 
 void EmulatorThread::requestStop() {
 	isRunning.store(false, std::memory_order_release);
+}
+
+void EmulatorThread::requestSoundReactivation() {
+	soundActivated.store(false, std::memory_order_release);
 }
 
 void EmulatorThread::run() {
@@ -136,9 +140,9 @@ void EmulatorThread::runCycles() {
 				audioSamples->push(sample);
 
 				constexpr static size_t INITIAL_AUDIO_SIZE = AUDIO_SAMPLE_RATE / 100;
-				if (!soundReady && audioSamples->size() >= INITIAL_AUDIO_SIZE) {
+				if (!soundActivated.load(std::memory_order_acquire) && audioSamples->size() >= INITIAL_AUDIO_SIZE) {
 					emit soundReadySignal();
-					soundReady = true;
+					soundActivated.store(true, std::memory_order_release);
 				}
 
 				scaledAudioClock -= INSTRUCTIONS_PER_SECOND;

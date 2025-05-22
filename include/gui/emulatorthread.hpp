@@ -21,6 +21,7 @@ public:
 	void run() override;
 
 	void requestStop();
+	void requestSoundReactivation();
 
 	static constexpr int AUDIO_SAMPLE_RATE = 44100;
 
@@ -39,6 +40,7 @@ private:
 
 	Bus bus;
 	std::atomic<bool> isRunning;
+	std::atomic<bool> soundActivated;
 
 	// EmulatorThread is not responsible for managing this memory
 	KeyboardInput keyInput;
@@ -50,7 +52,6 @@ private:
 	ThreadSafeQueue<float>* audioSamples;
 
 	int scaledAudioClock;
-	bool soundReady;
 };
 
 #endif // EMULATORTHREAD_HPP
