@@ -37,7 +37,6 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
     bool muted = globalMuteFlag.load(std::memory_order_relaxed) & 1;
     audioPlayer = new AudioPlayer(this, audioFormat, muted, &audioSamples);
     audioSink = nullptr;
-    resetAudioSink();
 
     mediaDevices = new QMediaDevices(this);
     connect(mediaDevices, &QMediaDevices::audioOutputsChanged, this, &MainWindow::onDefaultAudioDeviceChanged);
@@ -54,6 +53,7 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
     };
     emulatorThread = new EmulatorThread(this, filePath, keyInput, &audioSamples);
 
+    connect(emulatorThread, &EmulatorThread::soundReadySignal, this, &MainWindow::enableAudioSink, Qt::QueuedConnection);
     connect(emulatorThread, &EmulatorThread::frameReadySignal, this, &MainWindow::displayNewFrame, Qt::QueuedConnection);
     connect(emulatorThread, &EmulatorThread::debugFrameReadySignal, this, &MainWindow::displayNewDebugFrame, Qt::QueuedConnection);
 
@@ -77,6 +77,10 @@ MainWindow::~MainWindow() {
             audioSink->stop();
         }
     }
+}
+
+void MainWindow::enableAudioSink() {
+    resetAudioSink();
 }
 
 void MainWindow::displayNewFrame(const QImage& image) {

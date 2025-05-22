@@ -14,41 +14,43 @@
 #include <QThread>
 
 class EmulatorThread : public QThread {
-    Q_OBJECT
+	Q_OBJECT
 public:
-    EmulatorThread(QObject* parent, const std::string& filePath, const KeyboardInput& keyInput, ThreadSafeQueue<float>* audioSamples);
-    ~EmulatorThread() override;
-    void run() override;
+	EmulatorThread(QObject* parent, const std::string& filePath, const KeyboardInput& keyInput, ThreadSafeQueue<float>* audioSamples);
+	~EmulatorThread() override;
+	void run() override;
 
-    void requestStop();
+	void requestStop();
 
-    static constexpr int AUDIO_SAMPLE_RATE = 44100;
+	static constexpr int AUDIO_SAMPLE_RATE = 44100;
 
 signals:
-    void frameReadySignal(const QImage& display);
-    void debugFrameReadySignal(const DebugWindowState& state);
+	void soundReadySignal();
+	void frameReadySignal(const QImage& display);
+	void debugFrameReadySignal(const DebugWindowState& state);
 
 private:
-    static constexpr int FPS = 60;
-    static constexpr int TARGET_FRAME_US = 1000000 / FPS;
+	static constexpr int FPS = 60;
+	static constexpr int TARGET_FRAME_US = 1000000 / FPS;
 
-    // 262 scanlines, 341 cycles per scanline, 3 PPU cycles per CPU cycle
-    static constexpr int EXPECTED_CPU_CYCLES_PER_FRAME = (262 * 341) / 3;
-    static constexpr int INSTRUCTIONS_PER_SECOND = EXPECTED_CPU_CYCLES_PER_FRAME * FPS;
+	// 262 scanlines, 341 cycles per scanline, 3 PPU cycles per CPU cycle
+	static constexpr int EXPECTED_CPU_CYCLES_PER_FRAME = (262 * 341) / 3;
+	static constexpr int INSTRUCTIONS_PER_SECOND = EXPECTED_CPU_CYCLES_PER_FRAME * FPS;
 
-    Bus bus;
-    std::atomic<bool> isRunning;
+	Bus bus;
+	std::atomic<bool> isRunning;
 
-    // EmulatorThread is not responsible for managing this memory
-    KeyboardInput keyInput;
+	// EmulatorThread is not responsible for managing this memory
+	KeyboardInput keyInput;
 
-    void runCycles();
-    std::queue<uint16_t> recentPCs;
-    std::array<QString, DebugWindowState::NUM_INSTS_TOTAL> getInsts() const;
+	void runCycles();
+	std::queue<uint16_t> recentPCs;
+	std::array<QString, DebugWindowState::NUM_INSTS_TOTAL> getInsts() const;
 
-    ThreadSafeQueue<float>* audioSamples;
+	ThreadSafeQueue<float>* audioSamples;
 
-    int scaledAudioClock;
+	int scaledAudioClock;
+	bool soundReady;
 };
 
 #endif // EMULATORTHREAD_HPP
