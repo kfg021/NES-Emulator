@@ -9,7 +9,7 @@ A Nintendo Entertainment System (NES) emulator implemented in C++ with a Qt6-bas
 
 - Accurate CPU emulation (Supports all official 6502 opcodes)
 - PPU (Picture Processing Unit) emulation
-- APU (Audio processing Unit) emulation (Only supports pulse channels 1 and 2; Work in progress)
+- APU (Audio processing Unit) emulation (Pulse and Triangle channels implemented; Noise and DMC channels WIP)
 - Support for many of the most popular mappers:
   - NROM (Mapper 0)
   - MMC1 (Mapper 1)
@@ -166,7 +166,7 @@ The emulator is structured into several key components:
 The following features and improvements are planned for future development:
 
 ### Core Emulation
-- Finish APU (Triangle, Noise, DMC)
+- Finish APU (Add noise and DMC channels)
 - Additional mapper support
 - Complete iNES 2.0 format support
 - Support for undocumented 6502 CPU opcodes
