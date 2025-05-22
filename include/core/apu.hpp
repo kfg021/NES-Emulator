@@ -24,7 +24,7 @@ public:
     void executeHalfCycle();
     bool irqRequested() const;
 
-    float getAudioSample();
+    float getAudioSample() const;
 private:
     constexpr static MemoryRange PULSE_RANGE{ 0x4000, 0x4007 };
     constexpr static MemoryRange TRIANGLE_RANGE{ 0x4008, 0x400B };
@@ -40,9 +40,9 @@ private:
 
         // 0x4001 / 0x4005
         uint8_t sweepUnitShift : 3;
-        uint8_t sweepUnitNegate : 1;
+        bool sweepUnitNegate : 1;
         uint8_t sweepUnitPeriod : 3;
-        uint8_t sweepUnitEnabled : 1;
+        bool sweepUnitEnabled : 1;
 
         // 0x4002 / 0x4006
         uint8_t timerLow;
@@ -59,8 +59,29 @@ private:
         uint8_t envelope : 4;
         uint8_t envelopeDividerCounter;
         uint8_t sweepDividerCounter;
-        bool sweepMutesChannel;
-        bool sweepReloadFlag;
+        bool sweepMutesChannel : 1;
+        bool sweepReloadFlag : 1;
+    };
+
+    struct Triangle {
+        // 0x4008
+        uint8_t linearCounterLoad : 7;
+        bool lengthCounterHaltOrLinearCounterControl : 1;
+
+        // 0x400A
+        uint8_t timerLow;
+
+        // 0x400B
+        uint8_t timerHigh : 3;
+        uint8_t lengthCounterLoad : 5;
+
+        // Internal state
+        uint16_t timerCounter : 11;
+        uint8_t linearCounter : 7;
+        bool linearCounterReloadFlag : 1;
+        uint8_t sequenceIndex : 5;
+        uint8_t lengthCounter;
+        uint8_t outputValue;
     };
 
     const std::array<uint8_t, 4> DUTY_CYCLES = {
@@ -71,6 +92,8 @@ private:
     };
 
     std::array<Pulse, 2> pulses;
+    Triangle triangle;
+
     uint8_t status;
 
     bool frameSequenceMode;
@@ -87,6 +110,11 @@ private:
     constexpr static std::array<uint8_t, 0x20> LENGTH_COUNTER_TABLE = {
         10, 254, 20,  2, 40,  4, 80,  6, 160,  8, 60, 10, 14, 12, 26, 14,
         12,  16, 24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32, 30
+    };
+
+    constexpr static std::array<uint8_t, 32> TRIANGLE_SEQUENCE = {
+        15, 14, 13, 12, 11, 10,  9,  8,  7,  6,  5,  4,  3,  2,  1,  0,
+         0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15
     };
 
     void quarterClock();

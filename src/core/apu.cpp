@@ -7,6 +7,7 @@ APU::APU() {
 void APU::initAPU() {
     pulses[0] = {};
     pulses[1] = {};
+    triangle = {};
 
     status = 0;
     frameCounter = 0;
@@ -48,12 +49,12 @@ void APU::write(uint16_t addr, uint8_t value) {
 
             default: // 0x4003 / 0x4007
                 pulse.timerHigh = value & 0x7;
-                uint16_t timerReload = (pulse.timerHigh << 8) | pulse.timerLow;
+                uint16_t timerReload = (static_cast<uint16_t>(pulse.timerHigh) << 8) | pulse.timerLow;
                 pulse.timerCounter = timerReload;
 
                 pulse.lengthCounterLoad = (value >> 3) & 0x1F;
-                bool channelEnabled = (status >> pulseNum) & 1;
-                if (channelEnabled) {
+                bool pulseStatus = (status >> pulseNum) & 1;
+                if (pulseStatus) {
                     pulse.lengthCounter = LENGTH_COUNTER_TABLE[pulse.lengthCounterLoad];
                 }
 
@@ -62,16 +63,49 @@ void APU::write(uint16_t addr, uint8_t value) {
                 break;
         }
     }
+    else if (TRIANGLE_RANGE.contains(addr)) {
+        switch (addr & 0x3) {
+            case 0: // 0x4008
+                triangle.linearCounterLoad = value & 0x7F;
+                triangle.lengthCounterHaltOrLinearCounterControl = (value >> 7) & 1;
+                break;
+            case 1: // 0x4009
+                // Unused
+                break;
+            case 2: // 0x400A
+                triangle.timerLow = value;
+                break;
+            default: // 0x400B
+                triangle.timerHigh = value & 0x7;
+                uint16_t timerReload = (static_cast<uint16_t>(triangle.timerHigh) << 8) | triangle.timerLow;
+                triangle.timerCounter = timerReload;
+
+                triangle.lengthCounterLoad = (value >> 3) & 0x1F;
+                bool triangleStatus = (status >> 2) & 1;
+                if (triangleStatus) {
+                    triangle.lengthCounter = LENGTH_COUNTER_TABLE[triangle.lengthCounterLoad];
+                }
+                triangle.linearCounterReloadFlag = true;
+                break;
+        }
+    }
+
+    // TODO: other channels
 }
 
 uint8_t APU::viewStatus() const {
     uint8_t tempStatus = 0;
 
     for (int i = 0; i < 2; i++) {
-        bool statusBit = (status >> i) & 1;
-        if (statusBit && pulses[i].lengthCounter > 0) {
+        bool pulseStatus = (status >> i) & 1;
+        if (pulseStatus && pulses[i].lengthCounter > 0) {
             tempStatus |= (1 << i);
         }
+    }
+
+    bool triangleStatus = (status >> 2) & 1;
+    if (triangleStatus && triangle.lengthCounter > 0 && triangle.linearCounter > 0) {
+        tempStatus |= (1 << 2);
     }
 
     if (frameInterruptFlag) {
@@ -79,7 +113,7 @@ uint8_t APU::viewStatus() const {
     }
 
     // $4015 read	IF-D NT21	DMC interrupt (I), frame interrupt (F), DMC active (D), length counter > 0 (N/T/2/1)
-    // TODO: I, D, N, T
+    // TODO: I, D, N
 
     return tempStatus;
 }
@@ -92,6 +126,12 @@ uint8_t APU::readStatus() {
 void APU::writeStatus(uint8_t value) {
     if (!((value >> 0) & 1)) pulses[0].lengthCounter = 0;
     if (!((value >> 1) & 1)) pulses[1].lengthCounter = 0;
+
+    // Triangle channel
+    if (!((value >> 2) & 1)) {
+        triangle.lengthCounter = 0;
+        triangle.outputValue = 0;
+    }
 
     // TODO: Other channels
 
@@ -180,18 +220,33 @@ void APU::executeHalfCycle() {
     }
 
     if (totalCycles & 1) {
+        // Clock pulse timers
         for (int i = 0; i < 2; i++) {
-            bool statusBit = (status >> i) & 1;
-            if (statusBit) {
+            bool pulseStatus = (status >> i) & 1;
+            if (pulseStatus) {
                 Pulse& pulse = pulses[i];
                 pulse.timerCounter--;
 
                 if (pulse.timerCounter == 0x7FF) {
-                    uint16_t timerReload = (pulse.timerHigh << 8) | pulse.timerLow;
+                    uint16_t timerReload = (static_cast<uint16_t>(pulse.timerHigh) << 8) | pulse.timerLow;
                     pulse.timerCounter = timerReload;
 
                     pulse.dutyCycleIndex++;
                 }
+            }
+        }
+    }
+
+    // Clock triangle timer
+    bool triangleStatus = (status >> 2) & 1;
+    uint16_t triangleTimerPeriod = (static_cast<uint16_t>(triangle.timerHigh) << 8) | triangle.timerLow;
+    if (triangleStatus && triangleTimerPeriod >= 2) {
+        if (triangle.lengthCounter > 0 && triangle.linearCounter > 0) {
+            triangle.timerCounter--;
+            if (triangle.timerCounter == 0x7FF) {
+                triangle.timerCounter = triangleTimerPeriod;
+                triangle.sequenceIndex++;
+                triangle.outputValue = TRIANGLE_SEQUENCE[triangle.sequenceIndex];
             }
         }
     }
@@ -225,24 +280,37 @@ void APU::quarterClock() {
                 }
             }
         }
-
-        // TODO: Triangle envelope
     }
 
-    // TODO: Clock triangle linear counter
+    // Clock triangle linear counter
     {
+        if (triangle.linearCounterReloadFlag) {
+            triangle.linearCounter = triangle.linearCounterLoad;
+        }
+        else if (triangle.linearCounter > 0) {
+            triangle.linearCounter--;
+        }
 
+        if (!triangle.lengthCounterHaltOrLinearCounterControl) {
+            triangle.linearCounterReloadFlag = false;
+        }
     }
 }
 
 void APU::halfClock() {
     // Clock length counters
     {
+        // Pulse
         for (int i = 0; i < 2; i++) {
-            bool statusBit = (status >> i) & 1;
-            if (statusBit && pulses[i].lengthCounter && !pulses[i].envelopeLoopOrLengthCounterHalt) pulses[i].lengthCounter--;
+            bool pulseStatus = (status >> i) & 1;
+            if (pulseStatus && pulses[i].lengthCounter && !pulses[i].envelopeLoopOrLengthCounterHalt) pulses[i].lengthCounter--;
         }
 
+        // Triangle
+        bool triangleStatus = (status >> 2) & 1;
+        if (triangleStatus && triangle.lengthCounter > 0 && !triangle.lengthCounterHaltOrLinearCounterControl) {
+            triangle.lengthCounter--;
+        }
     }
 
     // Clock sweep units
@@ -302,18 +370,26 @@ bool APU::irqRequested() const {
     return frameInterruptFlag;
 }
 
-float APU::getAudioSample() {
+float APU::getAudioSample() const {
     auto mixPulse = [](uint8_t pulse1, uint8_t pulse2) -> float {
         if (pulse1 + pulse2 == 0) return 0.0f;
         return 95.88f / ((8128.0f / (pulse1 + pulse2)) + 100.0f);
     };
 
+    auto mixTND = [](uint8_t triangle, uint8_t noise, uint8_t dmc) -> float {
+        if (triangle + noise + dmc == 0) return 0.0f;
+
+        float sum = (triangle / 8227.0f) + (noise / 12241.0f) + (dmc / 22638.0f);
+        return 159.79f / ((1.0f / sum) + 100.0f);
+    };
+
+    // Get pulse outputs
     std::array<uint8_t, 2> pulseOutputs = {};
     for (int i = 0; i < 2; i++) {
-        Pulse& pulse = pulses[i];
-        bool statusBit = (status >> i) & 1;
+        const Pulse& pulse = pulses[i];
+        bool pulseStatus = (status >> i) & 1;
 
-        if (statusBit && pulse.lengthCounter > 0 && pulse.timerCounter >= 9 && !pulse.sweepMutesChannel) {
+        if (pulseStatus && pulse.lengthCounter > 0 && pulse.timerCounter >= 9 && !pulse.sweepMutesChannel) {
             uint8_t dutyCycle = DUTY_CYCLES[pulse.duty];
             bool dutyOutput = (dutyCycle >> pulse.dutyCycleIndex) & 1;
 
@@ -324,7 +400,10 @@ float APU::getAudioSample() {
         }
     }
 
-    // TODO: mix other channels
+    // Get triangle outputs
+    uint8_t triangleOutput = triangle.outputValue;
 
-    return mixPulse(pulseOutputs[0], pulseOutputs[1]);
+    // TODO: Mix Noise and DMC channels
+
+    return mixPulse(pulseOutputs[0], pulseOutputs[1]) +mixTND(triangleOutput, 0, 0);
 }
