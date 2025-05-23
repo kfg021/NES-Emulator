@@ -9,6 +9,9 @@ void APU::initAPU() {
     pulses[1] = {};
     triangle = {};
 
+    noise = {};
+    noise.shiftRegister = 1; // Shift register is 1 on power-up
+
     status = 0;
     frameCounter = 0;
     totalCycles = 0;
@@ -89,8 +92,33 @@ void APU::write(uint16_t addr, uint8_t value) {
                 break;
         }
     }
+    else if (NOISE_RANGE.contains(addr)) {
+        switch (addr & 0x3) {
+            case 0: // 0x400C
+                noise.volumeOrEnvelope = value & 0xF;
+                noise.constantVolume = (value >> 4) & 0x1;
+                noise.envelopeLoopOrLengthCounterHalt = (value >> 5) & 0x1;
+                break;
+            case 1: // 0x400D
+                // Unused
+                break;
+            case 2: // 0x400E
+                noise.noisePeriod = value & 0xF;
+                noise.loopNoise = (value >> 7) & 0x1;
+                noise.timerCounter = NOISE_PERIOD_TABLE[noise.noisePeriod];
+                break;
+            default: // 0x400F
+                noise.lengthCounterLoad = (value >> 3) & 0x1F;
+                bool noiseStatus = (status >> 3) & 1;
+                if (noiseStatus) {
+                    noise.lengthCounter = LENGTH_COUNTER_TABLE[noise.lengthCounterLoad];
+                }
+                noise.envelopeStartFlag = true;
+                break;
+        }
+    }
 
-    // TODO: other channels
+    // TODO: DMC channel
 }
 
 uint8_t APU::viewStatus() const {
@@ -108,12 +136,17 @@ uint8_t APU::viewStatus() const {
         tempStatus |= (1 << 2);
     }
 
+    bool noiseStatus = (status >> 3) & 1;
+    if (noiseStatus && noise.lengthCounter > 0) {
+        tempStatus |= (1 << 3);
+    }
+
     if (frameInterruptFlag) {
         tempStatus |= (1 << 6);
     }
 
     // $4015 read	IF-D NT21	DMC interrupt (I), frame interrupt (F), DMC active (D), length counter > 0 (N/T/2/1)
-    // TODO: I, D, N
+    // TODO: I, D
 
     return tempStatus;
 }
@@ -133,7 +166,12 @@ void APU::writeStatus(uint8_t value) {
         triangle.outputValue = 0;
     }
 
-    // TODO: Other channels
+    // Noise channel
+    if (!((value >> 3) & 1)) {
+        noise.lengthCounter = 0;
+    }
+
+    // TODO: DMC channel
 
     status = value;
 }
@@ -225,14 +263,33 @@ void APU::executeHalfCycle() {
             bool pulseStatus = (status >> i) & 1;
             if (pulseStatus) {
                 Pulse& pulse = pulses[i];
-                pulse.timerCounter--;
 
-                if (pulse.timerCounter == 0x7FF) {
+                if (pulse.timerCounter == 0) {
                     uint16_t timerReload = (static_cast<uint16_t>(pulse.timerHigh) << 8) | pulse.timerLow;
                     pulse.timerCounter = timerReload;
-
                     pulse.dutyCycleIndex++;
                 }
+                else {
+                    pulse.timerCounter--;
+                }
+            }
+        }
+
+        // Clock noise timer
+        bool noiseStatus = (status >> 3) & 1;
+        if (noiseStatus) {
+            if (noise.timerCounter == 0) {
+                noise.timerCounter = NOISE_PERIOD_TABLE[noise.noisePeriod];
+
+                // Clock LFSR
+                uint8_t shift = noise.loopNoise ? 6 : 1;
+                uint8_t feedback = (noise.shiftRegister & 1) ^ ((noise.shiftRegister >> shift) & 1);
+
+                noise.shiftRegister >>= 1;
+                noise.shiftRegister |= (feedback << 14);
+            }
+            else {
+                noise.timerCounter--;
             }
         }
     }
@@ -242,11 +299,13 @@ void APU::executeHalfCycle() {
     uint16_t triangleTimerPeriod = (static_cast<uint16_t>(triangle.timerHigh) << 8) | triangle.timerLow;
     if (triangleStatus && triangleTimerPeriod >= 2) {
         if (triangle.lengthCounter > 0 && triangle.linearCounter > 0) {
-            triangle.timerCounter--;
-            if (triangle.timerCounter == 0x7FF) {
+            if (triangle.timerCounter == 0) {
                 triangle.timerCounter = triangleTimerPeriod;
                 triangle.sequenceIndex++;
                 triangle.outputValue = TRIANGLE_SEQUENCE[triangle.sequenceIndex];
+            }
+            else {
+                triangle.timerCounter--;
             }
         }
     }
@@ -256,7 +315,7 @@ void APU::executeHalfCycle() {
 }
 
 void APU::quarterClock() {
-    // Clock envelope
+    // Clock pulse envelopes
     {
         for (int i = 0; i < 2; ++i) {
             Pulse& p = pulses[i];
@@ -277,6 +336,29 @@ void APU::quarterClock() {
                     else if (p.envelopeLoopOrLengthCounterHalt) {
                         p.envelope = 15;
                     }
+                }
+            }
+        }
+    }
+
+    // Clock noise envelope
+    {
+        if (noise.envelopeStartFlag) {
+            noise.envelopeStartFlag = false;
+            noise.envelope = 0xF;
+            noise.envelopeDividerCounter = noise.volumeOrEnvelope;
+        }
+        else {
+            if (noise.envelopeDividerCounter > 0) {
+                noise.envelopeDividerCounter--;
+            }
+            else {
+                noise.envelopeDividerCounter = noise.volumeOrEnvelope;
+                if (noise.envelope) {
+                    noise.envelope--;
+                }
+                else if (noise.envelopeLoopOrLengthCounterHalt) {
+                    noise.envelope = 0xF;
                 }
             }
         }
@@ -310,6 +392,12 @@ void APU::halfClock() {
         bool triangleStatus = (status >> 2) & 1;
         if (triangleStatus && triangle.lengthCounter > 0 && !triangle.lengthCounterHaltOrLinearCounterControl) {
             triangle.lengthCounter--;
+        }
+
+        // Noise
+        bool noiseStatus = (status >> 3) & 1;
+        if (noiseStatus && noise.lengthCounter > 0 && !noise.envelopeLoopOrLengthCounterHalt) {
+            noise.lengthCounter--;
         }
     }
 
@@ -403,7 +491,16 @@ float APU::getAudioSample() const {
     // Get triangle outputs
     uint8_t triangleOutput = triangle.outputValue;
 
-    // TODO: Mix Noise and DMC channels
+    // Get noise output
+    uint8_t noiseOutput = 0;
+    bool noiseStatus = (status >> 3) & 1;
+    bool shiftRegisterBitSet = noise.shiftRegister & 1;
+    if (noiseStatus && noise.lengthCounter > 0 && !shiftRegisterBitSet) {
+        uint8_t volume = noise.constantVolume ? noise.volumeOrEnvelope : noise.envelope;
+        noiseOutput = volume;
+    }
 
-    return mixPulse(pulseOutputs[0], pulseOutputs[1]) +mixTND(triangleOutput, 0, 0);
+    // TODO: Mix DMC channel
+
+    return mixPulse(pulseOutputs[0], pulseOutputs[1]) + mixTND(triangleOutput, noiseOutput, 0);
 }

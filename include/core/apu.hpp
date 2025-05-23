@@ -34,8 +34,8 @@ private:
     struct Pulse {
         // 0x4000 / 0x4004
         uint8_t volumeOrEnvelopeRate : 4;
-        uint8_t constantVolume : 1;
-        uint8_t envelopeLoopOrLengthCounterHalt : 1;
+        bool constantVolume : 1;
+        bool envelopeLoopOrLengthCounterHalt : 1;
         uint8_t duty : 2;
 
         // 0x4001 / 0x4005
@@ -55,7 +55,7 @@ private:
         uint16_t timerCounter : 11;
         uint8_t dutyCycleIndex : 3;
         uint8_t lengthCounter;
-        bool envelopeStartFlag;
+        bool envelopeStartFlag : 1;
         uint8_t envelope : 4;
         uint8_t envelopeDividerCounter;
         uint8_t sweepDividerCounter;
@@ -84,6 +84,28 @@ private:
         uint8_t outputValue;
     };
 
+    struct Noise {
+        // 0x400C
+        uint8_t volumeOrEnvelope : 4;
+        bool constantVolume : 1;
+        bool envelopeLoopOrLengthCounterHalt : 1;
+
+        // 0x400E
+        uint8_t noisePeriod : 4;
+        bool loopNoise : 1;
+
+        // 0x400F
+        uint8_t lengthCounterLoad : 5;
+
+        // Internal state
+        uint16_t timerCounter;
+        uint8_t lengthCounter;
+        bool envelopeStartFlag : 1;
+        uint8_t envelope : 4;
+        uint8_t envelopeDividerCounter;
+        uint16_t shiftRegister;
+    };
+
     const std::array<uint8_t, 4> DUTY_CYCLES = {
         0b00000001,
         0b00000011,
@@ -93,6 +115,7 @@ private:
 
     std::array<Pulse, 2> pulses;
     Triangle triangle;
+    Noise noise;
 
     uint8_t status;
 
@@ -112,9 +135,13 @@ private:
         12,  16, 24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32, 30
     };
 
-    static constexpr std::array<uint8_t, 32> TRIANGLE_SEQUENCE = {
+    static constexpr std::array<uint8_t, 0x20> TRIANGLE_SEQUENCE = {
         15, 14, 13, 12, 11, 10,  9,  8,  7,  6,  5,  4,  3,  2,  1,  0,
          0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15
+    };
+
+    static constexpr std::array<uint16_t, 0x10> NOISE_PERIOD_TABLE = {
+        4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068
     };
 
     void quarterClock();
