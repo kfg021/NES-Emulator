@@ -26,10 +26,10 @@ public:
 
     float getAudioSample() const;
 private:
-    constexpr static MemoryRange PULSE_RANGE{ 0x4000, 0x4007 };
-    constexpr static MemoryRange TRIANGLE_RANGE{ 0x4008, 0x400B };
-    constexpr static MemoryRange NOISE_RANGE{ 0x400C, 0x400F };
-    constexpr static MemoryRange DMC_RANGE{ 0x4010, 0x4013 };
+    static constexpr MemoryRange PULSE_RANGE{ 0x4000, 0x4007 };
+    static constexpr MemoryRange TRIANGLE_RANGE{ 0x4008, 0x400B };
+    static constexpr MemoryRange NOISE_RANGE{ 0x400C, 0x400F };
+    static constexpr MemoryRange DMC_RANGE{ 0x4010, 0x4013 };
 
     struct Pulse {
         // 0x4000 / 0x4004
@@ -103,16 +103,16 @@ private:
     uint64_t frameCounter;
     uint64_t totalCycles;
 
-    constexpr static std::array<int, 5> STEP_SEQUENCE = { 7457, 14913, 22371, 29829, 37281 };
-    constexpr static int FOUR_STEP_SEQUENCE_LENGTH = 29830;
-    constexpr static int FIVE_STEP_SEQUENCE_LENGTH = 37282;
+    static constexpr std::array<int, 5> STEP_SEQUENCE = { 7457, 14913, 22371, 29829, 37281 };
+    static constexpr int FOUR_STEP_SEQUENCE_LENGTH = 29830;
+    static constexpr int FIVE_STEP_SEQUENCE_LENGTH = 37282;
 
-    constexpr static std::array<uint8_t, 0x20> LENGTH_COUNTER_TABLE = {
+    static constexpr std::array<uint8_t, 0x20> LENGTH_COUNTER_TABLE = {
         10, 254, 20,  2, 40,  4, 80,  6, 160,  8, 60, 10, 14, 12, 26, 14,
         12,  16, 24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32, 30
     };
 
-    constexpr static std::array<uint8_t, 32> TRIANGLE_SEQUENCE = {
+    static constexpr std::array<uint8_t, 32> TRIANGLE_SEQUENCE = {
         15, 14, 13, 12, 11, 10,  9,  8,  7,  6,  5,  4,  3,  2,  1,  0,
          0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15
     };

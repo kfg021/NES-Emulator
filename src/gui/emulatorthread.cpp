@@ -139,7 +139,7 @@ void EmulatorThread::runCycles() {
 				float sample = bus.apu->getAudioSample();
 				audioSamples->push(sample);
 
-				constexpr static size_t INITIAL_AUDIO_SIZE = AUDIO_SAMPLE_RATE / 100;
+				static constexpr size_t INITIAL_AUDIO_SIZE = AUDIO_SAMPLE_RATE / 100;
 				if (!soundActivated.load(std::memory_order_acquire) && audioSamples->size() >= INITIAL_AUDIO_SIZE) {
 					emit soundReadySignal();
 					soundActivated.store(true, std::memory_order_release);
