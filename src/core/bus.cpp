@@ -19,9 +19,6 @@ void Bus::initDevices() {
     ppu->initPPU();
     apu->initAPU();
 
-    nmiRequest = false;
-    irqRequest = false;
-
     totalCycles = 0;
 
     dmaTransferRequested = false;

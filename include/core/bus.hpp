@@ -31,9 +31,6 @@ public:
 
     uint64_t totalCycles;
 
-    bool nmiRequest;
-    bool irqRequest;
-
     void executeCycle();
 
     void setController(bool controller, uint8_t value);
