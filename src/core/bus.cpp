@@ -5,6 +5,9 @@ Bus::Bus() {
     cpu->setBus(this);
 
     ppu = std::make_unique<PPU>();
+
+    apu = std::make_unique<APU>();
+    apu->setBus(this);
 }
 
 void Bus::initDevices() {
@@ -16,14 +19,12 @@ void Bus::initDevices() {
 
     cpu->initCPU();
     ppu->initPPU();
+    apu->initAPU();
 
     totalCycles = 0;
 
-    dmaTransferRequested = false;
-    dmaTransferOngoing = false;
-    dmaPage = 0;
-    dmaOffset = 0;
-    dmaData = 0;
+    oamDma = {};
+    dmcDma = {};
 }
 
 Cartridge::Status Bus::loadROM(const std::string& filePath) {
@@ -49,11 +50,12 @@ uint8_t Bus::view(uint16_t address) const {
             // The view mode returns all controller outputs at once
             return controllerData[address & 1];
         }
+        else if (address == APU_STATUS) {
+            return apu->viewStatus();
+        }
         else {
-            // TODO: Implement APU
             return 0;
         }
-
     }
     else { // if (CARTRIDGE_ADDRESSABLE_RANGE.contains(address))
         return ppu->cartridge.mapper->mapPRGView(address);
@@ -75,8 +77,10 @@ uint8_t Bus::read(uint16_t address) {
             }
             return data;
         }
+        else if (address == APU_STATUS) {
+            return apu->readStatus();
+        }
         else {
-            // TODO: Implement APU
             return 0;
         }
     }
@@ -93,7 +97,10 @@ void Bus::write(uint16_t address, uint8_t value) {
         ppu->write(address & 0x7, value); // TODO: what happens when write fails?
     }
     else if (IO_ADDRESSABLE_RANGE.contains(address)) {
-        if (address == CONTROLLER_1_DATA) {
+        if (APU_ADDRESSABLE_RANGE.contains(address)) {
+            apu->write(address, value);
+        }
+        else if (address == CONTROLLER_1_DATA) {
             strobe = value & 1;
             if (strobe) {
                 controllerData[0] = controllers[0].getButtons();
@@ -101,11 +108,14 @@ void Bus::write(uint16_t address, uint8_t value) {
             }
         }
         else if (address == OAM_DMA_ADDR) {
-            dmaTransferRequested = true;
-            dmaPage = value;
+            oamDma.requested = true;
+            oamDma.page = value;
         }
-        else {
-            // TODO: Implement APU
+        else if (address == APU_STATUS) {
+            apu->writeStatus(value);
+        }
+        else if (address == APU_FRAME_COUNTER) {
+            apu->writeFrameCounter(value);
         }
     }
     else { // if (CARTRIDGE_ADDRESSABLE_RANGE.contains(address)) 
@@ -119,16 +129,22 @@ void Bus::executeCycle() {
     ppu->executeCycle();
     ppu->executeCycle();
 
-    // TODO: Implement DMA dummy cycle
-    if (dmaTransferRequested) {
-        doDmaTransferCycle();
+    // Handle DMA transfers
+    if (oamDma.requested) {
+        oamDmaCycle();
+    }
+    else if (dmcDma.requested) {
+        dmcDmaCycle();
     }
     else {
         cpu->executeCycle();
     }
 
+    // 2 CPU Cycles for every APU cycle
+    apu->executeHalfCycle();
+
     bool nmiRequested = ppu->nmiRequested();
-    bool irqRequested = ppu->irqRequested();
+    bool irqRequested = ppu->irqRequested() || apu->irqRequested();
 
     // Handle interrupt requests
     if (nmiRequested) {
@@ -143,27 +159,52 @@ void Bus::executeCycle() {
     totalCycles++;
 }
 
-void Bus::doDmaTransferCycle() {
+void Bus::oamDmaCycle() {
     bool cycleMod = totalCycles & 1;
 
-    if (!dmaTransferOngoing && cycleMod == 0) {
-        dmaTransferOngoing = true;
+    if (!oamDma.ongoing && cycleMod == 0) {
+        oamDma.ongoing = true;
     }
 
-    if (dmaTransferOngoing) {
+    if (oamDma.ongoing) {
         if (cycleMod == 0) {
-            uint16_t dmaAddress = (dmaPage << 8) | dmaOffset;
-            dmaData = read(dmaAddress);
+            uint16_t dmaAddress = (oamDma.page << 8) | oamDma.offset;
+            oamDma.data = read(dmaAddress);
         }
         else {
-            ppu->oamBuffer[dmaOffset] = dmaData;
-            dmaOffset++;
-            if (dmaOffset == 0) {
-                dmaTransferRequested = false;
-                dmaTransferOngoing = false;
+            ppu->oamBuffer[oamDma.offset] = oamDma.data;
+            oamDma.offset++;
+            if (oamDma.offset == 0) {
+                oamDma.requested = false;
+                oamDma.ongoing = false;
             }
         }
     }
+}
+
+void Bus::dmcDmaCycle() {
+    // DMC DMA takes 4 cycles (3 stall cycles + 1 read)
+    if (!dmcDma.ongoing) {
+        dmcDma.ongoing = true;
+        dmcDma.delay = 0;
+    }
+
+    // Count cycles
+    dmcDma.delay++;
+
+    // On the 4th cycle, read the data and pass to DMC
+    if (dmcDma.delay >= 4) {
+        dmcDma.data = read(dmcDma.address);
+        apu->receiveDMCSample(dmcDma.data);
+        dmcDma.requested = false;
+        dmcDma.ongoing = false;
+        dmcDma.delay = 0;
+    }
+}
+
+void Bus::requestDmcDma(uint16_t address) {
+    dmcDma.requested = true;
+    dmcDma.address = address;
 }
 
 void Bus::setController(bool controller, uint8_t value) {

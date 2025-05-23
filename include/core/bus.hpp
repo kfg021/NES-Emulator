@@ -1,6 +1,7 @@
 #ifndef BUS_HPP
 #define BUS_HPP
 
+#include "core/apu.hpp"
 #include "core/cartridge.hpp"
 #include "core/controller.hpp"
 #include "core/cpu.hpp"
@@ -9,8 +10,6 @@
 
 #include <array>
 #include <cstdint>
-
-class CPU;
 
 class Bus {
 public:
@@ -23,8 +22,10 @@ public:
     uint8_t read(uint16_t address);
     void write(uint16_t address, uint8_t value);
 
+    // Devices connected to bus
     std::unique_ptr<CPU> cpu;
     std::unique_ptr<PPU> ppu;
+    std::unique_ptr<APU> apu;
 
     uint64_t totalCycles;
 
@@ -32,7 +33,10 @@ public:
 
     void setController(bool controller, uint8_t value);
 
+    void requestDmcDma(uint16_t address);
+
 private:
+    // Memory ranges for devices
     static constexpr MemoryRange RAM_ADDRESSABLE_RANGE{ 0x0000, 0x1FFF };
     static constexpr MemoryRange PPU_ADDRESSABLE_RANGE{ 0x2000, 0x3FFF };
     static constexpr MemoryRange IO_ADDRESSABLE_RANGE{ 0x4000, 0x401F };
@@ -51,13 +55,29 @@ private:
     bool strobe;
 
     static constexpr uint16_t OAM_DMA_ADDR = 0x4014;
-    bool dmaTransferRequested;
-    bool dmaDummyCycleNeeded;
-    bool dmaTransferOngoing;
-    uint8_t dmaPage;
-    uint8_t dmaOffset;
-    uint8_t dmaData;
-    void doDmaTransferCycle();
+    struct OamDma {
+        bool requested;
+        bool ongoing;
+        uint8_t page;
+        uint8_t offset;
+        uint8_t data;
+    };
+    OamDma oamDma;
+    void oamDmaCycle();
+
+    struct DmcDma {
+        bool requested;
+        bool ongoing;
+        uint16_t address;
+        uint8_t data;
+        uint8_t delay;
+    };
+    DmcDma dmcDma;
+    void dmcDmaCycle();
+
+    static constexpr MemoryRange APU_ADDRESSABLE_RANGE{ 0x4000, 0x4013 };
+    static constexpr uint16_t APU_STATUS = 0x4015;
+    static constexpr uint16_t APU_FRAME_COUNTER = 0x4017;
 };
 
 #endif // BUS_HPP

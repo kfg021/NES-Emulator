@@ -11,6 +11,7 @@
 
 using ControllerStatus = std::array<std::atomic<uint8_t>, 2>;
 struct KeyboardInput {
+    // Game input
     const ControllerStatus* controllerStatus;
     std::atomic<bool>* resetFlag;
 
@@ -20,6 +21,9 @@ struct KeyboardInput {
     std::atomic<bool>* stepRequested;
     const std::atomic<uint8_t>* spritePallete;
     const std::atomic<uint8_t>* backgroundPallete;
+
+    // Sound settings
+    const std::atomic<uint8_t>* globalMuteFlag; // Treated as a boolean
 };
 
 struct DebugWindowState {
@@ -38,5 +42,8 @@ struct DebugWindowState {
     PPU::PatternTable table1, table2;
     std::array<QString, NUM_INSTS_TOTAL> insts;
 };
+
+static constexpr int AUDIO_SAMPLE_RATE = 44100;	
+static constexpr size_t AUDIO_QUEUE_MAX_CAPACITY = AUDIO_SAMPLE_RATE / 10;
 
 #endif // GUITYPES_HPP 

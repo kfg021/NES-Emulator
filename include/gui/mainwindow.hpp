@@ -2,8 +2,10 @@
 #define MAINWINDOW_HPP
 
 #include "core/bus.hpp"
+#include "gui/audioplayer.hpp"
 #include "gui/emulatorthread.hpp"
 #include "gui/guitypes.hpp"
+#include "gui/threadsafeaudioqueue.hpp"
 
 #include <array>
 #include <atomic>
@@ -11,48 +13,67 @@
 #include <string>
 #include <queue>
 
+#include <QAudioSink>
+#include <QAudioFormat>
 #include <QImage>
 #include <QMainWindow>
+#include <QMediaDevices>
 #include <QWidget>
 
 class MainWindow : public QMainWindow {
-    Q_OBJECT
+	Q_OBJECT
 
 public:
-    MainWindow(QWidget* parent, const std::string& filePath);
+	MainWindow(QWidget* parent, const std::string& filePath);
+	~MainWindow() override;
 
-    static constexpr int GAME_WIDTH = 256 * 3;
-    static constexpr int GAME_HEIGHT = 240 * 3;
-    static constexpr int DEBUG_WIDTH = 300;
-    static constexpr int TOTAL_WIDTH = GAME_WIDTH + DEBUG_WIDTH;
+	static constexpr int GAME_WIDTH = 256 * 3;
+	static constexpr int GAME_HEIGHT = 240 * 3;
+	static constexpr int DEBUG_WIDTH = 300;
+	static constexpr int TOTAL_WIDTH = GAME_WIDTH + DEBUG_WIDTH;
 
 public slots:
-    void displayNewFrame(const QImage& image);
-    void displayNewDebugFrame(const DebugWindowState& state);
+	void enableAudioSink();
+	void displayNewFrame(const QImage& image);
+	void displayNewDebugFrame(const DebugWindowState& state);
 
 protected:
-    void keyPressEvent(QKeyEvent* event) override;
-    void keyReleaseEvent(QKeyEvent* event) override;
-    void paintEvent(QPaintEvent* event) override;
+	void keyPressEvent(QKeyEvent* event) override;
+	void keyReleaseEvent(QKeyEvent* event) override;
+	void paintEvent(QPaintEvent* event) override;
 
 private:
-    EmulatorThread* emulatorThread;
+	EmulatorThread* emulatorThread;
 
-    ControllerStatus controllerStatus;
-    std::atomic<bool> resetFlag;
-    std::atomic<bool> debugWindowEnabled;
-    std::atomic<uint8_t> stepModeEnabled;
-    std::atomic<bool> stepRequested;
-    std::atomic<uint8_t> spritePallete;
-    std::atomic<uint8_t> backgroundPallete;
+	ControllerStatus controllerStatus;
+	std::atomic<bool> resetFlag;
+	std::atomic<bool> debugWindowEnabled;
+	std::atomic<uint8_t> stepModeEnabled;
+	std::atomic<bool> stepRequested;
+	std::atomic<uint8_t> spritePallete;
+	std::atomic<uint8_t> backgroundPallete;
+	std::atomic<uint8_t> globalMuteFlag;
 
-    void setControllerData(bool controller, Controller::Button button, bool value);
-    void toggleDebugMode();
+	void setControllerData(bool controller, Controller::Button button, bool value);
+	void toggleDebugMode();
 
-    // Rendering
-    QImage mainWindowData;
-    DebugWindowState debugWindowData;
-    void renderDebugWindow();
+	// Rendering
+	QImage mainWindowData;
+	DebugWindowState debugWindowData;
+	void renderDebugWindow();
+
+	// Audio
+	const QAudioFormat audioFormat;
+	QMediaDevices* mediaDevices;
+	QAudioDevice defaultAudioDevice;
+	QAudioSink* audioSink;
+	AudioPlayer* audioPlayer;
+	ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY> audioSamples;
+	void updateAudioState();
+	void createAudioSink();
+	void onDefaultAudioDeviceChanged();
+
+	static QAudioFormat defaultAudioFormat();
 };
 
 #endif // MAINWINDOW_HPP
