@@ -6,11 +6,15 @@
 #include <array>
 #include <cstdint>
 
+class Bus;
+
 class APU {
 public:
     APU();
 
     void initAPU();
+    void setBus(Bus* bus);
+
     void write(uint16_t addr, uint8_t value);
 
     // Handles reads to/writes from 0x4015
@@ -24,7 +28,10 @@ public:
     void executeHalfCycle();
     bool irqRequested() const;
 
+    void receiveDMCSample(uint8_t sample);
+
     float getAudioSample() const;
+
 private:
     static constexpr MemoryRange PULSE_RANGE{ 0x4000, 0x4007 };
     static constexpr MemoryRange TRIANGLE_RANGE{ 0x4008, 0x400B };
@@ -106,6 +113,33 @@ private:
         uint16_t shiftRegister;
     };
 
+    struct DMC {
+        // 0x4010
+        uint8_t frequency : 4;
+        bool loopSample : 1;
+        bool irqEnable : 1;
+
+        // 0x4011
+        uint8_t outputLevel : 7;
+
+        // 0x4012
+        uint8_t sampleAddress;
+
+        // 0x4013
+        uint8_t sampleLength;
+
+        // Internal state
+        uint16_t currentAddress;
+        uint16_t bytesRemaining;
+        uint16_t timerCounter;
+        uint8_t sampleBuffer;
+        bool sampleBufferEmpty;
+        uint8_t shiftRegister;
+        uint8_t bitsRemaining;
+        bool silenceFlag;
+        bool irqFlag;
+    };
+
     const std::array<uint8_t, 4> DUTY_CYCLES = {
         0b00000001,
         0b00000011,
@@ -116,6 +150,7 @@ private:
     std::array<Pulse, 2> pulses;
     Triangle triangle;
     Noise noise;
+    DMC dmc;
 
     uint8_t status;
 
@@ -125,6 +160,9 @@ private:
 
     uint64_t frameCounter;
     uint64_t totalCycles;
+
+    // Pointer to the Bus instance that the APU is attached to. The APU is not responsible for clearing this memory as it will get deleted when the Bus goes out of scope
+    Bus* bus;
 
     static constexpr std::array<int, 5> STEP_SEQUENCE = { 7457, 14913, 22371, 29829, 37281 };
     static constexpr int FOUR_STEP_SEQUENCE_LENGTH = 29830;
@@ -144,8 +182,14 @@ private:
         4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068
     };
 
+    static constexpr std::array<uint16_t, 0x10> DMC_RATE_TABLE = {
+        428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106, 84, 72, 54
+    };
+
     void quarterClock();
     void halfClock();
+
+    void restartDmcSample();
 };
 
 #endif // APU_HPP

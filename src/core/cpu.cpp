@@ -1,5 +1,6 @@
 #include "core/cpu.hpp"
 
+#include "core/bus.hpp"
 #include "util/util.hpp"
 
 #include <fstream>

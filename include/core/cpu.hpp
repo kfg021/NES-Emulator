@@ -1,8 +1,6 @@
 #ifndef CPU_HPP
 #define CPU_HPP
 
-#include "core/bus.hpp"
-
 #include <cstdint>
 #include <memory>
 #include <string>

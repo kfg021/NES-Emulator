@@ -1,5 +1,7 @@
 #include "core/apu.hpp"
 
+#include "core/bus.hpp"
+
 APU::APU() {
     initAPU();
 }
@@ -12,6 +14,15 @@ void APU::initAPU() {
     noise = {};
     noise.shiftRegister = 1; // Shift register is 1 on power-up
 
+    dmc = {};
+    dmc.currentAddress = 0xC000;
+    dmc.bytesRemaining = 0;
+    dmc.sampleBufferEmpty = true;
+    dmc.silenceFlag = true;
+    dmc.bitsRemaining = 8;
+    dmc.irqFlag = false;
+    dmc.shiftRegister = 0;
+
     status = 0;
     frameCounter = 0;
     totalCycles = 0;
@@ -19,6 +30,10 @@ void APU::initAPU() {
     frameSequenceMode = false;
     interruptInhibitFlag = false;
     frameInterruptFlag = false;
+}
+
+void APU::setBus(Bus* bus) {
+    this->bus = bus;
 }
 
 void APU::write(uint16_t addr, uint8_t value) {
@@ -72,12 +87,15 @@ void APU::write(uint16_t addr, uint8_t value) {
                 triangle.linearCounterLoad = value & 0x7F;
                 triangle.lengthCounterHaltOrLinearCounterControl = (value >> 7) & 1;
                 break;
+
             case 1: // 0x4009
                 // Unused
                 break;
+
             case 2: // 0x400A
                 triangle.timerLow = value;
                 break;
+
             default: // 0x400B
                 triangle.timerHigh = value & 0x7;
                 uint16_t timerReload = (static_cast<uint16_t>(triangle.timerHigh) << 8) | triangle.timerLow;
@@ -99,14 +117,17 @@ void APU::write(uint16_t addr, uint8_t value) {
                 noise.constantVolume = (value >> 4) & 0x1;
                 noise.envelopeLoopOrLengthCounterHalt = (value >> 5) & 0x1;
                 break;
+
             case 1: // 0x400D
                 // Unused
                 break;
+
             case 2: // 0x400E
                 noise.noisePeriod = value & 0xF;
                 noise.loopNoise = (value >> 7) & 0x1;
                 noise.timerCounter = NOISE_PERIOD_TABLE[noise.noisePeriod];
                 break;
+
             default: // 0x400F
                 noise.lengthCounterLoad = (value >> 3) & 0x1F;
                 bool noiseStatus = (status >> 3) & 1;
@@ -117,8 +138,34 @@ void APU::write(uint16_t addr, uint8_t value) {
                 break;
         }
     }
+    else if (DMC_RANGE.contains(addr)) {
+        switch (addr & 0x3) {
+            case 0: // 0x4010
+                dmc.frequency = value & 0xF;
+                dmc.loopSample = (value >> 6) & 0x1;
+                dmc.irqEnable = (value >> 7) & 0x1;
 
-    // TODO: DMC channel
+                if (!dmc.irqEnable) {
+                    dmc.irqFlag = false;
+                }
+
+                dmc.timerCounter = DMC_RATE_TABLE[dmc.frequency];
+                break;
+
+            case 1: // 0x4011
+                // Direct load to output level - bit 7 is ignored on NTSC
+                dmc.outputLevel = value & 0x7F;
+                break;
+
+            case 2: // 0x4012
+                dmc.sampleAddress = value;
+                break;
+
+            case 3: // 0x4013
+                dmc.sampleLength = value;
+                break;
+        }
+    }
 }
 
 uint8_t APU::viewStatus() const {
@@ -141,18 +188,26 @@ uint8_t APU::viewStatus() const {
         tempStatus |= (1 << 3);
     }
 
+    bool dmcStatus = (status >> 4) & 1;
+    if (dmcStatus && dmc.bytesRemaining > 0) {
+        tempStatus |= (1 << 4);
+    }
+
     if (frameInterruptFlag) {
         tempStatus |= (1 << 6);
     }
 
-    // $4015 read	IF-D NT21	DMC interrupt (I), frame interrupt (F), DMC active (D), length counter > 0 (N/T/2/1)
-    // TODO: I, D
+    // DMC interrupt flag
+    if (dmc.irqFlag) {
+        tempStatus |= (1 << 7);
+    }
 
     return tempStatus;
 }
 
 uint8_t APU::readStatus() {
     frameInterruptFlag = false;
+    dmc.irqFlag = false;
     return viewStatus();
 }
 
@@ -171,7 +226,17 @@ void APU::writeStatus(uint8_t value) {
         noise.lengthCounter = 0;
     }
 
-    // TODO: DMC channel
+    // DMC channel
+    bool dmcStatus = (value >> 4) & 1;
+    if (!dmcStatus) {
+        dmc.bytesRemaining = 0;
+    }
+    else if (dmc.bytesRemaining == 0) {
+        // Silent until first sample is loaded
+        dmc.silenceFlag = true;
+
+        restartDmcSample();
+    }
 
     status = value;
 }
@@ -307,6 +372,64 @@ void APU::executeHalfCycle() {
             else {
                 triangle.timerCounter--;
             }
+        }
+    }
+
+    // Clock DMC reader
+    bool dmcStatus = (status >> 4) & 1;
+    if (dmcStatus) {
+        if (dmc.timerCounter == 0) {
+            dmc.timerCounter = DMC_RATE_TABLE[dmc.frequency];
+
+            if (!dmc.silenceFlag) {
+                bool shiftBit = dmc.shiftRegister & 1;
+                dmc.shiftRegister >>= 1;
+
+                // Update output level
+                if (shiftBit) {
+                    if (dmc.outputLevel <= 125) {
+                        dmc.outputLevel += 2;
+                    }
+                }
+                else {
+                    if (dmc.outputLevel >= 2) {
+                        dmc.outputLevel -= 2;
+                    }
+                }
+
+                dmc.bitsRemaining--;
+                if (dmc.bitsRemaining == 0) {
+                    dmc.bitsRemaining = 8;
+
+                    if (dmc.sampleBufferEmpty) {
+                        dmc.silenceFlag = true;
+                    }
+                    else {
+                        dmc.silenceFlag = false;
+                        dmc.shiftRegister = dmc.sampleBuffer;
+                        dmc.sampleBufferEmpty = true;
+
+                        // Reset bits counter when loading new sample
+                        dmc.bitsRemaining = 8;
+
+                        // Try to reload sample buffer via DMA
+                        if (dmc.bytesRemaining) {
+                            bus->requestDmcDma(dmc.currentAddress);
+                        }
+                        else if (dmc.bytesRemaining == 0) {
+                            if (dmc.loopSample) {
+                                restartDmcSample();
+                            }
+                            else if (dmc.irqEnable) {
+                                dmc.irqFlag = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        else {
+            dmc.timerCounter--;
         }
     }
 
@@ -455,17 +578,37 @@ void APU::halfClock() {
 }
 
 bool APU::irqRequested() const {
-    return frameInterruptFlag;
+    return frameInterruptFlag || dmc.irqFlag;
 }
 
 float APU::getAudioSample() const {
+    // https://www.nesdev.org/wiki/APU_Mixer
+
+    // The NES APU mixer takes the channel outputs and converts them to an analog audio signal. 
+    // Each channel has its own internal digital-to-analog convertor (DAC), implemented in a way that causes non-linearity and interaction between channels, so calculation of the resulting amplitude is somewhat involved.
+    // In particular, games such as Super Mario Bros. and StarTropics use the DMC level ($4011) as a crude volume control for the triangle and noise channels.
+
+    // The following formula[1] calculates the approximate audio output level within the range of 0.0 to 1.0. It is the sum of two sub-groupings of the channels:
+
+    // output = pulse_out + tnd_out
+
+    //                             95.88
+    // pulse_out = ------------------------------------
+    //              (8128 / (pulse1 + pulse2)) + 100
+
+    //                                        159.79
+    // tnd_out = -------------------------------------------------------------
+    //                                     1
+    //            ----------------------------------------------------- + 100
+    //             (triangle / 8227) + (noise / 12241) + (dmc / 22638)
+
     auto mixPulse = [](uint8_t pulse1, uint8_t pulse2) -> float {
-        if (pulse1 + pulse2 == 0) return 0.0f;
+        if (!pulse1 && !pulse2) return 0.0f;
         return 95.88f / ((8128.0f / (pulse1 + pulse2)) + 100.0f);
     };
 
     auto mixTND = [](uint8_t triangle, uint8_t noise, uint8_t dmc) -> float {
-        if (triangle + noise + dmc == 0) return 0.0f;
+        if (!triangle && !noise && !dmc) return 0.0f;
 
         float sum = (triangle / 8227.0f) + (noise / 12241.0f) + (dmc / 22638.0f);
         return 159.79f / ((1.0f / sum) + 100.0f);
@@ -500,7 +643,31 @@ float APU::getAudioSample() const {
         noiseOutput = volume;
     }
 
-    // TODO: Mix DMC channel
+    // Get DMC output
+    uint8_t dmcOutput = dmc.outputLevel;
 
-    return mixPulse(pulseOutputs[0], pulseOutputs[1]) + mixTND(triangleOutput, noiseOutput, 0);
+    return mixPulse(pulseOutputs[0], pulseOutputs[1]) + mixTND(triangleOutput, noiseOutput, dmcOutput);
+}
+
+void APU::receiveDMCSample(uint8_t sample) {
+    dmc.sampleBuffer = sample;
+    dmc.sampleBufferEmpty = false;
+    dmc.silenceFlag = false;
+
+    if (dmc.currentAddress == 0xFFFF) {
+        dmc.currentAddress = 0x8000;
+    }
+    else {
+        dmc.currentAddress++;
+    }
+
+    dmc.bytesRemaining--;
+}
+
+void APU::restartDmcSample() {
+    dmc.currentAddress = 0xC000 | (static_cast<uint16_t>(dmc.sampleAddress) << 6);
+    dmc.bytesRemaining = (static_cast<uint16_t>(dmc.sampleLength) << 4) + 1;
+
+    // Request the first sample of the new loop
+    bus->requestDmcDma(dmc.currentAddress);
 }

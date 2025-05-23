@@ -11,8 +11,6 @@
 #include <array>
 #include <cstdint>
 
-class CPU;
-
 class Bus {
 public:
     Bus();
@@ -35,6 +33,8 @@ public:
 
     void setController(bool controller, uint8_t value);
 
+    void requestDmcDma(uint16_t address);
+
 private:
     // Memory ranges for devices
     static constexpr MemoryRange RAM_ADDRESSABLE_RANGE{ 0x0000, 0x1FFF };
@@ -55,13 +55,25 @@ private:
     bool strobe;
 
     static constexpr uint16_t OAM_DMA_ADDR = 0x4014;
-    bool dmaTransferRequested;
-    bool dmaDummyCycleNeeded;
-    bool dmaTransferOngoing;
-    uint8_t dmaPage;
-    uint8_t dmaOffset;
-    uint8_t dmaData;
-    void doDmaTransferCycle();
+    struct OamDma {
+        bool requested;
+        bool ongoing;
+        uint8_t page;
+        uint8_t offset;
+        uint8_t data;
+    };
+    OamDma oamDma;
+    void oamDmaCycle();
+
+    struct DmcDma {
+        bool requested;
+        bool ongoing;
+        uint16_t address;
+        uint8_t data;
+        uint8_t delay;
+    };
+    DmcDma dmcDma;
+    void dmcDmaCycle();
 
     static constexpr MemoryRange APU_ADDRESSABLE_RANGE{ 0x4000, 0x4013 };
     static constexpr uint16_t APU_STATUS = 0x4015;
