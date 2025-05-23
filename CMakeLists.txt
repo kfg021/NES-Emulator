@@ -35,7 +35,6 @@ set(HEADERS
     include/gui/emulatorthread.hpp
     include/gui/guitypes.hpp
     include/gui/mainwindow.hpp
-    include/util/threadsafequeue.hpp
     include/util/util.hpp
 )
 

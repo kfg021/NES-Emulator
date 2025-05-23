@@ -5,7 +5,7 @@
 #include "gui/audioplayer.hpp"
 #include "gui/emulatorthread.hpp"
 #include "gui/guitypes.hpp"
-#include "util/threadsafequeue.hpp"
+#include "gui/threadsafeaudioqueue.hpp"
 
 #include <array>
 #include <atomic>
@@ -68,7 +68,7 @@ private:
 	QAudioDevice defaultAudioDevice;
 	QAudioSink* audioSink;
 	AudioPlayer* audioPlayer;
-	ThreadSafeQueue<float> audioSamples;
+	ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY> audioSamples;
 	void updateAudioState();
 	void createAudioSink();
 	void onDefaultAudioDeviceChanged();

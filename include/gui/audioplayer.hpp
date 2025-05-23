@@ -1,7 +1,8 @@
 #ifndef AUDIOPLAYER_HPP
 #define AUDIOPLAYER_HPP
 
-#include "util/threadsafequeue.hpp"
+#include "gui/guitypes.hpp"
+#include "gui/threadsafeaudioqueue.hpp"
 
 #include <cstdint>
 #include <mutex>
@@ -15,7 +16,7 @@ class AudioPlayer : public QIODevice {
     Q_OBJECT
 
 public:
-    AudioPlayer(QWidget* parent, const QAudioFormat& audioFormat, bool muted, ThreadSafeQueue<float>* audioSamples);
+    AudioPlayer(QWidget* parent, const QAudioFormat& audioFormat, bool muted, ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>* audioSamples);
     
     void tryToMute();
     void tryToUnmute();
@@ -28,7 +29,7 @@ protected:
 private:
     QAudioFormat audioFormat;
     bool muted;
-    ThreadSafeQueue<float>* audioSamples;
+    ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>* audioSamples;
 };
 
 #endif // AUDIOPLAYER_HPP

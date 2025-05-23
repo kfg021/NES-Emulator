@@ -12,7 +12,7 @@
 
 QAudioFormat MainWindow::defaultAudioFormat() {
 	QAudioFormat audioFormat;
-	audioFormat.setSampleRate(EmulatorThread::AUDIO_SAMPLE_RATE);
+	audioFormat.setSampleRate(AUDIO_SAMPLE_RATE);
 	audioFormat.setChannelCount(1); // Mono
 	audioFormat.setSampleFormat(QAudioFormat::Float);
 	return audioFormat;

@@ -4,7 +4,7 @@
 
 #include <QElapsedTimer>
 
-EmulatorThread::EmulatorThread(QObject* parent, const std::string& filePath, const KeyboardInput& keyInput, ThreadSafeQueue<float>* audioSamples) :
+EmulatorThread::EmulatorThread(QObject* parent, const std::string& filePath, const KeyboardInput& keyInput, ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>* audioSamples) :
 	QThread(parent),
 	keyInput(keyInput),
 	audioSamples(audioSamples) {
@@ -163,12 +163,12 @@ void EmulatorThread::runCycles() {
 			return true;
 		}
 		return false;
-		};
+	};
 
 	auto loopCondition = [&]() -> bool {
 		static constexpr int UPPER_LIMIT_CYCLES = EXPECTED_CPU_CYCLES_PER_FRAME * 2;
 		return isRunning.load(std::memory_order_relaxed) && !bus.ppu->frameReadyFlag && cycles < UPPER_LIMIT_CYCLES;
-		};
+	};
 
 	bool stepModeEnabled = keyInput.stepModeEnabled->load(std::memory_order_relaxed) & 1;
 	if (!stepModeEnabled) {
@@ -195,7 +195,7 @@ std::array<QString, DebugWindowState::NUM_INSTS_TOTAL> EmulatorThread::getInsts(
 	auto toString = [&](uint16_t addr) {
 		std::string text = "$" + toHexString16(addr) + ": " + bus.cpu->toString(addr);
 		return QString(text.c_str());
-		};
+	};
 
 	// Last x PCs
 	int start = DebugWindowState::NUM_INSTS_ABOVE_AND_BELOW - static_cast<int>(recentPCsCopy.size());

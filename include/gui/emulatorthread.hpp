@@ -3,7 +3,7 @@
 
 #include "core/bus.hpp"
 #include "gui/guitypes.hpp"
-#include "util/threadsafequeue.hpp"
+#include "gui/threadsafeaudioqueue.hpp"
 
 #include <array>
 #include <queue>
@@ -16,14 +16,12 @@
 class EmulatorThread : public QThread {
 	Q_OBJECT
 public:
-	EmulatorThread(QObject* parent, const std::string& filePath, const KeyboardInput& keyInput, ThreadSafeQueue<float>* audioSamples);
+	EmulatorThread(QObject* parent, const std::string& filePath, const KeyboardInput& keyInput, ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>* audioSamples);
 	~EmulatorThread() override;
 	void run() override;
 
 	void requestStop();
 	void requestSoundReactivation();
-
-	static constexpr int AUDIO_SAMPLE_RATE = 44100;
 
 signals:
 	void soundReadySignal();
@@ -49,7 +47,7 @@ private:
 	std::queue<uint16_t> recentPCs;
 	std::array<QString, DebugWindowState::NUM_INSTS_TOTAL> getInsts() const;
 
-	ThreadSafeQueue<float>* audioSamples;
+	ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>* audioSamples;
 
 	int scaledAudioClock;
 };

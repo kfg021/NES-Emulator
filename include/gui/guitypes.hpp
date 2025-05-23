@@ -43,4 +43,7 @@ struct DebugWindowState {
     std::array<QString, NUM_INSTS_TOTAL> insts;
 };
 
+static constexpr int AUDIO_SAMPLE_RATE = 44100;	
+static constexpr size_t AUDIO_QUEUE_MAX_CAPACITY = AUDIO_SAMPLE_RATE / 10;
+
 #endif // GUITYPES_HPP 
