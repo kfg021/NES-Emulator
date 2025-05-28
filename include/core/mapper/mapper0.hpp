@@ -12,6 +12,16 @@ public:
 
     uint8_t mapCHRView(uint16_t ppuAddress) const override;
     void mapCHRWrite(uint16_t ppuAddress, uint8_t value) override;
+
+    bool hasChrRam() const;
+
+    // Serialization
+    struct State {
+        std::vector<uint8_t> prgRam;
+        std::vector<uint8_t> chrRam;
+    };
+    State getState() const;
+    void restoreState(const State& state);
 };
 
 #endif // MAPPER0_HPP

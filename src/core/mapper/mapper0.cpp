@@ -35,8 +35,27 @@ uint8_t Mapper0::mapCHRView(uint16_t ppuAddress) const {
 }
 
 void Mapper0::mapCHRWrite(uint16_t ppuAddress, uint8_t value) {
-    if (CHR_RANGE.contains(ppuAddress) && config.chrChunks == 0) {
-        // If chrChunks == 0, we assume we have CHR RAM
+    if (CHR_RANGE.contains(ppuAddress) && hasChrRam()) {
         chr[ppuAddress] = value;
+    }
+}
+
+bool Mapper0::hasChrRam() const {
+    // If chrChunks == 0, we assume we have CHR RAM
+    return config.chrChunks == 0;
+}
+
+Mapper0::State Mapper0::getState() const {
+    std::vector<uint8_t> empty;
+    State state = {
+        prgRam,
+        hasChrRam() ? chr : empty
+    };
+    return state;
+}
+void Mapper0::restoreState(const Mapper0::State& state) {
+    prgRam = state.prgRam;
+    if (hasChrRam()) {
+        chr = state.chrRam;
     }
 }

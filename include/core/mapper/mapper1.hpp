@@ -19,6 +19,21 @@ public:
 
     MirrorMode getMirrorMode() const override;
 
+    bool hasChrRam() const;
+
+    // Serialization
+    struct State {
+        uint8_t shiftRegister;
+        uint8_t control;
+        uint8_t chrBank0;
+        uint8_t chrBank1;
+        uint8_t prgBank;
+        std::vector<uint8_t> prgRam;
+        std::vector<uint8_t> chrRam; 
+    };
+    State getState() const;
+    void restoreState(const State& state);
+
 private:
     // Banks
     static constexpr MemoryRange PRG_ROM_BANK_0{ 0x8000, 0xBFFF };
@@ -59,8 +74,8 @@ private:
 
         Control() = default;
         Control(uint8_t data);
-        uint16_t toUInt8() const;
-        void setFromUInt8(uint16_t data);
+        uint8_t toUInt8() const;
+        void setFromUInt8(uint8_t data);
     };
     Control control;
 
@@ -81,8 +96,8 @@ private:
 
         PRGBank() = default;
         PRGBank(uint8_t data);
-        uint16_t toUInt8() const;
-        void setFromUInt8(uint16_t data);
+        uint8_t toUInt8() const;
+        void setFromUInt8(uint8_t data);
     };
     PRGBank prgBank;
 };
