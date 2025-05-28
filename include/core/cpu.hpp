@@ -73,12 +73,24 @@ public:
     bool getFlag(Flag flag) const;
     uint8_t getFlagMask(Flag flag) const;
     uint8_t getRemainingCycles() const;
-    int64_t getTotalCycles() const;
 
     // Debugging
-    std::string debugString() const;
     std::string toString(uint16_t address) const;
     const Opcode& getOpcode(uint16_t address) const;
+
+    // Serialization
+    struct State {
+        uint16_t pc;
+        uint8_t a;
+        uint8_t x;
+        uint8_t y;
+        uint8_t sr;
+        uint8_t sp;
+        uint8_t remainingCycles;
+        bool shouldAdvancePC;
+    };
+    State getState() const;
+    void restoreState(const State& state);
 
 private:
     // Constants
@@ -98,7 +110,6 @@ private:
 
     // Helper variables
     uint8_t remainingCycles;
-    int64_t totalCycles;
     bool shouldAdvancePC;
     static const std::array<Opcode, MAX_NUM_OPCODES> lookup;
 

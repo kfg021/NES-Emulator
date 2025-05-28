@@ -19,8 +19,6 @@ void CPU::initCPU() {
     sr = 0;
     setFlag(Flag::UNUSED, 1);
 
-    totalCycles = 0;
-
     reset();
 }
 
@@ -54,7 +52,6 @@ void CPU::executeCycle() {
     }
 
     remainingCycles--;
-    totalCycles++;
 }
 
 // Reset (description from from https://www.masswerk.at/6502/6502_instruction_set.html)
@@ -144,9 +141,6 @@ uint8_t CPU::getFlagMask(Flag flag) const {
 }
 uint8_t CPU::getRemainingCycles() const {
     return remainingCycles;
-}
-int64_t CPU::getTotalCycles() const {
-    return totalCycles;
 }
 
 std::array<CPU::Opcode, CPU::MAX_NUM_OPCODES> CPU::initLookup() {
@@ -1446,34 +1440,27 @@ const CPU::Opcode& CPU::getOpcode(uint16_t address) const {
     return lookup[index];
 }
 
-// Returns a string that closely resembles the nestest.nes log found here: https://www.qmtpro.com/~nes/misc/nestest.log
-std::string CPU::debugString() const {
-    uint8_t index = bus->view(pc);
-    const Opcode& currentOpcode = lookup[index];
-    const AddressingMode& mode = currentOpcode.addressingMode;
+CPU::State CPU::getState() const {
+    State state = {
+        pc,
+        a,
+        x,
+        y,
+        sr,
+        sp,
+        remainingCycles,
+        shouldAdvancePC
+    };
+    return state;
+};
 
-    // TODO: Probably just use string
-    std::ostringstream stream;
-    stream << toHexString16(pc) << "  ";
-    for (int i = 0; i < 3; i++) {
-        if (i < mode.instructionSize) {
-            stream << toHexString8(bus->view(pc + i)) << " ";
-        }
-        else {
-            stream << "   ";
-        }
-    }
-    std::string str = toString(pc);
-    std::string gap(32 - static_cast<int>(str.length()), ' ');
-    stream << " " << str << gap;
-
-    stream
-        << "A:" << toHexString8(a) \
-        << " X:" << toHexString8(x) \
-        << " Y:" << toHexString8(y) \
-        << " P:" << toHexString8(sr) \
-        << " SP:" << toHexString8(sp) \
-        << " CYC:" << totalCycles;
-
-    return stream.str();
+void CPU::restoreState(const CPU::State& state) {
+    pc = state.pc;
+    a = state.a;
+    x = state.x;
+    y = state.y;
+    sr = state.sr;
+    sp = state.sp;
+    remainingCycles = state.remainingCycles;
+    shouldAdvancePC = state.shouldAdvancePC;
 }
