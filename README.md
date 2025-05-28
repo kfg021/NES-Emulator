@@ -182,6 +182,7 @@ The following features and improvements are planned for future development:
 ### User Experience
 - Save state support
 - Recording/replay functionality
+- Controller/Gamepad key button support
 
 ## Contributing
 
