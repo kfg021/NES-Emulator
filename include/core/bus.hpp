@@ -35,6 +35,34 @@ public:
 
     void requestDmcDma(uint16_t address);
 
+    struct OamDma {
+        bool requested;
+        bool ongoing;
+        uint8_t page;
+        uint8_t offset;
+        uint8_t data;
+    };
+
+    struct DmcDma {
+        bool requested;
+        bool ongoing;
+        uint16_t address;
+        uint8_t data;
+        uint8_t delay;
+    };
+
+    // Serialization
+    struct State {
+        uint64_t totalCycles;
+        std::array<uint8_t, 0x800> ram;
+        std::array<uint8_t, 2> controllerData;
+        bool strobe;
+        OamDma oamDma;
+        DmcDma dmcDma;
+    };
+    State getState() const;
+    void restoreState(const State& state);
+
 private:
     // Memory ranges for devices
     static constexpr MemoryRange RAM_ADDRESSABLE_RANGE{ 0x0000, 0x1FFF };
@@ -55,23 +83,10 @@ private:
     bool strobe;
 
     static constexpr uint16_t OAM_DMA_ADDR = 0x4014;
-    struct OamDma {
-        bool requested;
-        bool ongoing;
-        uint8_t page;
-        uint8_t offset;
-        uint8_t data;
-    };
+
     OamDma oamDma;
     void oamDmaCycle();
 
-    struct DmcDma {
-        bool requested;
-        bool ongoing;
-        uint16_t address;
-        uint8_t data;
-        uint8_t delay;
-    };
     DmcDma dmcDma;
     void dmcDmaCycle();
 

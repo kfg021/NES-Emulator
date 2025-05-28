@@ -210,3 +210,23 @@ void Bus::requestDmcDma(uint16_t address) {
 void Bus::setController(bool controller, uint8_t value) {
     controllers[controller].setButtons(value);
 }
+
+Bus::State Bus::getState() const {
+    State state = {
+        totalCycles,
+        ram,
+        controllerData,
+        strobe,
+        oamDma,
+        dmcDma
+    };
+    return state;
+}
+void Bus::restoreState(const Bus::State& state) {
+    totalCycles = state.totalCycles;
+    ram = state.ram;
+    controllerData = state.controllerData;
+    strobe = state.strobe;
+    oamDma = state.oamDma;
+    dmcDma = state.dmcDma;
+}
