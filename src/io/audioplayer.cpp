@@ -1,4 +1,4 @@
-#include "gui/audioplayer.hpp"
+#include "io/audioplayer.hpp"
 
 AudioPlayer::AudioPlayer(QWidget* parent, const QAudioFormat& audioFormat, bool muted, ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>* audioSamples)
     : QIODevice(parent),

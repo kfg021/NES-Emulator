@@ -1,8 +1,8 @@
 #ifndef AUDIOPLAYER_HPP
 #define AUDIOPLAYER_HPP
 
-#include "gui/guitypes.hpp"
-#include "gui/threadsafeaudioqueue.hpp"
+#include "io/guitypes.hpp"
+#include "io/threadsafeaudioqueue.hpp"
 
 #include <cstdint>
 #include <mutex>

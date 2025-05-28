@@ -1,8 +1,8 @@
-#include "gui/mainwindow.hpp"
+#include "io/mainwindow.hpp"
 
 #include "core/controller.hpp"
 #include "core/cpu.hpp"
-#include "gui/emulatorthread.hpp"
+#include "io/emulatorthread.hpp"
 
 #include <QColor>
 #include <QFont>
