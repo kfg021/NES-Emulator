@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <vector>
 
 Cartridge::Cartridge() {
     status = { Code::MISSING_FILE, "No file was requested." };

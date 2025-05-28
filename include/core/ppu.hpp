@@ -5,6 +5,7 @@
 #include "util/util.hpp"
 
 #include <memory>
+#include <vector>
 
 class PPU {
 public:
