@@ -913,3 +913,64 @@ void PPU::OAMEntry::setFromUInt32(uint32_t data) {
     attributes = (data >> 16) & 0xFF;
     x = (data >> 24) & 0xFF;
 }
+
+PPU::State PPU::getState() const {
+    State state = {
+        oamBuffer,
+        control.toUInt8(),
+        mask.toUInt8(),
+        status.toUInt8(),
+        addressLatch,
+        temporaryVramAddress.toUInt16(),
+        vramAddress.toUInt16(),
+        fineX,
+        ppuBusData,
+        palleteRam,
+        nameTable,
+        scanline,
+        cycle,
+        frame,
+        patternTableLoShifter,
+        patternTableHiShifter,
+        attributeTableLoShifter,
+        attributeTableHiShifter,
+        nextNameTableByte,
+        nextPatternTableLo,
+        nextPatternTableHi,
+        nextAttributeTableLo,
+        nextAttributeTableHi,
+        oamAddress,
+        nmiRequest,
+        irqRequest
+    };
+    return state;
+}
+
+void PPU::restoreState(const PPU::State& state) {
+    oamBuffer = state.oamBuffer;
+    control = state.control;
+    mask = state.mask;
+    status = state.status;
+    addressLatch = state.addressLatch;
+    temporaryVramAddress = state.temporaryVramAddress;
+    vramAddress = state.vramAddress;
+    fineX = state.fineX;
+    ppuBusData = state.ppuBusData;
+    palleteRam = state.palleteRam;
+    nameTable = state.nameTable;
+    scanline = state.scanline;
+    cycle = state.cycle;
+    frame = state.frame;
+    patternTableLoShifter = state.patternTableLoShifter;
+    patternTableHiShifter = state.patternTableHiShifter;
+    attributeTableLoShifter = state.attributeTableLoShifter;
+    attributeTableHiShifter = state.attributeTableHiShifter;
+    nextNameTableByte = state.nextNameTableByte;
+    nextPatternTableLo = state.nextPatternTableLo;
+    nextPatternTableHi = state.nextPatternTableHi;
+    nextAttributeTableLo = state.nextAttributeTableLo;
+    nextAttributeTableHi = state.nextAttributeTableHi;
+    oamAddress = state.oamAddress;
+    nmiRequest = state.nmiRequest;
+    irqRequest = state.irqRequest;
+}

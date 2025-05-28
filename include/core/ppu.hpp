@@ -64,6 +64,39 @@ public:
     void clearNMIRequest();
     bool irqRequested();
 
+    // Serialization
+    struct State {
+        OAMBuffer oamBuffer;
+        uint8_t control;
+        uint8_t mask;
+        uint8_t status;
+        bool addressLatch;
+        uint16_t temporaryVramAddress;
+        uint16_t vramAddress;
+        uint8_t fineX;
+        uint8_t ppuBusData;
+        std::array<uint8_t, 0x20> palleteRam;
+        std::array<uint8_t, 2 * KB> nameTable;
+        int scanline;
+        int cycle;
+        int64_t frame;
+        uint16_t patternTableLoShifter;
+        uint16_t patternTableHiShifter;
+        uint16_t attributeTableLoShifter;
+        uint16_t attributeTableHiShifter;
+        uint8_t nextNameTableByte;
+        uint8_t nextPatternTableLo;
+        uint8_t nextPatternTableHi;
+        bool nextAttributeTableLo;
+        bool nextAttributeTableHi;
+        uint8_t oamAddress;
+        bool nmiRequest;
+        bool irqRequest;
+    };
+
+    State getState() const;
+    void restoreState(const State& state);
+
 private:
     // PPU internal data structures (descriptions from https://www.nesdev.org/wiki/PPU_registers)
 
