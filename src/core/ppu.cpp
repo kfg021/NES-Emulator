@@ -405,7 +405,7 @@ void PPU::visibleScanlines() {
             frameReadyFlag = true;
         }
     }
-    else if (cycle == 260) {
+    else if (cycle == 280) { // TODO: Think this should really be 260, but breaks things...
         if (isRenderingEnabled()) {
             handleMapper4IRQ();
         }
