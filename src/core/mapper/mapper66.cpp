@@ -43,3 +43,17 @@ uint8_t Mapper66::mapCHRView(uint16_t ppuAddress) const {
 void Mapper66::mapCHRWrite(uint16_t /*ppuAddress*/, uint8_t /*value*/) {
     // CHR in mapper 66 is read only
 }
+
+Mapper66::State Mapper66::getState() const {
+    State state = {
+        currentPRGBank,
+        currentCHRBank,
+        prgRam
+    };
+    return state;
+}
+void Mapper66::restoreState(const Mapper66::State& state) {
+    currentPRGBank = state.currentPRGBank;
+    currentCHRBank = state.currentCHRBank;
+    prgRam = state.prgRam;
+}
