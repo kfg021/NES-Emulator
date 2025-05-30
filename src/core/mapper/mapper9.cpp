@@ -120,6 +120,7 @@ Mapper9::State Mapper9::getState() const {
     };
     return state;
 }
+
 void Mapper9::restoreState(const Mapper9::State& state) {
     prgBankSelect = state.prgBankSelect;
     chrLatch1 = state.chrLatch1;

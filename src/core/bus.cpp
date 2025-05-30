@@ -222,6 +222,7 @@ Bus::State Bus::getState() const {
     };
     return state;
 }
+
 void Bus::restoreState(const Bus::State& state) {
     totalCycles = state.totalCycles;
     ram = state.ram;

@@ -184,6 +184,7 @@ Mapper1::State Mapper1::getState() const {
     };
     return state;
 }
+
 void Mapper1::restoreState(const Mapper1::State& state) {
     shiftRegister = state.shiftRegister;
     control = state.control;

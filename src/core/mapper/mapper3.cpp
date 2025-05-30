@@ -52,6 +52,7 @@ Mapper3::State Mapper3::getState() const {
     };
     return state;
 }
+
 void Mapper3::restoreState(const Mapper3::State& state) {
     currentBank = state.currentBank;
     prgRam = state.prgRam;

@@ -52,6 +52,7 @@ Mapper66::State Mapper66::getState() const {
     };
     return state;
 }
+
 void Mapper66::restoreState(const Mapper66::State& state) {
     currentPRGBank = state.currentPRGBank;
     currentCHRBank = state.currentCHRBank;

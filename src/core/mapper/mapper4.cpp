@@ -203,6 +203,7 @@ Mapper4::State Mapper4::getState() const {
     };
     return state;
 }
+
 void Mapper4::restoreState(const Mapper4::State& state) {
     bankSelect = state.bankSelect;
     bankData = state.bankData;

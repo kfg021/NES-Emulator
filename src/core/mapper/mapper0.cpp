@@ -53,6 +53,7 @@ Mapper0::State Mapper0::getState() const {
     };
     return state;
 }
+
 void Mapper0::restoreState(const Mapper0::State& state) {
     prgRam = state.prgRam;
     if (hasChrRam()) {

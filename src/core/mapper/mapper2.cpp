@@ -61,6 +61,7 @@ Mapper2::State Mapper2::getState() const {
     };
     return state;
 }
+
 void Mapper2::restoreState(const Mapper2::State& state) {
     currentBank = state.currentBank;
     prgRam = state.prgRam;
