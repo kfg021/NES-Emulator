@@ -43,7 +43,7 @@ void Mapper4::clockIRQTimer() {
     irqRequest = irqEnabled && (irqTimer == 0);
 }
 
-bool Mapper4::irqRequested(){
+bool Mapper4::irqRequested() {
     return irqRequest;
 }
 
@@ -183,4 +183,38 @@ bool Mapper4::canReadFromPRGRam() const {
 bool Mapper4::canWriteToPRGRam() const {
     bool writeProtection = (prgRamProtect >> 6) & 1;
     return canReadFromPRGRam() && !writeProtection;
+}
+
+Mapper4::State Mapper4::getState() const {
+    State state = {
+        bankSelect,
+        bankData,
+        mirroring,
+        prgRamProtect,
+        irqReloadValue,
+        irqTimer,
+        irqEnabled,
+        irqReloadPending,
+        irqRequest,
+        prgSwitchableBankSelect,
+        chrSwitchableBankSelect,
+        prgRam,
+        customNametable
+    };
+    return state;
+}
+void Mapper4::restoreState(const Mapper4::State& state) {
+    bankSelect = state.bankSelect;
+    bankData = state.bankData;
+    mirroring = state.mirroring;
+    prgRamProtect = state.prgRamProtect;
+    irqReloadValue = state.irqReloadValue;
+    irqTimer = state.irqTimer;
+    irqEnabled = state.irqEnabled;
+    irqReloadPending = state.irqReloadPending;
+    irqRequest = state.irqRequest;
+    prgSwitchableBankSelect = state.prgSwitchableBankSelect;
+    chrSwitchableBankSelect = state.chrSwitchableBankSelect;
+    prgRam = state.prgRam;
+    customNametable = state.customNametable;
 }
