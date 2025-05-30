@@ -31,10 +31,10 @@ set(HEADERS
     include/core/mapper/mapper4.hpp
     include/core/mapper/mapper9.hpp
     include/core/mapper/mapper66.hpp
-    include/gui/audioplayer.hpp
-    include/gui/emulatorthread.hpp
-    include/gui/guitypes.hpp
-    include/gui/mainwindow.hpp
+    include/io/audioplayer.hpp
+    include/io/emulatorthread.hpp
+    include/io/guitypes.hpp
+    include/io/mainwindow.hpp
     include/util/util.hpp
 )
 
@@ -53,9 +53,9 @@ set(SOURCES
     src/core/mapper/mapper4.cpp
     src/core/mapper/mapper9.cpp
     src/core/mapper/mapper66.cpp
-    src/gui/audioplayer.cpp
-    src/gui/emulatorthread.cpp
-    src/gui/mainwindow.cpp
+    src/io/audioplayer.cpp
+    src/io/emulatorthread.cpp
+    src/io/mainwindow.cpp
     src/util/util.cpp
     src/main.cpp
 )

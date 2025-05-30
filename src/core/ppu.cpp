@@ -47,7 +47,7 @@ void PPU::initPPU() {
     (*finishedDisplay) = {};
 
     // Reset the OAM buffer to 0xFF so that sprites start off the screen
-    std::fill(oamBuffer.begin(), oamBuffer.end(), 0xFF);
+    oamBuffer.fill(0xFF);
 
     oamAddress = 0;
 
@@ -108,10 +108,10 @@ uint8_t PPU::read(uint8_t ppuRegister) {
 
         ppuBusData = ppuRead(vramAddress.toUInt16() & 0x3FFF);
 
-        // open bus is the bottom 5 bits of the bus
+        // Open bus is the bottom 5 bits of the bus
         status.openBus = ppuBusData & 0x1F;
 
-        // pallete addresses get returned immediately
+        // Pallete addresses get returned immediately
         if (PALLETE_RAM_RANGE.contains(vramAddress.toUInt16() & 0x3FFF)) {
             data = ppuBusData;
         }

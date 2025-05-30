@@ -2,8 +2,8 @@
 #define EMULATORTHREAD_HPP
 
 #include "core/bus.hpp"
-#include "gui/guitypes.hpp"
-#include "gui/threadsafeaudioqueue.hpp"
+#include "io/guitypes.hpp"
+#include "io/threadsafeaudioqueue.hpp"
 
 #include <array>
 #include <queue>
