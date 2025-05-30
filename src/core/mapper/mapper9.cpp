@@ -25,6 +25,9 @@ uint8_t Mapper9::mapPRGView(uint16_t cpuAddress) const {
         }
         return prg[mappedAddress];
     }
+    else if (canAccessPrgRam(cpuAddress)) {
+        return getPrgRam(cpuAddress);
+    }
 
     return 0;
 }
@@ -47,6 +50,9 @@ void Mapper9::mapPRGWrite(uint16_t cpuAddress, uint8_t value) {
     }
     else if (MIRRORING.contains(cpuAddress)) {
         mirroring = value & 0x1;
+    }
+    else if (canAccessPrgRam(cpuAddress)) {
+        setPrgRam(cpuAddress, value);
     }
 }
 
@@ -100,4 +106,26 @@ void Mapper9::mapCHRWrite(uint16_t /*ppuAddress*/, uint8_t /*value*/) {
 
 Mapper::MirrorMode Mapper9::getMirrorMode() const {
     return mirroring ? MirrorMode::HORIZONTAL : MirrorMode::VERTICAL;
+}
+
+Mapper9::State Mapper9::getState() const {
+    State state = {
+        prgBankSelect,
+        chrLatch1,
+        chrLatch2,
+        chrBank1Select,
+        chrBank2Select,
+        mirroring,
+        prgRam
+    };
+    return state;
+}
+void Mapper9::restoreState(const Mapper9::State& state) {
+    prgBankSelect = state.prgBankSelect;
+    chrLatch1 = state.chrLatch1;
+    chrLatch2 = state.chrLatch2;
+    chrBank1Select = state.chrBank1Select;
+    chrBank2Select = state.chrBank2Select;
+    mirroring = state.mirroring;
+    prgRam = state.prgRam;
 }

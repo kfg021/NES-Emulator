@@ -18,6 +18,19 @@ public:
 
     MirrorMode getMirrorMode() const override;
 
+    // Serialization
+    struct State {
+        uint8_t prgBankSelect;
+        bool chrLatch1;
+        bool chrLatch2;
+        std::array<uint8_t, 2> chrBank1Select;
+        std::array<uint8_t, 2> chrBank2Select;
+        bool mirroring;
+        std::vector<uint8_t> prgRam;
+    };
+    State getState() const;
+    void restoreState(const State& state);
+
 private:
     // Banks
     static constexpr MemoryRange PRG_ROM_SWITCHABLE{ 0x8000, 0x9FFF };
