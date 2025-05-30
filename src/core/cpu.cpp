@@ -90,7 +90,7 @@ void CPU::reset() {
 bool CPU::IRQ() {
     if (!getFlag(Flag::INTERRUPT)) {
         push16BitDataToStack(pc);
-        push8BitDataToStack(sr | getFlagMask(Flag::BREAK));
+        push8BitDataToStack(sr & ~getFlagMask(Flag::BREAK) | getFlagMask(Flag::UNUSED));
 
         setFlag(Flag::INTERRUPT, 1);
 
@@ -107,7 +107,7 @@ bool CPU::IRQ() {
 
 void CPU::NMI() {
     push16BitDataToStack(pc);
-    push8BitDataToStack(sr | getFlagMask(Flag::BREAK));
+    push8BitDataToStack(sr & ~getFlagMask(Flag::BREAK) | getFlagMask(Flag::UNUSED));
 
     setFlag(Flag::INTERRUPT, 1);
 
@@ -140,7 +140,7 @@ bool CPU::getFlag(Flag flag) const {
     return (sr >> static_cast<int>(flag)) & 1;
 }
 uint8_t CPU::getFlagMask(Flag flag) const {
-    return (1 << static_cast<int>(flag)) & 1;
+    return (1 << static_cast<int>(flag));
 }
 uint8_t CPU::getRemainingCycles() const {
     return remainingCycles;
@@ -838,7 +838,7 @@ void CPU::BPL(const AddressingMode::ReturnType& operand) {
 //  -	-	-	1	-	-
 void CPU::BRK(const AddressingMode::ReturnType& /*operand*/) {
     push16BitDataToStack(pc + 2);
-    push8BitDataToStack(sr | getFlagMask(Flag::BREAK));
+    push8BitDataToStack(sr | getFlagMask(Flag::BREAK) | getFlagMask(Flag::UNUSED));
 
     setFlag(Flag::INTERRUPT, 1);
 
@@ -1148,7 +1148,7 @@ void CPU::PHA(const AddressingMode::ReturnType& /*operand*/) {
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	-
 void CPU::PHP(const AddressingMode::ReturnType& /*operand*/) {
-    push8BitDataToStack(sr | getFlagMask(Flag::BREAK));
+    push8BitDataToStack(sr & ~getFlagMask(Flag::BREAK) | getFlagMask(Flag::UNUSED));
 }
 
 // PLA
