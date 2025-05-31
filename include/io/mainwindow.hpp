@@ -16,6 +16,7 @@
 #include <QAudioSink>
 #include <QAudioFormat>
 #include <QImage>
+#include <QKeyEvent>
 #include <QMainWindow>
 #include <QMediaDevices>
 #include <QWidget>
@@ -74,6 +75,28 @@ private:
 	void onDefaultAudioDeviceChanged();
 
 	static QAudioFormat defaultAudioFormat();
+
+	// NES controller
+	static constexpr Qt::Key UP_KEY = Qt::Key_Up;
+	static constexpr Qt::Key DOWN_KEY = Qt::Key_Down;
+	static constexpr Qt::Key LEFT_KEY = Qt::Key_Left;
+	static constexpr Qt::Key RIGHT_KEY = Qt::Key_Right;
+	static constexpr Qt::Key SELECT_KEY = Qt::Key_Shift;
+	static constexpr Qt::Key START_KEY = Qt::Key_Return;
+	static constexpr Qt::Key B_KEY = Qt::Key_Z;
+	static constexpr Qt::Key A_KEY = Qt::Key_X;
+
+	// System control
+	static constexpr Qt::Key RESET_KEY = Qt::Key_R;
+	static constexpr Qt::Key PAUSE_KEY = Qt::Key_C;
+	static constexpr Qt::Key MUTE_KEY = Qt::Key_M;
+	static constexpr Qt::Key SAVE_KEY = Qt::Key_S;
+
+	// Debug control
+	static constexpr Qt::Key DEBUG_WINDOW_KEY = Qt::Key_D;
+	static constexpr Qt::Key STEP_KEY = Qt::Key_Space;
+	static constexpr Qt::Key BACKGROUND_PATTETE_KEY = Qt::Key_O;
+	static constexpr Qt::Key SPRITE_PATTETE_KEY = Qt::Key_P;
 };
 
 #endif // MAINWINDOW_HPP

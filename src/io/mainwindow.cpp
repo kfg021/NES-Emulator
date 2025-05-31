@@ -7,7 +7,6 @@
 #include <QColor>
 #include <QFont>
 #include <QFontDatabase>
-#include <QKeyEvent>
 #include <QPainter>
 
 QAudioFormat MainWindow::defaultAudioFormat() {
@@ -101,38 +100,38 @@ void MainWindow::displayNewDebugFrame(const DebugWindowState& state) {
 // TODO: Key inputs for second controller
 void MainWindow::keyPressEvent(QKeyEvent* event) {
 	// Game keys
-	if (event->key() == Qt::Key_Up) {
+	if (event->key() == UP_KEY) {
 		setControllerData(0, Controller::Button::UP, 1);
 	}
-	else if (event->key() == Qt::Key_Down) {
+	else if (event->key() == DOWN_KEY) {
 		setControllerData(0, Controller::Button::DOWN, 1);
 	}
-	else if (event->key() == Qt::Key_Left) {
+	else if (event->key() == LEFT_KEY) {
 		setControllerData(0, Controller::Button::LEFT, 1);
 	}
-	else if (event->key() == Qt::Key_Right) {
+	else if (event->key() == RIGHT_KEY) {
 		setControllerData(0, Controller::Button::RIGHT, 1);
 	}
-	else if (event->key() == Qt::Key_Shift) {
+	else if (event->key() == SELECT_KEY) {
 		setControllerData(0, Controller::Button::SELECT, 1);
 	}
-	else if (event->key() == Qt::Key_Return) {
+	else if (event->key() == START_KEY) {
 		setControllerData(0, Controller::Button::START, 1);
 	}
-	else if (event->key() == Qt::Key_Z) {
+	else if (event->key() == B_KEY) {
 		setControllerData(0, Controller::Button::B, 1);
 	}
-	else if (event->key() == Qt::Key_X) {
+	else if (event->key() == A_KEY) {
 		setControllerData(0, Controller::Button::A, 1);
 	}
 
 	// Reset button
-	else if (event->key() == Qt::Key_R) {
+	else if (event->key() == RESET_KEY) {
 		resetFlag.store(true, std::memory_order_relaxed);
 	}
 
 	// Mute button
-	else if (event->key() == Qt::Key_M) {
+	else if (event->key() == MUTE_KEY) {
 		if (!stepModeEnabled.load(std::memory_order_relaxed)) {
 			globalMuteFlag.fetch_xor(1, std::memory_order_relaxed);
 			updateAudioState();
@@ -140,23 +139,23 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 	}
 
 	// Debugging keys
-	else if (event->key() == Qt::Key_D) {
+	else if (event->key() == DEBUG_WINDOW_KEY) {
 		toggleDebugMode();
 	}
 	else if (debugWindowEnabled.load(std::memory_order_relaxed)) {
-		if (event->key() == Qt::Key_Space) {
+		if (event->key() == STEP_KEY) {
 			if (stepModeEnabled.load(std::memory_order_relaxed)) {
 				stepRequested.store(true, std::memory_order_relaxed);
 			}
 		}
-		else if (event->key() == Qt::Key_C) {
+		else if (event->key() == PAUSE_KEY) {
 			stepModeEnabled.fetch_xor(1, std::memory_order_relaxed);
 			updateAudioState();
 		}
-		else if (event->key() == Qt::Key_O) {
+		else if (event->key() == BACKGROUND_PATTETE_KEY) {
 			backgroundPallete.fetch_add(1, std::memory_order_relaxed);
 		}
-		else if (event->key() == Qt::Key_P) {
+		else if (event->key() == BACKGROUND_PATTETE_KEY) {
 			spritePallete.fetch_add(1, std::memory_order_relaxed);
 		}
 	}
@@ -164,28 +163,28 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 
 void MainWindow::keyReleaseEvent(QKeyEvent* event) {
 	// Game keys
-	if (event->key() == Qt::Key_Up) {
+	if (event->key() == UP_KEY) {
 		setControllerData(0, Controller::Button::UP, 0);
 	}
-	else if (event->key() == Qt::Key_Down) {
+	else if (event->key() == DOWN_KEY) {
 		setControllerData(0, Controller::Button::DOWN, 0);
 	}
-	else if (event->key() == Qt::Key_Left) {
+	else if (event->key() == LEFT_KEY) {
 		setControllerData(0, Controller::Button::LEFT, 0);
 	}
-	else if (event->key() == Qt::Key_Right) {
+	else if (event->key() == RIGHT_KEY) {
 		setControllerData(0, Controller::Button::RIGHT, 0);
 	}
-	else if (event->key() == Qt::Key_Shift) {
+	else if (event->key() == SELECT_KEY) {
 		setControllerData(0, Controller::Button::SELECT, 0);
 	}
-	else if (event->key() == Qt::Key_Return) {
+	else if (event->key() == START_KEY) {
 		setControllerData(0, Controller::Button::START, 0);
 	}
-	else if (event->key() == Qt::Key_Z) {
+	else if (event->key() == B_KEY) {
 		setControllerData(0, Controller::Button::B, 0);
 	}
-	else if (event->key() == Qt::Key_X) {
+	else if (event->key() == A_KEY) {
 		setControllerData(0, Controller::Button::A, 0);
 	}
 }
