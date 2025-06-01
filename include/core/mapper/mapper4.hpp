@@ -21,23 +21,8 @@ public:
     bool irqRequested();
 
     // Serialization
-    struct State {
-        uint8_t bankSelect;
-        uint8_t bankData;
-        bool mirroring;
-        uint8_t prgRamProtect;
-        uint8_t irqReloadValue;
-        uint8_t irqTimer;
-        bool irqEnabled;
-        bool irqReloadPending;
-        bool irqRequest;
-        std::array<uint8_t, 2> prgSwitchableBankSelect;
-        std::array<uint8_t, 6> chrSwitchableBankSelect;
-        std::vector<uint8_t> prgRam;
-        std::vector<uint8_t> customNametable;
-    };
-    State getState() const;
-    void restoreState(const State& state);
+    void serialize(Serializer& s) const override;
+    void deserialize(Deserializer& d) override;
 
 private:
     // PRG banks

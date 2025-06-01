@@ -22,17 +22,8 @@ public:
     bool hasChrRam() const;
 
     // Serialization
-    struct State {
-        uint8_t shiftRegister;
-        uint8_t control;
-        uint8_t chrBank0;
-        uint8_t chrBank1;
-        uint8_t prgBank;
-        std::vector<uint8_t> prgRam;
-        std::vector<uint8_t> chrRam; 
-    };
-    State getState() const;
-    void restoreState(const State& state);
+    void serialize(Serializer& s) const override;
+    void deserialize(Deserializer& d) override;
 
 private:
     // Banks

@@ -16,12 +16,8 @@ public:
     bool hasChrRam() const;
 
     // Serialization
-    struct State {
-        std::vector<uint8_t> prgRam;
-        std::vector<uint8_t> chrRam;
-    };
-    State getState() const;
-    void restoreState(const State& state);
+    void serialize(Serializer& s) const override;
+    void deserialize(Deserializer& d) override;
 };
 
 #endif // MAPPER0_HPP

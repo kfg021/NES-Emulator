@@ -185,37 +185,34 @@ bool Mapper4::canWriteToPRGRam() const {
     return canReadFromPRGRam() && !writeProtection;
 }
 
-Mapper4::State Mapper4::getState() const {
-    State state = {
-        bankSelect,
-        bankData,
-        mirroring,
-        prgRamProtect,
-        irqReloadValue,
-        irqTimer,
-        irqEnabled,
-        irqReloadPending,
-        irqRequest,
-        prgSwitchableBankSelect,
-        chrSwitchableBankSelect,
-        prgRam,
-        customNametable
-    };
-    return state;
+void Mapper4::serialize(Serializer& s) const {
+    s.serializeUInt8(bankSelect);
+    s.serializeUInt8(bankData);
+    s.serializeBool(mirroring);
+    s.serializeUInt8(prgRamProtect);
+    s.serializeUInt8(irqReloadValue);
+    s.serializeUInt8(irqTimer);
+    s.serializeBool(irqEnabled);
+    s.serializeBool(irqReloadPending);
+    s.serializeBool(irqRequest);
+    s.serializeArray(prgSwitchableBankSelect, s.uInt8Func);
+    s.serializeArray(chrSwitchableBankSelect, s.uInt8Func);
+    s.serializeVector(prgRam, s.uInt8Func);
+    s.serializeVector(customNametable, s.uInt8Func);
 }
 
-void Mapper4::restoreState(const Mapper4::State& state) {
-    bankSelect = state.bankSelect;
-    bankData = state.bankData;
-    mirroring = state.mirroring;
-    prgRamProtect = state.prgRamProtect;
-    irqReloadValue = state.irqReloadValue;
-    irqTimer = state.irqTimer;
-    irqEnabled = state.irqEnabled;
-    irqReloadPending = state.irqReloadPending;
-    irqRequest = state.irqRequest;
-    prgSwitchableBankSelect = state.prgSwitchableBankSelect;
-    chrSwitchableBankSelect = state.chrSwitchableBankSelect;
-    prgRam = state.prgRam;
-    customNametable = state.customNametable;
+void Mapper4::deserialize(Deserializer& d) {
+    d.deserializeUInt8(bankSelect);
+    d.deserializeUInt8(bankData);
+    d.deserializeBool(mirroring);
+    d.deserializeUInt8(prgRamProtect);
+    d.deserializeUInt8(irqReloadValue);
+    d.deserializeUInt8(irqTimer);
+    d.deserializeBool(irqEnabled);
+    d.deserializeBool(irqReloadPending);
+    d.deserializeBool(irqRequest);
+    d.deserializeArray(prgSwitchableBankSelect, d.uInt8Func);
+    d.deserializeArray(chrSwitchableBankSelect, d.uInt8Func);
+    d.deserializeVector(prgRam, d.uInt8Func);
+    d.deserializeVector(customNametable, d.uInt8Func);
 }

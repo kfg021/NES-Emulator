@@ -171,28 +171,34 @@ bool Mapper1::hasChrRam() const {
     return config.chrChunks == 0;
 }
 
-Mapper1::State Mapper1::getState() const {
-    std::vector<uint8_t> empty;
-    State state = {
-        shiftRegister,
-        control.toUInt8(),
-        chrBank0,
-        chrBank1,
-        prgBank.toUInt8(),
-        prgRam,
-        hasChrRam() ? chr : empty
-    };
-    return state;
+void Mapper1::serialize(Serializer& s) const {
+    s.serializeUInt8(shiftRegister);
+    s.serializeUInt8(control.toUInt8());
+    s.serializeUInt8(chrBank0);
+    s.serializeUInt8(chrBank1);
+    s.serializeUInt8(prgBank.toUInt8());
+    s.serializeVector(prgRam, s.uInt8Func);
+    if (hasChrRam()) {
+        s.serializeVector(chr, s.uInt8Func);
+    }
 }
 
-void Mapper1::restoreState(const Mapper1::State& state) {
-    shiftRegister = state.shiftRegister;
-    control = state.control;
-    chrBank0 = state.chrBank0;
-    chrBank1 = state.chrBank1;
-    prgBank = state.prgBank;
-    prgRam = state.prgRam;
+void Mapper1::deserialize(Deserializer& d) {
+    d.deserializeUInt8(shiftRegister);
+
+    uint8_t controlTemp;
+    d.deserializeUInt8(controlTemp);
+    control.setFromUInt8(controlTemp);
+
+    d.deserializeUInt8(chrBank0);
+    d.deserializeUInt8(chrBank1);
+
+    uint8_t prgBankTemp;
+    d.deserializeUInt8(prgBankTemp);
+    prgBank.setFromUInt8(prgBankTemp);
+
+    d.deserializeVector(prgRam, d.uInt8Func);
     if (hasChrRam()) {
-        chr = state.chrRam;
+        d.deserializeVector(chr, d.uInt8Func);
     }
 }

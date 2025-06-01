@@ -52,20 +52,18 @@ bool Mapper2::hasChrRam() const {
     return config.chrChunks == 0;
 }
 
-Mapper2::State Mapper2::getState() const {
-    std::vector<uint8_t> empty;
-    State state = {
-        currentBank,
-        prgRam,
-        hasChrRam() ? chr : empty
-    };
-    return state;
+void Mapper2::serialize(Serializer& s) const {
+    s.serializeUInt8(currentBank);
+    s.serializeVector(prgRam, s.uInt8Func);
+    if (hasChrRam()) {
+        s.serializeVector(chr, s.uInt8Func);
+    }
 }
 
-void Mapper2::restoreState(const Mapper2::State& state) {
-    currentBank = state.currentBank;
-    prgRam = state.prgRam;
+void Mapper2::deserialize(Deserializer& d) {
+    d.deserializeUInt8(currentBank);
+    d.deserializeVector(prgRam, d.uInt8Func);
     if (hasChrRam()) {
-        chr = state.chrRam;
+        d.deserializeVector(chr, d.uInt8Func);
     }
 }

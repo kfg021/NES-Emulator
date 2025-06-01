@@ -18,13 +18,8 @@ public:
     bool hasChrRam() const;
 
     // Serialization
-    struct State {
-        uint8_t currentBank;
-        std::vector<uint8_t> prgRam;
-        std::vector<uint8_t> chrRam;
-    };
-    State getState() const;
-    void restoreState(const State& state);
+    void serialize(Serializer& s) const override;
+    void deserialize(Deserializer& d) override;
 
 private:
     static constexpr MemoryRange PRG_RANGE_SWICHABLE{ 0x8000, 0xBFFF };

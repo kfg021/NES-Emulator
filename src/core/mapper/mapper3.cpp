@@ -45,15 +45,12 @@ void Mapper3::mapCHRWrite(uint16_t /*ppuAddress*/, uint8_t /*value*/) {
     // CHR in mapper 3 is read only
 }
 
-Mapper3::State Mapper3::getState() const {
-    State state = {
-        currentBank,
-        prgRam
-    };
-    return state;
+void Mapper3::serialize(Serializer& s) const {
+    s.serializeUInt8(currentBank);
+    s.serializeVector(prgRam, s.uInt8Func);
 }
 
-void Mapper3::restoreState(const Mapper3::State& state) {
-    currentBank = state.currentBank;
-    prgRam = state.prgRam;
+void Mapper3::deserialize(Deserializer& d) {
+    d.deserializeUInt8(currentBank);
+    d.deserializeVector(prgRam, d.uInt8Func);
 }

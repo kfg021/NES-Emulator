@@ -19,17 +19,8 @@ public:
     MirrorMode getMirrorMode() const override;
 
     // Serialization
-    struct State {
-        uint8_t prgBankSelect;
-        bool chrLatch1;
-        bool chrLatch2;
-        std::array<uint8_t, 2> chrBank1Select;
-        std::array<uint8_t, 2> chrBank2Select;
-        bool mirroring;
-        std::vector<uint8_t> prgRam;
-    };
-    State getState() const;
-    void restoreState(const State& state);
+    void serialize(Serializer& s) const override;
+    void deserialize(Deserializer& d) override;
 
 private:
     // Banks

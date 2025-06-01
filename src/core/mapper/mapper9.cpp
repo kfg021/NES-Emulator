@@ -108,25 +108,22 @@ Mapper::MirrorMode Mapper9::getMirrorMode() const {
     return mirroring ? MirrorMode::HORIZONTAL : MirrorMode::VERTICAL;
 }
 
-Mapper9::State Mapper9::getState() const {
-    State state = {
-        prgBankSelect,
-        chrLatch1,
-        chrLatch2,
-        chrBank1Select,
-        chrBank2Select,
-        mirroring,
-        prgRam
-    };
-    return state;
+void Mapper9::serialize(Serializer& s) const {
+    s.serializeUInt8(prgBankSelect);
+    s.serializeBool(chrLatch1);
+    s.serializeBool(chrLatch2);
+    s.serializeArray(chrBank1Select, s.uInt8Func);
+    s.serializeArray(chrBank2Select, s.uInt8Func);
+    s.serializeBool(mirroring);
+    s.serializeVector(prgRam, s.uInt8Func);
 }
 
-void Mapper9::restoreState(const Mapper9::State& state) {
-    prgBankSelect = state.prgBankSelect;
-    chrLatch1 = state.chrLatch1;
-    chrLatch2 = state.chrLatch2;
-    chrBank1Select = state.chrBank1Select;
-    chrBank2Select = state.chrBank2Select;
-    mirroring = state.mirroring;
-    prgRam = state.prgRam;
+void Mapper9::deserialize(Deserializer& d) {
+    d.deserializeUInt8(prgBankSelect);
+    d.deserializeBool(chrLatch1);
+    d.deserializeBool(chrLatch2);
+    d.deserializeArray(chrBank1Select, d.uInt8Func);
+    d.deserializeArray(chrBank2Select, d.uInt8Func);
+    d.deserializeBool(mirroring);
+    d.deserializeVector(prgRam, d.uInt8Func);
 }

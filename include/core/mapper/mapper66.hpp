@@ -16,13 +16,8 @@ public:
     void mapCHRWrite(uint16_t ppuAddress, uint8_t value) override;
 
     // Serialization
-    struct State {
-        uint8_t currentPRGBank;
-        uint8_t currentCHRBank;
-        std::vector<uint8_t> prgRam;
-    };
-    State getState() const;
-    void restoreState(const State& state);
+    void serialize(Serializer& s) const override;
+    void deserialize(Deserializer& d) override;
 
 private:
     static constexpr MemoryRange BANK_SELECT_RANGE = PRG_RANGE;
