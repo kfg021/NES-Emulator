@@ -10,26 +10,26 @@ class Serializer {
 public:
     virtual ~Serializer() = default;
 
-    virtual void serializeUInt8(uint8_t data) const = 0;
-    virtual void serializeUInt16(uint16_t data) const = 0;
-    virtual void serializeUInt32(uint32_t data) const = 0;
-    virtual void serializeUInt64(uint64_t data) const = 0;
-    virtual void serializeInt32(int32_t data) const = 0;
+    virtual void serializeUInt8(uint8_t data) = 0;
+    virtual void serializeUInt16(uint16_t data) = 0;
+    virtual void serializeUInt32(uint32_t data) = 0;
+    virtual void serializeUInt64(uint64_t data) = 0;
+    virtual void serializeInt32(int32_t data) = 0;
 
-    void serializeBool(bool data) const {
+    void serializeBool(bool data) {
         serializeUInt8(static_cast<uint8_t>(data));
     }
 
     // Serialize arrays/vectors of arbitrary type if user supplies a serialization function
     template <typename T, size_t size>
-    void serializeArray(const std::array<T, size>& data, const std::function<void(const T&)>& serializeT) const {
+    void serializeArray(const std::array<T, size>& data, const std::function<void(const T&)>& serializeT) {
         for (const T& t : data) {
             serializeT(t);
         }
     }
 
     template <typename T>
-    void serializeVector(const std::vector<T>& data, const std::function<void(const T&)>& serializeT) const {
+    void serializeVector(const std::vector<T>& data, const std::function<void(const T&)>& serializeT) {
         serializeUInt64(static_cast<uint64_t>(data.size()));
         for (const T& t : data) {
             serializeT(t);

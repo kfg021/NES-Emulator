@@ -36,6 +36,7 @@ set(HEADERS
     include/io/guitypes.hpp
     include/io/mainwindow.hpp
     include/io/threadsafeaudioqueue.hpp
+    include/io/qtserializer.hpp
     include/util/serializer.hpp
     include/util/util.hpp
 )
@@ -58,6 +59,7 @@ set(SOURCES
     src/io/audioplayer.cpp
     src/io/emulatorthread.cpp
     src/io/mainwindow.cpp
+    src/io/qtserializer.cpp
     src/util/util.cpp
     src/main.cpp
 )
