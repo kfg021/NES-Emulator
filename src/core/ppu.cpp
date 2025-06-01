@@ -940,6 +940,7 @@ void PPU::serialize(Serializer& s) const {
     s.serializeUInt8(oamAddress);
     s.serializeBool(nmiRequest);
     s.serializeBool(irqRequest);
+    s.serializeArray(oamBuffer, s.uInt8Func);
 }
 
 void PPU::deserialize(Deserializer& d) {
@@ -984,4 +985,5 @@ void PPU::deserialize(Deserializer& d) {
     d.deserializeUInt8(oamAddress);
     d.deserializeBool(nmiRequest);
     d.deserializeBool(irqRequest);
+    d.deserializeArray(oamBuffer, d.uInt8Func);
 }
