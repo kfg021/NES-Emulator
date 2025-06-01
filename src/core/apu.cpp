@@ -683,16 +683,16 @@ void APU::serialize(Serializer& s) const {
                 (pulse.duty << 6) |
 
                 // 0x4001 / 0x4005
-                (pulse.sweepUnitShift << (8 + 0)) |
+                (pulse.sweepUnitShift << 8) |
                 (pulse.sweepUnitNegate << (8 + 3)) |
                 (pulse.sweepUnitPeriod << (8 + 4)) |
                 (pulse.sweepUnitEnabled << (8 + 7)) |
 
                 // 0x4002 / 0x4006
-                (pulse.timerLow << (16 + 0)) |
+                (pulse.timerLow << 16) |
 
                 // 0x4003 / 0x4007
-                (pulse.timerHigh << (24 + 0)) |
+                (pulse.timerHigh << 24) |
                 (pulse.lengthCounterLoad << (24 + 3));
 
             return data;
@@ -722,7 +722,7 @@ void APU::serialize(Serializer& s) const {
                 // 0x4009 - Unused
 
                 // 0x400A
-                (triangle.timerLow << (16 + 0)) |
+                (triangle.timerLow << 16) |
 
                 // 0x400B
                 (triangle.timerHigh << 24) |
@@ -757,16 +757,16 @@ void APU::deserialize(Deserializer& d) {
             pulse.duty = (data >> 6) & 0x3;
 
             // 0x4001 / 0x4005
-            pulse.sweepUnitShift = (data >> (8 + 0)) & 0x7;
+            pulse.sweepUnitShift = (data >> 8) & 0x7;
             pulse.sweepUnitNegate = (data >> (8 + 3)) & 0x1;
             pulse.sweepUnitPeriod = (data >> (8 + 4)) & 0x7;
             pulse.sweepUnitEnabled = (data >> (8 + 7)) & 0x1;
 
             // 0x4002 / 0x4006
-            pulse.timerLow = (data >> (16 + 0)) & 0xFF;
+            pulse.timerLow = (data >> 16) & 0xFF;
 
             // 0x4003 / 0x4007
-            pulse.timerHigh = (data >> (24 + 0)) & 0x7;
+            pulse.timerHigh = (data >> 24) & 0x7;
             pulse.lengthCounterLoad = (data >> (24 + 3)) & 0x1F;
         };
 
@@ -795,10 +795,10 @@ void APU::deserialize(Deserializer& d) {
             // 0x4009 - Unused
 
             // 0x400A
-            triangle.timerLow = (data >> (16 + 0)) & 0xFF;
+            triangle.timerLow = (data >> 16) & 0xFF;
 
             // 0x400B
-            triangle.timerHigh = (data >> (24 + 0)) & 0x7;
+            triangle.timerHigh = (data >> 24) & 0x7;
             triangle.lengthCounterLoad = (data >> (24 + 3)) & 0x1F;
         };
 
