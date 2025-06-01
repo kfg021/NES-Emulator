@@ -40,7 +40,7 @@ bool createSaveState(const QString& filePath, const Bus& bus) {
         bus.serialize(s);
         bus.cpu->serialize(s);
         bus.ppu->serialize(s);
-        // bus.apu->serialize(s);
+        bus.apu->serialize(s);
         bus.ppu->cartridge.mapper->serialize(s);
 
         return true;
@@ -71,7 +71,7 @@ bool loadSaveState(const QString& filePath, Bus& bus) {
         bus.deserialize(d);
         bus.cpu->deserialize(d);
         bus.ppu->deserialize(d);
-        // bus.apu->deserialize(d);
+        bus.apu->deserialize(d);
         bus.ppu->cartridge.mapper->deserialize(d);
 
         return true;

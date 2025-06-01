@@ -1,6 +1,7 @@
 #ifndef APU_HPP
 #define APU_HPP
 
+#include "util/serializer.hpp"
 #include "util/util.hpp"
 
 #include <array>
@@ -31,6 +32,10 @@ public:
     void receiveDMCSample(uint8_t sample);
 
     float getAudioSample() const;
+
+    // Serialization
+    void serialize(Serializer& s) const;
+    void deserialize(Deserializer& d);
 
 private:
     static constexpr MemoryRange PULSE_RANGE{ 0x4000, 0x4007 };
