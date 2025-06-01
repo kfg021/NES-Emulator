@@ -31,6 +31,7 @@ set(HEADERS
     include/core/mapper/mapper4.hpp
     include/core/mapper/mapper9.hpp
     include/core/mapper/mapper66.hpp
+    include/core/serializer.hpp
     include/io/audioplayer.hpp
     include/io/emulatorthread.hpp
     include/io/guitypes.hpp
