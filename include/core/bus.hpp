@@ -36,22 +36,6 @@ public:
 
     void requestDmcDma(uint16_t address);
 
-    struct OamDma {
-        bool requested;
-        bool ongoing;
-        uint8_t page;
-        uint8_t offset;
-        uint8_t data;
-    };
-
-    struct DmcDma {
-        bool requested;
-        bool ongoing;
-        uint16_t address;
-        uint8_t data;
-        uint8_t delay;
-    };
-
     // Serialization
     void serialize(Serializer& s) const;
     void deserialize(Deserializer& d);
@@ -77,9 +61,23 @@ private:
 
     static constexpr uint16_t OAM_DMA_ADDR = 0x4014;
 
+    struct OamDma {
+        bool requested;
+        bool ongoing;
+        uint8_t page;
+        uint8_t offset;
+        uint8_t data;
+    };
     OamDma oamDma;
     void oamDmaCycle();
 
+    struct DmcDma {
+        bool requested;
+        bool ongoing;
+        uint16_t address;
+        uint8_t data;
+        uint8_t delay;
+    };
     DmcDma dmcDma;
     void dmcDmaCycle();
 
