@@ -80,7 +80,7 @@ public:
         std::array<uint8_t, 2 * KB> nameTable;
         int scanline;
         int cycle;
-        int64_t frame;
+        bool oddFrame;
         uint16_t patternTableLoShifter;
         uint16_t patternTableHiShifter;
         uint16_t attributeTableLoShifter;
@@ -278,7 +278,7 @@ private:
 
     int scanline;
     int cycle;
-    int64_t frame;
+    bool oddFrame;
 
     // internal latches
     uint16_t patternTableLoShifter;

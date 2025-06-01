@@ -68,7 +68,7 @@ QDataStream& operator<<(QDataStream& out, const PPU::State& state) {
         << state.nameTable
         << state.scanline
         << state.cycle
-        << state.frame
+        << state.oddFrame
         << state.patternTableLoShifter
         << state.patternTableHiShifter
         << state.attributeTableLoShifter
@@ -99,7 +99,7 @@ QDataStream& operator>>(QDataStream& in, PPU::State& state) {
         >> state.nameTable
         >> state.scanline
         >> state.cycle
-        >> state.frame
+        >> state.oddFrame
         >> state.patternTableLoShifter
         >> state.patternTableHiShifter
         >> state.attributeTableLoShifter

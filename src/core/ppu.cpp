@@ -28,7 +28,7 @@ void PPU::initPPU() {
 
     scanline = 0;
     cycle = 0;
-    frame = 0;
+    oddFrame = false;
 
     patternTableLoShifter = 0;
     patternTableHiShifter = 0;
@@ -648,11 +648,11 @@ void PPU::incrementCycle() {
         }
         else {
             scanline = -1;
-            frame++;
+            oddFrame ^= 1;
         }
 
         // Skip a cycle on odd frame numbers
-        if (scanline == 0 && (frame & 1)) {
+        if (scanline == 0 && oddFrame) {
             cycle = 1;
         }
         else {
@@ -929,7 +929,7 @@ PPU::State PPU::getState() const {
         nameTable,
         scanline,
         cycle,
-        frame,
+        oddFrame,
         patternTableLoShifter,
         patternTableHiShifter,
         attributeTableLoShifter,
@@ -960,7 +960,7 @@ void PPU::restoreState(const PPU::State& state) {
     nameTable = state.nameTable;
     scanline = state.scanline;
     cycle = state.cycle;
-    frame = state.frame;
+    oddFrame = state.oddFrame;
     patternTableLoShifter = state.patternTableLoShifter;
     patternTableHiShifter = state.patternTableHiShifter;
     attributeTableLoShifter = state.attributeTableLoShifter;
