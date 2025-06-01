@@ -31,13 +31,12 @@ set(HEADERS
     include/core/mapper/mapper4.hpp
     include/core/mapper/mapper9.hpp
     include/core/mapper/mapper66.hpp
-    include/core/serializer.hpp
     include/io/audioplayer.hpp
     include/io/emulatorthread.hpp
     include/io/guitypes.hpp
     include/io/mainwindow.hpp
-    include/io/savestate.hpp
     include/io/threadsafeaudioqueue.hpp
+    include/util/serializer.hpp
     include/util/util.hpp
 )
 
@@ -59,7 +58,6 @@ set(SOURCES
     src/io/audioplayer.cpp
     src/io/emulatorthread.cpp
     src/io/mainwindow.cpp
-    src/io/savestate.cpp
     src/util/util.cpp
     src/main.cpp
 )

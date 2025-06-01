@@ -211,23 +211,52 @@ void Bus::setController(bool controller, uint8_t value) {
     controllers[controller].setButtons(value);
 }
 
-Bus::State Bus::getState() const {
-    State state = {
-        totalCycles,
-        ram,
-        controllerData,
-        strobe,
-        oamDma,
-        dmcDma
+void Bus::serialize(Serializer& s) const {
+    s.serializeUInt64(totalCycles);
+    s.serializeArray(ram, s.uInt8Func);
+    s.serializeArray(controllerData, s.uInt8Func);
+    s.serializeBool(strobe);
+
+    auto serializeOamDma = [](Serializer& s, const OamDma& dma) {
+        s.serializeBool(dma.requested);
+        s.serializeBool(dma.ongoing);
+        s.serializeUInt8(dma.page);
+        s.serializeUInt8(dma.offset);
+        s.serializeUInt8(dma.data);
     };
-    return state;
+    serializeOamDma(s, oamDma);
+
+    auto serializeDmcDma = [](Serializer& s, const DmcDma& dma) {
+        s.serializeBool(dma.requested);
+        s.serializeBool(dma.ongoing);
+        s.serializeUInt16(dma.address);
+        s.serializeUInt8(dma.data);
+        s.serializeUInt8(dma.delay);
+    };
+    serializeDmcDma(s, dmcDma);
 }
 
-void Bus::restoreState(const Bus::State& state) {
-    totalCycles = state.totalCycles;
-    ram = state.ram;
-    controllerData = state.controllerData;
-    strobe = state.strobe;
-    oamDma = state.oamDma;
-    dmcDma = state.dmcDma;
+void Bus::deserialize(Deserializer& d) {
+    d.deserializeUInt64(totalCycles);
+    d.deserializeArray(ram, d.uInt8Func);
+    d.deserializeArray(controllerData, d.uInt8Func);
+    d.deserializeBool(strobe);
+
+    auto serializeOamDma = [](Deserializer& d, OamDma& dma) -> void {
+        d.deserializeBool(dma.requested);
+        d.deserializeBool(dma.ongoing);
+        d.deserializeUInt8(dma.page);
+        d.deserializeUInt8(dma.offset);
+        d.deserializeUInt8(dma.data);
+    };
+    serializeOamDma(d, oamDma);
+
+    auto serializeDmcDma = [](Deserializer& d, DmcDma& dma) -> void {
+        d.deserializeBool(dma.requested);
+        d.deserializeBool(dma.ongoing);
+        d.deserializeUInt16(dma.address);
+        d.deserializeUInt8(dma.data);
+        d.deserializeUInt8(dma.delay);
+    };
+    serializeDmcDma(d, dmcDma);
 }

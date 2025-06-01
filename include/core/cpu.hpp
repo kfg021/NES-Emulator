@@ -1,6 +1,8 @@
 #ifndef CPU_HPP
 #define CPU_HPP
 
+#include "util/serializer.hpp"
+
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -79,18 +81,8 @@ public:
     const Opcode& getOpcode(uint16_t address) const;
 
     // Serialization
-    struct State {
-        uint16_t pc;
-        uint8_t a;
-        uint8_t x;
-        uint8_t y;
-        uint8_t sr;
-        uint8_t sp;
-        uint8_t remainingCycles;
-        bool shouldAdvancePC;
-    };
-    State getState() const;
-    void restoreState(const State& state);
+    void serialize(Serializer& s) const;
+    void deserialize(Deserializer& d);
 
 private:
     // Constants

@@ -1440,27 +1440,24 @@ const CPU::Opcode& CPU::getOpcode(uint16_t address) const {
     return lookup[index];
 }
 
-CPU::State CPU::getState() const {
-    State state = {
-        pc,
-        a,
-        x,
-        y,
-        sr,
-        sp,
-        remainingCycles,
-        shouldAdvancePC
-    };
-    return state;
-};
+void CPU::serialize(Serializer& s) const {
+    s.serializeUInt16(pc);
+    s.serializeUInt8(a);
+    s.serializeUInt8(x);
+    s.serializeUInt8(y);
+    s.serializeUInt8(sr);
+    s.serializeUInt8(sp);
+    s.serializeUInt8(remainingCycles);
+    s.serializeBool(shouldAdvancePC);
+}
 
-void CPU::restoreState(const CPU::State& state) {
-    pc = state.pc;
-    a = state.a;
-    x = state.x;
-    y = state.y;
-    sr = state.sr;
-    sp = state.sp;
-    remainingCycles = state.remainingCycles;
-    shouldAdvancePC = state.shouldAdvancePC;
+void CPU::deserialize(Deserializer& d) {
+    d.deserializeUInt16(pc);
+    d.deserializeUInt8(a);
+    d.deserializeUInt8(x);
+    d.deserializeUInt8(y);
+    d.deserializeUInt8(sr);
+    d.deserializeUInt8(sp);
+    d.deserializeUInt8(remainingCycles);
+    d.deserializeBool(shouldAdvancePC);
 }

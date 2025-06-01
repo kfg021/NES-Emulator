@@ -6,6 +6,7 @@
 #include "core/controller.hpp"
 #include "core/cpu.hpp"
 #include "core/ppu.hpp"
+#include "util/serializer.hpp"
 #include "util/util.hpp"
 
 #include <array>
@@ -52,16 +53,8 @@ public:
     };
 
     // Serialization
-    struct State {
-        uint64_t totalCycles;
-        std::array<uint8_t, 0x800> ram;
-        std::array<uint8_t, 2> controllerData;
-        bool strobe;
-        OamDma oamDma;
-        DmcDma dmcDma;
-    };
-    State getState() const;
-    void restoreState(const State& state);
+    void serialize(Serializer& s) const;
+    void deserialize(Deserializer& d);
 
 private:
     // Memory ranges for devices
