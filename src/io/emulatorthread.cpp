@@ -94,12 +94,6 @@ void EmulatorThread::run() {
 
 			emit debugFrameReadySignal(state);
 		}
-		else {
-			if (!recentPCs.empty()) {
-				std::queue<uint16_t> empty;
-				std::swap(recentPCs, empty);
-			}
-		}
 
 		int currentTimeUs = elapsedTimer.nsecsElapsed() / 1000;
 		int sleepTimeUs = desiredNextFrameUs - currentTimeUs;
@@ -170,15 +164,15 @@ void EmulatorThread::runCycles() {
 		return isRunning.load(std::memory_order_relaxed) && !bus.ppu->frameReadyFlag && cycles < UPPER_LIMIT_CYCLES;
 	};
 
-	bool stepModeEnabled = keyInput.stepModeEnabled->load(std::memory_order_relaxed) & 1;
-	if (!stepModeEnabled) {
+	bool paused = keyInput.pauseFlag->load(std::memory_order_relaxed) & 1;
+	if (!paused) {
 		bool debugEnabled = keyInput.debugWindowEnabled->load(std::memory_order_relaxed);
 		bool audioEnabled = !(keyInput.globalMuteFlag->load(std::memory_order_relaxed) & 1);
 		while (loopCondition()) {
 			executeCycle(debugEnabled, audioEnabled);
 		}
 	}
-	else if (stepModeEnabled && keyInput.stepRequested->load(std::memory_order_acquire)) {
+	else if (paused && keyInput.stepRequested->load(std::memory_order_acquire)) {
 		keyInput.stepRequested->store(false, std::memory_order_release);
 
 		while (loopCondition()) {

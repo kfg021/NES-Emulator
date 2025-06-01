@@ -17,7 +17,7 @@ struct KeyboardInput {
 
     // Debug window settings
     const std::atomic<bool>* debugWindowEnabled;
-    const std::atomic<uint8_t>* stepModeEnabled; // Treated as a boolean
+    const std::atomic<uint8_t>* pauseFlag; // Treated as a boolean
     std::atomic<bool>* stepRequested;
     const std::atomic<uint8_t>* spritePallete;
     const std::atomic<uint8_t>* backgroundPallete;

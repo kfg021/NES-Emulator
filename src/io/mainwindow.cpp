@@ -27,7 +27,7 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
 	controllerStatus[1].store(0, std::memory_order_relaxed);
 	resetFlag.store(false, std::memory_order_relaxed);
 	debugWindowEnabled.store(false, std::memory_order_relaxed);
-	stepModeEnabled.store(false, std::memory_order_relaxed);
+	pauseFlag.store(false, std::memory_order_relaxed);
 	stepRequested.store(false, std::memory_order_relaxed);
 	spritePallete.store(0, std::memory_order_relaxed);
 	backgroundPallete.store(0, std::memory_order_relaxed);
@@ -45,7 +45,7 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
 		&controllerStatus,
 		&resetFlag,
 		&debugWindowEnabled,
-		&stepModeEnabled,
+		&pauseFlag,
 		&stepRequested,
 		&spritePallete,
 		&backgroundPallete,
@@ -91,8 +91,8 @@ void MainWindow::displayNewFrame(const QImage& image) {
 void MainWindow::displayNewDebugFrame(const DebugWindowState& state) {
 	debugWindowData = state;
 
-	// displayNewFrame will handle updates if emulator is running at full speed
-	if (stepModeEnabled.load(std::memory_order_relaxed)) {
+	// displayNewDebugFrame handles updates only when we are step-through mode
+	if (debugWindowEnabled.load(std::memory_order_relaxed) && pauseFlag.load(std::memory_order_acquire)) {
 		update();
 	}
 }
@@ -130,12 +130,16 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 		resetFlag.store(true, std::memory_order_relaxed);
 	}
 
+	// Pause button
+	else if (event->key() == PAUSE_KEY) {
+		pauseFlag.fetch_xor(1, std::memory_order_relaxed);
+		updateAudioState();
+	}
+
 	// Mute button
 	else if (event->key() == MUTE_KEY) {
-		if (!stepModeEnabled.load(std::memory_order_relaxed)) {
-			globalMuteFlag.fetch_xor(1, std::memory_order_relaxed);
-			updateAudioState();
-		}
+		globalMuteFlag.fetch_xor(1, std::memory_order_relaxed);
+		updateAudioState();
 	}
 
 	// Debugging keys
@@ -144,13 +148,9 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 	}
 	else if (debugWindowEnabled.load(std::memory_order_relaxed)) {
 		if (event->key() == STEP_KEY) {
-			if (stepModeEnabled.load(std::memory_order_relaxed)) {
+			if (pauseFlag.load(std::memory_order_relaxed)) {
 				stepRequested.store(true, std::memory_order_relaxed);
 			}
-		}
-		else if (event->key() == PAUSE_KEY) {
-			stepModeEnabled.fetch_xor(1, std::memory_order_relaxed);
-			updateAudioState();
 		}
 		else if (event->key() == BACKGROUND_PATTETE_KEY) {
 			backgroundPallete.fetch_add(1, std::memory_order_relaxed);
@@ -216,8 +216,8 @@ void MainWindow::updateAudioState() {
 	};
 
 	bool globalMute = globalMuteFlag.load(std::memory_order_relaxed) & 1;
-	bool stepMode = stepModeEnabled.load(std::memory_order_relaxed) & 1;
-	if (globalMute || stepMode) {
+	bool paused = pauseFlag.load(std::memory_order_relaxed) & 1;
+	if (globalMute || paused) {
 		tryToMute();
 	}
 	else {
@@ -265,7 +265,6 @@ void MainWindow::toggleDebugMode() {
 	bool debugMode = debugWindowEnabled.load(std::memory_order_relaxed);
 	if (debugMode) {
 		debugWindowEnabled.store(false, std::memory_order_relaxed);
-		stepModeEnabled.store(0, std::memory_order_release);
 		setFixedSize(GAME_WIDTH, GAME_HEIGHT);
 	}
 	else {
