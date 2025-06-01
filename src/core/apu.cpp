@@ -332,7 +332,7 @@ void APU::executeHalfCycle() {
                 if (pulse.timerCounter == 0) {
                     uint16_t timerReload = (static_cast<uint16_t>(pulse.timerHigh) << 8) | pulse.timerLow;
                     pulse.timerCounter = timerReload;
-                    pulse.dutyCycleIndex++;
+                    pulse.dutyCycleIndex = (pulse.dutyCycleIndex + 1) & 0x7;
                 }
                 else {
                     pulse.timerCounter--;
@@ -441,23 +441,23 @@ void APU::quarterClock() {
     // Clock pulse envelopes
     {
         for (int i = 0; i < 2; ++i) {
-            Pulse& p = pulses[i];
-            if (p.envelopeStartFlag) {
-                p.envelopeStartFlag = false;
-                p.envelope = 0xF;
-                p.envelopeDividerCounter = p.volumeOrEnvelopeRate;
+            Pulse& pulse = pulses[i];
+            if (pulse.envelopeStartFlag) {
+                pulse.envelopeStartFlag = false;
+                pulse.envelope = 0xF;
+                pulse.envelopeDividerCounter = pulse.volumeOrEnvelopeRate;
             }
             else {
-                if (p.envelopeDividerCounter > 0) {
-                    p.envelopeDividerCounter--;
+                if (pulse.envelopeDividerCounter > 0) {
+                    pulse.envelopeDividerCounter--;
                 }
                 else {
-                    p.envelopeDividerCounter = p.volumeOrEnvelopeRate;
-                    if (p.envelope) {
-                        p.envelope--;
+                    pulse.envelopeDividerCounter = pulse.volumeOrEnvelopeRate;
+                    if (pulse.envelope) {
+                        pulse.envelope--;
                     }
-                    else if (p.envelopeLoopOrLengthCounterHalt) {
-                        p.envelope = 15;
+                    else if (pulse.envelopeLoopOrLengthCounterHalt) {
+                        pulse.envelope = 0xF;
                     }
                 }
             }
@@ -705,24 +705,31 @@ void APU::restartDmcSample() {
 
 void APU::serialize(Serializer& s) const {
     auto serializePulse = [](Serializer& s, const Pulse& pulse) -> void {
-        // 0x4000 / 0x4004
-        s.serializeUInt8(pulse.volumeOrEnvelopeRate);
-        s.serializeBool(pulse.constantVolume);
-        s.serializeBool(pulse.envelopeLoopOrLengthCounterHalt);
-        s.serializeUInt8(pulse.duty);
+        auto pulseToUInt32 = [](const Pulse& pulse) -> uint32_t {
+            uint32_t data =
+                // 0x4000 / 0x4004
+                static_cast<uint32_t>(pulse.volumeOrEnvelopeRate) |
+                (pulse.constantVolume << 4) |
+                (pulse.envelopeLoopOrLengthCounterHalt << 5) |
+                (pulse.duty << 6) |
 
-        // 0x4001 / 0x4005
-        s.serializeUInt8(pulse.sweepUnitShift);
-        s.serializeBool(pulse.sweepUnitNegate);
-        s.serializeUInt8(pulse.sweepUnitPeriod);
-        s.serializeBool(pulse.sweepUnitEnabled);
+                // 0x4001 / 0x4005
+                (pulse.sweepUnitShift << (8 + 0)) |
+                (pulse.sweepUnitNegate << (8 + 3)) |
+                (pulse.sweepUnitPeriod << (8 + 4)) |
+                (pulse.sweepUnitEnabled << (8 + 7)) |
 
-        // 0x4002 / 0x4006
-        s.serializeUInt8(pulse.timerLow);
+                // 0x4002 / 0x4006
+                (pulse.timerLow << (16 + 0)) |
 
-        // 0x4003 / 0x4007
-        s.serializeUInt8(pulse.timerHigh);
-        s.serializeUInt8(pulse.lengthCounterLoad);
+                // 0x4003 / 0x4007
+                (pulse.timerHigh << (24 + 0)) |
+                (pulse.lengthCounterLoad << (24 + 3));
+
+            return data;
+        };
+
+        s.serializeUInt32(pulseToUInt32(pulse));
 
         // Internal state
         s.serializeUInt16(pulse.timerCounter);
@@ -741,84 +748,43 @@ void APU::serialize(Serializer& s) const {
 
 void APU::deserialize(Deserializer& d) {
     auto deserializePulse = [](Deserializer& d, Pulse& pulse) -> void {
-        // 0x4000 / 0x4004
-        uint8_t volumeOrEnvelopeRateTemp;
-        d.deserializeUInt8(volumeOrEnvelopeRateTemp);
-        pulse.volumeOrEnvelopeRate = volumeOrEnvelopeRateTemp;
+        auto setPulseFromUInt32 = [](Pulse& pulse, uint32_t data) -> void {
+            // 0x4000 / 0x4004
+            pulse.volumeOrEnvelopeRate = data & 0xF;
+            pulse.constantVolume = (data >> 4) & 0x1;
+            pulse.envelopeLoopOrLengthCounterHalt = (data >> 5) & 0x1;
+            pulse.duty = (data >> 6) & 0x3;
 
-        bool constantVolumeTemp;
-        d.deserializeBool(constantVolumeTemp);
-        pulse.constantVolume = constantVolumeTemp;
+            // 0x4001 / 0x4005
+            pulse.sweepUnitShift = (data >> (8 + 0)) & 0x7;
+            pulse.sweepUnitNegate = (data >> (8 + 3)) & 0x1;
+            pulse.sweepUnitPeriod = (data >> (8 + 4)) & 0x7;
+            pulse.sweepUnitEnabled = (data >> (8 + 7)) & 0x1;
 
-        bool envelopeLoopOrLengthCounterHaltTemp;
-        d.deserializeBool(envelopeLoopOrLengthCounterHaltTemp);
-        pulse.envelopeLoopOrLengthCounterHalt = envelopeLoopOrLengthCounterHaltTemp;
+            // 0x4002 / 0x4006
+            pulse.timerLow = (data >> (16 + 0)) & 0xFF;
 
-        uint8_t dutyTemp;
-        d.deserializeUInt8(dutyTemp);
-        pulse.duty = dutyTemp;
+            // 0x4003 / 0x4007
+            pulse.timerHigh = (data >> (24 + 0)) & 0x7;
+            pulse.lengthCounterLoad = (data >> (24 + 3)) & 0x1F;
+        };
 
-        // 0x4001 / 0x4005
-        uint8_t sweepUnitShiftTemp;
-        d.deserializeUInt8(sweepUnitShiftTemp);
-        pulse.sweepUnitShift = sweepUnitShiftTemp;
-
-        bool sweepUnitNegateTemp;
-        d.deserializeBool(sweepUnitNegateTemp);
-        pulse.sweepUnitNegate = sweepUnitNegateTemp;
-
-        uint8_t sweepUnitPeriodTemp;
-        d.deserializeUInt8(sweepUnitPeriodTemp);
-        pulse.sweepUnitPeriod = sweepUnitPeriodTemp;
-
-        bool sweepUnitEnabledTemp;
-        d.deserializeBool(sweepUnitEnabledTemp);
-        pulse.sweepUnitEnabled = sweepUnitEnabledTemp;
-
-        // 0x4002 / 0x4006
-        uint8_t timerLowTemp;
-        d.deserializeUInt8(timerLowTemp);
-        pulse.timerLow = timerLowTemp;
-
-        // 0x4003 / 0x4007
-        uint8_t timerHighTemp;
-        d.deserializeUInt8(timerHighTemp);
-        pulse.timerHigh = timerHighTemp;
-
-        uint8_t lengthCounterLoadTemp;
-        d.deserializeUInt8(lengthCounterLoadTemp);
-        pulse.lengthCounterLoad = lengthCounterLoadTemp;
+        uint32_t pulseTemp;
+        d.deserializeUInt32(pulseTemp);
+        setPulseFromUInt32(pulse, pulseTemp);
 
         // Internal state
-        uint16_t timerCounterTemp;
-        d.deserializeUInt16(timerCounterTemp);
-        pulse.timerCounter = timerCounterTemp;
-
-        uint8_t dutyCycleIndexTemp;
-        d.deserializeUInt8(dutyCycleIndexTemp);
-        pulse.dutyCycleIndex = dutyCycleIndexTemp;
-
+        d.deserializeUInt16(pulse.timerCounter);
+        d.deserializeUInt8(pulse.dutyCycleIndex);
         d.deserializeUInt8(pulse.lengthCounter);
-
-        bool envelopeStartFlagTemp;
-        d.deserializeBool(envelopeStartFlagTemp);
-        pulse.envelopeStartFlag = envelopeStartFlagTemp;
-
-        uint8_t envelopeTemp;
-        d.deserializeUInt8(envelopeTemp);
-        pulse.envelope = envelopeTemp;
-
+        d.deserializeBool(pulse.envelopeStartFlag);
+        d.deserializeUInt8(pulse.envelope);
         d.deserializeUInt8(pulse.envelopeDividerCounter);
         d.deserializeUInt8(pulse.sweepDividerCounter);
-
-        bool sweepMutesChannelTemp;
-        d.deserializeBool(sweepMutesChannelTemp);
-        pulse.sweepMutesChannel = sweepMutesChannelTemp;
-
-        bool sweepReloadFlagTemp;
-        d.deserializeBool(sweepReloadFlagTemp);
-        pulse.sweepReloadFlag = sweepReloadFlagTemp;
+        d.deserializeBool(pulse.sweepMutesChannel);
+        d.deserializeBool(pulse.sweepReloadFlag);
     };
+
     deserializePulse(d, pulses[0]);
     deserializePulse(d, pulses[1]);
 }

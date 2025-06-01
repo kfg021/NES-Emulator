@@ -64,15 +64,15 @@ private:
         uint8_t lengthCounterLoad : 5;
 
         // Internal state
-        uint16_t timerCounter : 11;
-        uint8_t dutyCycleIndex : 3;
+        uint16_t timerCounter;
+        uint8_t dutyCycleIndex;
         uint8_t lengthCounter;
-        bool envelopeStartFlag : 1;
-        uint8_t envelope : 4;
+        bool envelopeStartFlag;
+        uint8_t envelope;
         uint8_t envelopeDividerCounter;
         uint8_t sweepDividerCounter;
-        bool sweepMutesChannel : 1;
-        bool sweepReloadFlag : 1;
+        bool sweepMutesChannel;
+        bool sweepReloadFlag;
     };
 
     struct Triangle {
