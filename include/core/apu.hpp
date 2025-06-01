@@ -112,8 +112,8 @@ private:
         // Internal state
         uint16_t timerCounter;
         uint8_t lengthCounter;
-        bool envelopeStartFlag : 1;
-        uint8_t envelope : 4;
+        bool envelopeStartFlag;
+        uint8_t envelope;
         uint8_t envelopeDividerCounter;
         uint16_t shiftRegister;
     };

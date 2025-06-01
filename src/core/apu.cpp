@@ -742,9 +742,83 @@ void APU::serialize(Serializer& s) const {
         s.serializeUInt8(triangle.outputValue);
     };
 
+    auto serializeNoise = [](Serializer& s, const Noise& noise) -> void {
+        auto noiseToUInt16 = [](const Noise& noise) -> uint16_t {
+            uint16_t data =
+                // 0x400C
+                static_cast<uint16_t>(noise.volumeOrEnvelope) |
+                (noise.constantVolume << 4) |
+                (noise.envelopeLoopOrLengthCounterHalt << 5) |
+
+                // 0x400D - Unused
+
+                // 0x400E
+                (noise.noisePeriod << 6) |
+                (noise.loopNoise << 10) |
+
+                // 0x400F
+                (noise.lengthCounterLoad << 11);
+
+            return data;
+        };
+
+        s.serializeUInt16(noiseToUInt16(noise));
+
+        // Internal state
+        s.serializeUInt16(noise.timerCounter);
+        s.serializeUInt8(noise.lengthCounter);
+        s.serializeBool(noise.envelopeStartFlag);
+        s.serializeUInt8(noise.envelope);
+        s.serializeUInt8(noise.envelopeDividerCounter);
+        s.serializeUInt16(noise.shiftRegister);
+    };
+
+    auto serializeDMC = [](Serializer& s, const DMC& dmc) -> void {
+        auto dmcToUInt32 = [](const DMC& dmc) -> uint32_t {
+            uint32_t data =
+                // 0x4010
+                static_cast<uint32_t>(dmc.frequency) |
+                (dmc.loopSample << 6) |
+                (dmc.irqEnable << 7) |
+
+                // 0x4011
+                (dmc.outputLevel << 8) |
+
+                // 0x4012
+                (dmc.sampleAddress << 16) |
+
+                // 0x4013
+                (dmc.sampleLength << 24);
+
+            return data;
+        };
+
+        s.serializeUInt32(dmcToUInt32(dmc));
+
+        // Internal state
+        s.serializeUInt16(dmc.currentAddress);
+        s.serializeUInt16(dmc.bytesRemaining);
+        s.serializeUInt16(dmc.timerCounter);
+        s.serializeUInt8(dmc.sampleBuffer);
+        s.serializeBool(dmc.sampleBufferEmpty);
+        s.serializeUInt8(dmc.shiftRegister);
+        s.serializeUInt8(dmc.bitsRemaining);
+        s.serializeBool(dmc.silenceFlag);
+        s.serializeBool(dmc.irqFlag);
+    };
+
     serializePulse(s, pulses[0]);
     serializePulse(s, pulses[1]);
     serializeTriangle(s, triangle);
+    serializeNoise(s, noise);
+    serializeDMC(s, dmc);
+
+    s.serializeUInt8(status);
+    s.serializeBool(frameSequenceMode);
+    s.serializeBool(interruptInhibitFlag);
+    s.serializeBool(frameInterruptFlag);
+    s.serializeUInt64(frameCounter);
+    s.serializeUInt64(totalCycles);
 }
 
 void APU::deserialize(Deserializer& d) {
@@ -815,8 +889,79 @@ void APU::deserialize(Deserializer& d) {
         d.deserializeUInt8(triangle.outputValue);
     };
 
+    auto deserializeNoise = [](Deserializer& d, Noise& noise) -> void {
+        auto setNoiseFromUInt16 = [](Noise& noise, uint16_t data) -> void {
+            // 0x400C
+            noise.volumeOrEnvelope = data & 0xF;
+            noise.constantVolume = (data >> 4) & 0x1;
+            noise.envelopeLoopOrLengthCounterHalt = (data >> 5) & 0x1;
+
+            // 0x400D - Unused
+
+            // 0x400E
+            noise.noisePeriod = (data >> 6) & 0xF;
+            noise.loopNoise = (data >> 10) & 0x1;
+
+            // 0x400F
+            noise.lengthCounterLoad = (data >> 11) & 0x1F;
+        };
+
+        uint16_t noiseTemp;
+        d.deserializeUInt16(noiseTemp);
+        setNoiseFromUInt16(noise, noiseTemp);
+
+        // Internal state
+        d.deserializeUInt16(noise.timerCounter);
+        d.deserializeUInt8(noise.lengthCounter);
+        d.deserializeBool(noise.envelopeStartFlag);
+        d.deserializeUInt8(noise.envelope);
+        d.deserializeUInt8(noise.envelopeDividerCounter);
+        d.deserializeUInt16(noise.shiftRegister);
+    };
+
+    auto deserializeDMC = [](Deserializer& d, DMC& dmc) -> void {
+        auto setDMCFromUInt32 = [](DMC& dmc, uint32_t data) -> void {
+            // 0x4010
+            dmc.frequency = data & 0xF;
+            dmc.loopSample = (data >> 6) & 0x1;
+            dmc.irqEnable = (data >> 7) & 0x1;
+
+            // 0x4011
+            dmc.outputLevel = (data >> 8) & 0x7F;
+
+            // 0x4012
+            dmc.sampleAddress = (data >> 16) & 0xFF;
+
+            // 0x4013
+            dmc.sampleLength = (data >> 24) & 0xFF;
+        };
+
+        uint32_t dmcTemp;
+        d.deserializeUInt32(dmcTemp);
+        setDMCFromUInt32(dmc, dmcTemp);
+
+        // Internal state
+        d.deserializeUInt16(dmc.currentAddress);
+        d.deserializeUInt16(dmc.bytesRemaining);
+        d.deserializeUInt16(dmc.timerCounter);
+        d.deserializeUInt8(dmc.sampleBuffer);
+        d.deserializeBool(dmc.sampleBufferEmpty);
+        d.deserializeUInt8(dmc.shiftRegister);
+        d.deserializeUInt8(dmc.bitsRemaining);
+        d.deserializeBool(dmc.silenceFlag);
+        d.deserializeBool(dmc.irqFlag);
+    };
+
     deserializePulse(d, pulses[0]);
     deserializePulse(d, pulses[1]);
-
     deserializeTriangle(d, triangle);
+    deserializeNoise(d, noise);
+    deserializeDMC(d, dmc);
+
+    d.deserializeUInt8(status);
+    d.deserializeBool(frameSequenceMode);
+    d.deserializeBool(interruptInhibitFlag);
+    d.deserializeBool(frameInterruptFlag);
+    d.deserializeUInt64(frameCounter);
+    d.deserializeUInt64(totalCycles);
 }
