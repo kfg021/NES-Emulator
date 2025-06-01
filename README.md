@@ -130,12 +130,12 @@ The emulator window will show:
 - Return/Enter: Start
 - Shift: Select
 - R: Reset game
+- C: Pause/Unpause game
+- M: Toggle sound
 - D: Toggle debug window
-- M: Mute/Unmute sound
 
 Debug Window controls (when open):
-- C: Toggle step mode
-- Space (If step mode enabled): Step to next instruction
+- Space (If paused): Step to next instruction
 - O: Cycle background palette
 - P: Cycle sprite palette
 
