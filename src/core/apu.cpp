@@ -366,7 +366,7 @@ void APU::executeHalfCycle() {
         if (triangle.lengthCounter > 0 && triangle.linearCounter > 0) {
             if (triangle.timerCounter == 0) {
                 triangle.timerCounter = triangleTimerPeriod;
-                triangle.sequenceIndex++;
+                triangle.sequenceIndex = (triangle.sequenceIndex + 1) & 0x1F;
                 triangle.outputValue = TRIANGLE_SEQUENCE[triangle.sequenceIndex];
             }
             else {
@@ -672,37 +672,6 @@ void APU::restartDmcSample() {
     bus->requestDmcDma(dmc.currentAddress);
 }
 
-//   struct Pulse {
-//         // 0x4000 / 0x4004
-//         uint8_t volumeOrEnvelopeRate : 4;
-//         bool constantVolume : 1;
-//         bool envelopeLoopOrLengthCounterHalt : 1;
-//         uint8_t duty : 2;
-
-//         // 0x4001 / 0x4005
-//         uint8_t sweepUnitShift : 3;
-//         bool sweepUnitNegate : 1;
-//         uint8_t sweepUnitPeriod : 3;
-//         bool sweepUnitEnabled : 1;
-
-//         // 0x4002 / 0x4006
-//         uint8_t timerLow;
-
-//         // 0x4003 / 0x4007
-//         uint8_t timerHigh : 3;
-//         uint8_t lengthCounterLoad : 5;
-
-//         // Internal state
-//         uint16_t timerCounter : 11;
-//         uint8_t dutyCycleIndex : 3;
-//         uint8_t lengthCounter;
-//         bool envelopeStartFlag : 1;
-//         uint8_t envelope : 4;
-//         uint8_t envelopeDividerCounter;
-//         uint8_t sweepDividerCounter;
-//         bool sweepMutesChannel : 1;
-//         bool sweepReloadFlag : 1;
-
 void APU::serialize(Serializer& s) const {
     auto serializePulse = [](Serializer& s, const Pulse& pulse) -> void {
         auto pulseToUInt32 = [](const Pulse& pulse) -> uint32_t {
@@ -742,8 +711,40 @@ void APU::serialize(Serializer& s) const {
         s.serializeBool(pulse.sweepMutesChannel);
         s.serializeBool(pulse.sweepReloadFlag);
     };
+
+    auto serializeTriangle = [](Serializer& s, const Triangle& triangle) -> void {
+        auto triangleToUInt32 = [](const Triangle& triangle) -> uint32_t {
+            uint32_t data =
+                // 0x4008
+                (static_cast<uint32_t>(triangle.linearCounterLoad)) |
+                (triangle.lengthCounterHaltOrLinearCounterControl << 7) |
+
+                // 0x4009 - Unused
+
+                // 0x400A
+                (triangle.timerLow << (16 + 0)) |
+
+                // 0x400B
+                (triangle.timerHigh << 24) |
+                (triangle.lengthCounterLoad << (24 + 3));
+
+            return data;
+        };
+
+        s.serializeUInt32(triangleToUInt32(triangle));
+
+        // Internal state
+        s.serializeUInt16(triangle.timerCounter);
+        s.serializeUInt8(triangle.linearCounter);
+        s.serializeBool(triangle.linearCounterReloadFlag);
+        s.serializeUInt8(triangle.sequenceIndex);
+        s.serializeUInt8(triangle.lengthCounter);
+        s.serializeUInt8(triangle.outputValue);
+    };
+
     serializePulse(s, pulses[0]);
     serializePulse(s, pulses[1]);
+    serializeTriangle(s, triangle);
 }
 
 void APU::deserialize(Deserializer& d) {
@@ -785,6 +786,37 @@ void APU::deserialize(Deserializer& d) {
         d.deserializeBool(pulse.sweepReloadFlag);
     };
 
+    auto deserializeTriangle = [](Deserializer& d, Triangle& triangle) -> void {
+        auto setTriangleFromUInt32 = [](Triangle& triangle, uint32_t data) -> void {
+            // 0x4008
+            triangle.linearCounterLoad = data & 0x7F;
+            triangle.lengthCounterHaltOrLinearCounterControl = (data >> 7) & 0x1;
+
+            // 0x4009 - Unused
+
+            // 0x400A
+            triangle.timerLow = (data >> (16 + 0)) & 0xFF;
+
+            // 0x400B
+            triangle.timerHigh = (data >> (24 + 0)) & 0x7;
+            triangle.lengthCounterLoad = (data >> (24 + 3)) & 0x1F;
+        };
+
+        uint32_t triangleTemp;
+        d.deserializeUInt32(triangleTemp);
+        setTriangleFromUInt32(triangle, triangleTemp);
+
+        // Internal state
+        d.deserializeUInt16(triangle.timerCounter);
+        d.deserializeUInt8(triangle.linearCounter);
+        d.deserializeBool(triangle.linearCounterReloadFlag);
+        d.deserializeUInt8(triangle.sequenceIndex);
+        d.deserializeUInt8(triangle.lengthCounter);
+        d.deserializeUInt8(triangle.outputValue);
+    };
+
     deserializePulse(d, pulses[0]);
     deserializePulse(d, pulses[1]);
+
+    deserializeTriangle(d, triangle);
 }

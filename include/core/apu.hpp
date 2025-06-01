@@ -88,10 +88,10 @@ private:
         uint8_t lengthCounterLoad : 5;
 
         // Internal state
-        uint16_t timerCounter : 11;
-        uint8_t linearCounter : 7;
-        bool linearCounterReloadFlag : 1;
-        uint8_t sequenceIndex : 5;
+        uint16_t timerCounter;
+        uint8_t linearCounter;
+        bool linearCounterReloadFlag;
+        uint8_t sequenceIndex;
         uint8_t lengthCounter;
         uint8_t outputValue;
     };
