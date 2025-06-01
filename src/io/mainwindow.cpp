@@ -5,6 +5,8 @@
 #include "io/emulatorthread.hpp"
 
 #include <QColor>
+#include <QDir>
+#include <QFileDialog>
 #include <QFont>
 #include <QFontDatabase>
 #include <QPainter>
@@ -44,12 +46,15 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
 	KeyboardInput keyInput = {
 		&controllerStatus,
 		&resetFlag,
-		&debugWindowEnabled,
 		&pauseFlag,
+		&debugWindowEnabled,
 		&stepRequested,
 		&spritePallete,
 		&backgroundPallete,
-		&globalMuteFlag
+		&globalMuteFlag,
+		&saveRequested,
+		&loadRequested,
+		&saveFilePath
 	};
 	emulatorThread = new EmulatorThread(this, filePath, keyInput, &audioSamples);
 
@@ -140,6 +145,26 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 	else if (event->key() == MUTE_KEY) {
 		globalMuteFlag.fetch_xor(1, std::memory_order_relaxed);
 		updateAudioState();
+	}
+
+	else if (event->key() == SAVE_KEY) {
+		pauseFlag.store(1, std::memory_order_relaxed);
+
+		saveFilePath = QFileDialog::getSaveFileName(
+			this, "Create save state", QDir::homePath(), "(*.bin)"
+		);
+
+		saveRequested.store(true, std::memory_order_release);
+	}
+
+	else if (event->key() == LOAD_KEY) {
+		pauseFlag.store(1, std::memory_order_relaxed);
+
+		saveFilePath = QFileDialog::getOpenFileName(
+			this, "Load save state", QDir::homePath(), "(*.bin)"
+		);
+		
+		loadRequested.store(true, std::memory_order_release);
 	}
 
 	// Debugging keys

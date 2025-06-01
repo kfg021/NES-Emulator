@@ -19,6 +19,7 @@
 #include <QKeyEvent>
 #include <QMainWindow>
 #include <QMediaDevices>
+#include <QString>
 #include <QWidget>
 
 class MainWindow : public QMainWindow {
@@ -48,12 +49,17 @@ private:
 
 	ControllerStatus controllerStatus;
 	std::atomic<bool> resetFlag;
-	std::atomic<bool> debugWindowEnabled;
 	std::atomic<uint8_t> pauseFlag;
+
+	std::atomic<bool> debugWindowEnabled;
 	std::atomic<bool> stepRequested;
 	std::atomic<uint8_t> spritePallete;
 	std::atomic<uint8_t> backgroundPallete;
 	std::atomic<uint8_t> globalMuteFlag;
+
+	std::atomic<bool> saveRequested;
+	std::atomic<bool> loadRequested;
+	QString saveFilePath;
 
 	void setControllerData(bool controller, Controller::Button button, bool value);
 	void toggleDebugMode();
@@ -90,13 +96,16 @@ private:
 	static constexpr Qt::Key RESET_KEY = Qt::Key_R;
 	static constexpr Qt::Key PAUSE_KEY = Qt::Key_C;
 	static constexpr Qt::Key MUTE_KEY = Qt::Key_M;
-	static constexpr Qt::Key SAVE_KEY = Qt::Key_S;
 
 	// Debug control
 	static constexpr Qt::Key DEBUG_WINDOW_KEY = Qt::Key_D;
 	static constexpr Qt::Key STEP_KEY = Qt::Key_Space;
 	static constexpr Qt::Key BACKGROUND_PATTETE_KEY = Qt::Key_O;
 	static constexpr Qt::Key SPRITE_PATTETE_KEY = Qt::Key_P;
+
+	// Save states
+	static constexpr Qt::Key SAVE_KEY = Qt::Key_S;
+	static constexpr Qt::Key LOAD_KEY = Qt::Key_L;
 };
 
 #endif // MAINWINDOW_HPP

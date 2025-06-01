@@ -1,5 +1,7 @@
 #include "io/emulatorthread.hpp"
 
+#include "io/savestate.hpp"
+
 #include <cstdint>
 
 #include <QElapsedTimer>
@@ -51,9 +53,32 @@ void EmulatorThread::run() {
 			std::queue<uint16_t> empty;
 			std::swap(recentPCs, empty);
 
-			keyInput.resetFlag->store(false, std::memory_order_relaxed);
+			keyInput.resetFlag->store(false, std::memory_order_release);
 
 			desiredNextFrameUs = (elapsedTimer.nsecsElapsed() / 1000) + TARGET_FRAME_US;
+		}
+
+		bool saveRequested = keyInput.saveRequested->load(std::memory_order_relaxed);
+		bool loadRequested = keyInput.loadRequested->load(std::memory_order_relaxed);
+		if (saveRequested) {
+			audioSamples->erase();
+
+			// TODO: check success/failure
+			createSaveState(*keyInput.saveFilePath, bus);
+
+			keyInput.saveFilePath->clear();
+			keyInput.pauseFlag->store(0, std::memory_order_relaxed);
+			keyInput.saveRequested->store(false, std::memory_order_release);
+		}
+		else if (loadRequested) {
+			// TODO: check success/failure
+			loadSaveState(*keyInput.saveFilePath, bus);
+
+			audioSamples->erase();
+
+			keyInput.saveFilePath->clear();
+			keyInput.pauseFlag->store(0, std::memory_order_relaxed);
+			keyInput.loadRequested->store(false, std::memory_order_release);
 		}
 
 		// Handle controller input

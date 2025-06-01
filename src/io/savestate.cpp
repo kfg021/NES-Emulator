@@ -24,13 +24,12 @@
 
 static constexpr uint32_t FORMAT_ID = 0xABCD1234;
 
-static constexpr uint8_t VERSION_MAJOR = 1;
+static constexpr uint8_t VERSION_MAJOR = 0;
 static constexpr uint8_t VERSION_MINOR = 0;
 static constexpr uint8_t VERSION_PATCH = 0;
 
-bool createSaveState(const Bus& bus) {
+bool createSaveState(const QString& filePath, const Bus& bus) {
     QtSerializer s;
-    QString filePath = QFileDialog::getSaveFileName(nullptr, "Create save state", QDir::homePath(), "(*.bin)");
     if (s.openFile(filePath)) {
         s.serializeUInt32(FORMAT_ID);
         s.serializeUInt8(VERSION_MAJOR);
@@ -51,7 +50,7 @@ bool createSaveState(const Bus& bus) {
     }
 }
 
-bool loadSaveState(Bus& bus) {
+bool loadSaveState(const QString& filePath, Bus& bus) {
     struct Header {
         uint32_t formatID;
         uint8_t versionMajor;
@@ -60,7 +59,6 @@ bool loadSaveState(Bus& bus) {
     };
 
     QtDeserializer d;
-    QString filePath = QFileDialog::getOpenFileName(nullptr, "Load save state", QDir::homePath(), "(*.bin)");
     if (d.openFile(filePath)) {
         // TODO: Check header
         Header header;
