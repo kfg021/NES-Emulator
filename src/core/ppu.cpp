@@ -28,7 +28,7 @@ void PPU::initPPU() {
 
     scanline = 0;
     cycle = 0;
-    frame = 0;
+    oddFrame = false;
 
     patternTableLoShifter = 0;
     patternTableHiShifter = 0;
@@ -648,11 +648,11 @@ void PPU::incrementCycle() {
         }
         else {
             scanline = -1;
-            frame++;
+            oddFrame ^= 1;
         }
 
         // Skip a cycle on odd frame numbers
-        if (scanline == 0 && (frame & 1)) {
+        if (scanline == 0 && oddFrame) {
             cycle = 1;
         }
         else {
@@ -912,4 +912,78 @@ void PPU::OAMEntry::setFromUInt32(uint32_t data) {
     tileIndex = (data >> 8) & 0xFF;
     attributes = (data >> 16) & 0xFF;
     x = (data >> 24) & 0xFF;
+}
+
+void PPU::serialize(Serializer& s) const {
+    s.serializeUInt8(control.toUInt8());
+    s.serializeUInt8(mask.toUInt8());
+    s.serializeUInt8(status.toUInt8());
+    s.serializeBool(addressLatch);
+    s.serializeUInt16(temporaryVramAddress.toUInt16());
+    s.serializeUInt16(vramAddress.toUInt16());
+    s.serializeUInt8(fineX);
+    s.serializeUInt8(ppuBusData);
+    s.serializeArray(palleteRam, s.uInt8Func);
+    s.serializeArray(nameTable, s.uInt8Func);
+    s.serializeInt32(scanline);
+    s.serializeInt32(cycle);
+    s.serializeBool(oddFrame);
+    s.serializeUInt16(patternTableLoShifter);
+    s.serializeUInt16(patternTableHiShifter);
+    s.serializeUInt16(attributeTableLoShifter);
+    s.serializeUInt16(attributeTableHiShifter);
+    s.serializeUInt8(nextNameTableByte);
+    s.serializeUInt8(nextPatternTableLo);
+    s.serializeUInt8(nextPatternTableHi);
+    s.serializeBool(nextAttributeTableLo);
+    s.serializeBool(nextAttributeTableHi);
+    s.serializeUInt8(oamAddress);
+    s.serializeBool(nmiRequest);
+    s.serializeBool(irqRequest);
+    s.serializeArray(oamBuffer, s.uInt8Func);
+}
+
+void PPU::deserialize(Deserializer& d) {
+    uint8_t controlTemp;
+    d.deserializeUInt8(controlTemp);
+    control.setFromUInt8(controlTemp);
+
+    uint8_t maskTemp;
+    d.deserializeUInt8(maskTemp);
+    mask.setFromUInt8(maskTemp);
+
+    uint8_t statusTemp;
+    d.deserializeUInt8(statusTemp);
+    status.setFromUInt8(statusTemp);
+
+    d.deserializeBool(addressLatch);
+
+    uint16_t temporaryVramAddressTemp;
+    d.deserializeUInt16(temporaryVramAddressTemp);
+    temporaryVramAddress.setFromUInt16(temporaryVramAddressTemp);
+
+    uint16_t vramAddressTemp;
+    d.deserializeUInt16(vramAddressTemp);
+    vramAddress.setFromUInt16(vramAddressTemp);
+
+    d.deserializeUInt8(fineX);
+    d.deserializeUInt8(ppuBusData);
+    d.deserializeArray(palleteRam, d.uInt8Func);
+    d.deserializeArray(nameTable, d.uInt8Func);
+    d.deserializeInt32(scanline);
+    d.deserializeInt32(cycle);
+    d.deserializeBool(oddFrame);
+    d.deserializeUInt16(patternTableLoShifter);
+    d.deserializeUInt16(patternTableHiShifter);
+    d.deserializeUInt16(attributeTableLoShifter);
+    d.deserializeUInt16(attributeTableHiShifter);
+    d.deserializeUInt8(nextNameTableByte);
+    d.deserializeUInt8(nextPatternTableLo);
+    d.deserializeUInt8(nextPatternTableHi);
+    d.deserializeBool(nextAttributeTableLo);
+    d.deserializeBool(nextAttributeTableHi);
+    d.deserializeUInt8(oamAddress);
+    d.deserializeBool(nmiRequest);
+    d.deserializeBool(irqRequest);
+    d.deserializeArray(oamBuffer, d.uInt8Func);
 }

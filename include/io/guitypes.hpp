@@ -14,16 +14,21 @@ struct KeyboardInput {
     // Game input
     const ControllerStatus* controllerStatus;
     std::atomic<bool>* resetFlag;
+    std::atomic<uint8_t>* pauseFlag; // Treated as a boolean
 
     // Debug window settings
     const std::atomic<bool>* debugWindowEnabled;
-    const std::atomic<uint8_t>* stepModeEnabled; // Treated as a boolean
     std::atomic<bool>* stepRequested;
     const std::atomic<uint8_t>* spritePallete;
     const std::atomic<uint8_t>* backgroundPallete;
 
     // Sound settings
     const std::atomic<uint8_t>* globalMuteFlag; // Treated as a boolean
+
+    // Save state settings
+    std::atomic<bool>* saveRequested;
+	std::atomic<bool>* loadRequested;
+    QString* saveFilePath;
 };
 
 struct DebugWindowState {

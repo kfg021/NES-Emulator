@@ -20,6 +20,10 @@ public:
     void clockIRQTimer();
     bool irqRequested();
 
+    // Serialization
+    void serialize(Serializer& s) const override;
+    void deserialize(Deserializer& d) override;
+
 private:
     // PRG banks
     static constexpr std::array<MemoryRange, 2> PRG_ROM_8KB_SWITCHABLE_1{ {{0x8000, 0x9FFF}, {0xC000, 0xDFFF}} };

@@ -1,6 +1,8 @@
 #ifndef CPU_HPP
 #define CPU_HPP
 
+#include "util/serializer.hpp"
+
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -73,12 +75,14 @@ public:
     bool getFlag(Flag flag) const;
     uint8_t getFlagMask(Flag flag) const;
     uint8_t getRemainingCycles() const;
-    int64_t getTotalCycles() const;
 
     // Debugging
-    std::string debugString() const;
     std::string toString(uint16_t address) const;
     const Opcode& getOpcode(uint16_t address) const;
+
+    // Serialization
+    void serialize(Serializer& s) const;
+    void deserialize(Deserializer& d);
 
 private:
     // Constants
@@ -98,7 +102,6 @@ private:
 
     // Helper variables
     uint8_t remainingCycles;
-    int64_t totalCycles;
     bool shouldAdvancePC;
     static const std::array<Opcode, MAX_NUM_OPCODES> lookup;
 

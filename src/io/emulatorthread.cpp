@@ -1,13 +1,15 @@
 #include "io/emulatorthread.hpp"
-
 #include <cstdint>
 
+#include <QDebug>
 #include <QElapsedTimer>
+#include <QString>
 
 EmulatorThread::EmulatorThread(QObject* parent, const std::string& filePath, const KeyboardInput& keyInput, ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>* audioSamples) :
 	QThread(parent),
 	keyInput(keyInput),
-	audioSamples(audioSamples) {
+	audioSamples(audioSamples),
+	saveState(bus, QString::fromStdString(filePath)) {
 	isRunning.store(false, std::memory_order_relaxed);
 
 	Cartridge::Status status = bus.loadROM(filePath);
@@ -51,9 +53,30 @@ void EmulatorThread::run() {
 			std::queue<uint16_t> empty;
 			std::swap(recentPCs, empty);
 
-			keyInput.resetFlag->store(false, std::memory_order_relaxed);
+			keyInput.resetFlag->store(false, std::memory_order_release);
 
 			desiredNextFrameUs = (elapsedTimer.nsecsElapsed() / 1000) + TARGET_FRAME_US;
+		}
+
+		bool saveRequested = keyInput.saveRequested->load(std::memory_order_relaxed);
+		bool loadRequested = keyInput.loadRequested->load(std::memory_order_relaxed);
+		if (saveRequested) {
+			audioSamples->erase();
+
+			SaveState::CreateStatus saveStatus = saveState.createSaveState(*keyInput.saveFilePath);
+			qDebug().noquote() << saveStatus.message;
+
+			keyInput.pauseFlag->store(0, std::memory_order_relaxed);
+			keyInput.saveRequested->store(false, std::memory_order_release);
+		}
+		else if (loadRequested) {
+			audioSamples->erase();
+
+			SaveState::LoadStatus saveStatus = saveState.loadSaveState(*keyInput.saveFilePath);
+			qDebug().noquote() << saveStatus.message;
+
+			keyInput.pauseFlag->store(0, std::memory_order_relaxed);
+			keyInput.loadRequested->store(false, std::memory_order_release);
 		}
 
 		// Handle controller input
@@ -93,12 +116,6 @@ void EmulatorThread::run() {
 			};
 
 			emit debugFrameReadySignal(state);
-		}
-		else {
-			if (!recentPCs.empty()) {
-				std::queue<uint16_t> empty;
-				std::swap(recentPCs, empty);
-			}
 		}
 
 		int currentTimeUs = elapsedTimer.nsecsElapsed() / 1000;
@@ -170,15 +187,15 @@ void EmulatorThread::runCycles() {
 		return isRunning.load(std::memory_order_relaxed) && !bus.ppu->frameReadyFlag && cycles < UPPER_LIMIT_CYCLES;
 	};
 
-	bool stepModeEnabled = keyInput.stepModeEnabled->load(std::memory_order_relaxed) & 1;
-	if (!stepModeEnabled) {
+	bool paused = keyInput.pauseFlag->load(std::memory_order_relaxed) & 1;
+	if (!paused) {
 		bool debugEnabled = keyInput.debugWindowEnabled->load(std::memory_order_relaxed);
 		bool audioEnabled = !(keyInput.globalMuteFlag->load(std::memory_order_relaxed) & 1);
 		while (loopCondition()) {
 			executeCycle(debugEnabled, audioEnabled);
 		}
 	}
-	else if (stepModeEnabled && keyInput.stepRequested->load(std::memory_order_acquire)) {
+	else if (paused && keyInput.stepRequested->load(std::memory_order_acquire)) {
 		keyInput.stepRequested->store(false, std::memory_order_release);
 
 		while (loopCondition()) {

@@ -23,6 +23,7 @@ A Nintendo Entertainment System (NES) emulator implemented in C++ with a Qt6-bas
   viewer
   - PPU pattern table and palette viewer
   - Step-by-step execution control
+- Save states
 
 
 ## Prerequisites
@@ -139,18 +140,25 @@ The emulator window will show:
   - Pattern tables / Palettes
 
 ### Controls
+
+#### Emulator controls
 - Arrow keys: D-pad
 - Z: B button
 - X: A button
 - Return/Enter: Start
 - Shift: Select
-- R: Reset game
-- D: Toggle debug window
-- M: Mute/Unmute sound
 
-Debug Window controls (when open):
-- C: Toggle step mode
-- Space (If step mode enabled): Step to next instruction
+#### Menu controls
+- R: Reset game
+- C: Pause/Unpause game
+- M: Toggle sound
+- D: Toggle debug window
+- S: Create save state (opens file dialog to choose location)
+- L: Load save state (opens file dialog to choose file)
+- K: Quick load save state (loads most recently saved/loaded file)
+
+#### Debug window controls (when open)
+- Space (If paused): Step to next instruction
 - O: Cycle background palette
 - P: Cycle sprite palette
 
@@ -195,7 +203,6 @@ The following features and improvements are planned for future development:
 - Frame timing optimizations
 
 ### User Experience
-- Save state support
 - Recording/replay functionality
 - Controller/Gamepad key button support
 

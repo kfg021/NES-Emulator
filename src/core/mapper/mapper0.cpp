@@ -35,8 +35,26 @@ uint8_t Mapper0::mapCHRView(uint16_t ppuAddress) const {
 }
 
 void Mapper0::mapCHRWrite(uint16_t ppuAddress, uint8_t value) {
-    if (CHR_RANGE.contains(ppuAddress) && config.chrChunks == 0) {
-        // If chrChunks == 0, we assume we have CHR RAM
+    if (CHR_RANGE.contains(ppuAddress) && hasChrRam()) {
         chr[ppuAddress] = value;
+    }
+}
+
+bool Mapper0::hasChrRam() const {
+    // If chrChunks == 0, we assume we have CHR RAM
+    return config.chrChunks == 0;
+}
+
+void Mapper0::serialize(Serializer& s) const {
+    s.serializeVector(prgRam, s.uInt8Func);
+    if (hasChrRam()) {
+        s.serializeVector(chr, s.uInt8Func);
+    }
+}
+
+void Mapper0::deserialize(Deserializer& d) {
+    d.deserializeVector(prgRam, d.uInt8Func);
+    if (hasChrRam()) {
+        d.deserializeVector(chr, d.uInt8Func);
     }
 }

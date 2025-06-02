@@ -1,6 +1,7 @@
 #ifndef MAPPER_HPP
 #define MAPPER_HPP
 
+#include "util/serializer.hpp"
 #include "util/util.hpp"
 
 #include <cstdint>
@@ -50,6 +51,10 @@ public:
 
     // By default this returns the mirror mode that was set by the cartridge, but some mappers change the mirroring on their own.
     virtual MirrorMode getMirrorMode() const;
+
+    // Serialization
+    virtual void serialize(Serializer& s) const = 0;
+    virtual void deserialize(Deserializer& d) = 0;
 
 protected:
     static constexpr MemoryRange PRG_RAM_RANGE{ 0x6000, 0x7FFF };

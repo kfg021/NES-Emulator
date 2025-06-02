@@ -2,6 +2,7 @@
 #define PPU_HPP
 
 #include "core/cartridge.hpp"
+#include "util/serializer.hpp"
 #include "util/util.hpp"
 
 #include <memory>
@@ -64,6 +65,10 @@ public:
     bool nmiRequested();
     void clearNMIRequest();
     bool irqRequested();
+
+    // Serialization
+    void serialize(Serializer& s) const;
+    void deserialize(Deserializer& d);
 
 private:
     // PPU internal data structures (descriptions from https://www.nesdev.org/wiki/PPU_registers)
@@ -243,9 +248,9 @@ private:
     using NameTable = std::array<uint8_t, 2 * KB>;
     NameTable nameTable;
 
-    int scanline;
-    int cycle;
-    int64_t frame;
+    int32_t scanline;
+    int32_t cycle;
+    bool oddFrame;
 
     // internal latches
     uint16_t patternTableLoShifter;

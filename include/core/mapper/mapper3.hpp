@@ -15,6 +15,10 @@ public:
     uint8_t mapCHRView(uint16_t ppuAddress) const override;
     void mapCHRWrite(uint16_t ppuAddress, uint8_t value) override;
 
+    // Serialization
+    void serialize(Serializer& s) const override;
+    void deserialize(Deserializer& d) override;
+
 private:
     static constexpr MemoryRange BANK_SELECT_RANGE = PRG_RANGE;
     uint8_t currentBank;

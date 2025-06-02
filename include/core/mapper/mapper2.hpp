@@ -15,6 +15,12 @@ public:
     uint8_t mapCHRView(uint16_t ppuAddress) const override;
     void mapCHRWrite(uint16_t ppuAddress, uint8_t value) override;
 
+    bool hasChrRam() const;
+
+    // Serialization
+    void serialize(Serializer& s) const override;
+    void deserialize(Deserializer& d) override;
+
 private:
     static constexpr MemoryRange PRG_RANGE_SWICHABLE{ 0x8000, 0xBFFF };
     static constexpr MemoryRange PRG_RANGE_FIXED{ 0xC000, 0xFFFF };

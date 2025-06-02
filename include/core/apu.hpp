@@ -1,6 +1,7 @@
 #ifndef APU_HPP
 #define APU_HPP
 
+#include "util/serializer.hpp"
 #include "util/util.hpp"
 
 #include <array>
@@ -32,6 +33,10 @@ public:
 
     float getAudioSample() const;
 
+    // Serialization
+    void serialize(Serializer& s) const;
+    void deserialize(Deserializer& d);
+
 private:
     static constexpr MemoryRange PULSE_RANGE{ 0x4000, 0x4007 };
     static constexpr MemoryRange TRIANGLE_RANGE{ 0x4008, 0x400B };
@@ -59,15 +64,15 @@ private:
         uint8_t lengthCounterLoad : 5;
 
         // Internal state
-        uint16_t timerCounter : 11;
-        uint8_t dutyCycleIndex : 3;
+        uint16_t timerCounter;
+        uint8_t dutyCycleIndex;
         uint8_t lengthCounter;
-        bool envelopeStartFlag : 1;
-        uint8_t envelope : 4;
+        bool envelopeStartFlag;
+        uint8_t envelope;
         uint8_t envelopeDividerCounter;
         uint8_t sweepDividerCounter;
-        bool sweepMutesChannel : 1;
-        bool sweepReloadFlag : 1;
+        bool sweepMutesChannel;
+        bool sweepReloadFlag;
     };
 
     struct Triangle {
@@ -83,10 +88,10 @@ private:
         uint8_t lengthCounterLoad : 5;
 
         // Internal state
-        uint16_t timerCounter : 11;
-        uint8_t linearCounter : 7;
-        bool linearCounterReloadFlag : 1;
-        uint8_t sequenceIndex : 5;
+        uint16_t timerCounter;
+        uint8_t linearCounter;
+        bool linearCounterReloadFlag;
+        uint8_t sequenceIndex;
         uint8_t lengthCounter;
         uint8_t outputValue;
     };
@@ -107,8 +112,8 @@ private:
         // Internal state
         uint16_t timerCounter;
         uint8_t lengthCounter;
-        bool envelopeStartFlag : 1;
-        uint8_t envelope : 4;
+        bool envelopeStartFlag;
+        uint8_t envelope;
         uint8_t envelopeDividerCounter;
         uint16_t shiftRegister;
     };

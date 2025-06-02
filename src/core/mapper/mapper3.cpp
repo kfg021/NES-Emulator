@@ -44,3 +44,13 @@ uint8_t Mapper3::mapCHRView(uint16_t ppuAddress) const {
 void Mapper3::mapCHRWrite(uint16_t /*ppuAddress*/, uint8_t /*value*/) {
     // CHR in mapper 3 is read only
 }
+
+void Mapper3::serialize(Serializer& s) const {
+    s.serializeUInt8(currentBank);
+    s.serializeVector(prgRam, s.uInt8Func);
+}
+
+void Mapper3::deserialize(Deserializer& d) {
+    d.deserializeUInt8(currentBank);
+    d.deserializeVector(prgRam, d.uInt8Func);
+}

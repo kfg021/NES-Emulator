@@ -6,6 +6,7 @@
 #include "core/controller.hpp"
 #include "core/cpu.hpp"
 #include "core/ppu.hpp"
+#include "util/serializer.hpp"
 #include "util/util.hpp"
 
 #include <array>
@@ -35,6 +36,10 @@ public:
 
     void requestDmcDma(uint16_t address);
 
+    // Serialization
+    void serialize(Serializer& s) const;
+    void deserialize(Deserializer& d);
+
 private:
     // Memory ranges for devices
     static constexpr MemoryRange RAM_ADDRESSABLE_RANGE{ 0x0000, 0x1FFF };
@@ -55,6 +60,7 @@ private:
     bool strobe;
 
     static constexpr uint16_t OAM_DMA_ADDR = 0x4014;
+
     struct OamDma {
         bool requested;
         bool ongoing;

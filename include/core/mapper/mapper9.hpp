@@ -18,6 +18,10 @@ public:
 
     MirrorMode getMirrorMode() const override;
 
+    // Serialization
+    void serialize(Serializer& s) const override;
+    void deserialize(Deserializer& d) override;
+
 private:
     // Banks
     static constexpr MemoryRange PRG_ROM_SWITCHABLE{ 0x8000, 0x9FFF };

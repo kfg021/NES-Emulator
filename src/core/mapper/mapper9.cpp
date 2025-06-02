@@ -25,6 +25,9 @@ uint8_t Mapper9::mapPRGView(uint16_t cpuAddress) const {
         }
         return prg[mappedAddress];
     }
+    else if (canAccessPrgRam(cpuAddress)) {
+        return getPrgRam(cpuAddress);
+    }
 
     return 0;
 }
@@ -47,6 +50,9 @@ void Mapper9::mapPRGWrite(uint16_t cpuAddress, uint8_t value) {
     }
     else if (MIRRORING.contains(cpuAddress)) {
         mirroring = value & 0x1;
+    }
+    else if (canAccessPrgRam(cpuAddress)) {
+        setPrgRam(cpuAddress, value);
     }
 }
 
@@ -100,4 +106,24 @@ void Mapper9::mapCHRWrite(uint16_t /*ppuAddress*/, uint8_t /*value*/) {
 
 Mapper::MirrorMode Mapper9::getMirrorMode() const {
     return mirroring ? MirrorMode::HORIZONTAL : MirrorMode::VERTICAL;
+}
+
+void Mapper9::serialize(Serializer& s) const {
+    s.serializeUInt8(prgBankSelect);
+    s.serializeBool(chrLatch1);
+    s.serializeBool(chrLatch2);
+    s.serializeArray(chrBank1Select, s.uInt8Func);
+    s.serializeArray(chrBank2Select, s.uInt8Func);
+    s.serializeBool(mirroring);
+    s.serializeVector(prgRam, s.uInt8Func);
+}
+
+void Mapper9::deserialize(Deserializer& d) {
+    d.deserializeUInt8(prgBankSelect);
+    d.deserializeBool(chrLatch1);
+    d.deserializeBool(chrLatch2);
+    d.deserializeArray(chrBank1Select, d.uInt8Func);
+    d.deserializeArray(chrBank2Select, d.uInt8Func);
+    d.deserializeBool(mirroring);
+    d.deserializeVector(prgRam, d.uInt8Func);
 }

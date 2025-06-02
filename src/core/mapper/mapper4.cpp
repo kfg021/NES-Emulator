@@ -43,7 +43,7 @@ void Mapper4::clockIRQTimer() {
     irqRequest = irqEnabled && (irqTimer == 0);
 }
 
-bool Mapper4::irqRequested(){
+bool Mapper4::irqRequested() {
     return irqRequest;
 }
 
@@ -183,4 +183,36 @@ bool Mapper4::canReadFromPRGRam() const {
 bool Mapper4::canWriteToPRGRam() const {
     bool writeProtection = (prgRamProtect >> 6) & 1;
     return canReadFromPRGRam() && !writeProtection;
+}
+
+void Mapper4::serialize(Serializer& s) const {
+    s.serializeUInt8(bankSelect);
+    s.serializeUInt8(bankData);
+    s.serializeBool(mirroring);
+    s.serializeUInt8(prgRamProtect);
+    s.serializeUInt8(irqReloadValue);
+    s.serializeUInt8(irqTimer);
+    s.serializeBool(irqEnabled);
+    s.serializeBool(irqReloadPending);
+    s.serializeBool(irqRequest);
+    s.serializeArray(prgSwitchableBankSelect, s.uInt8Func);
+    s.serializeArray(chrSwitchableBankSelect, s.uInt8Func);
+    s.serializeVector(prgRam, s.uInt8Func);
+    s.serializeVector(customNametable, s.uInt8Func);
+}
+
+void Mapper4::deserialize(Deserializer& d) {
+    d.deserializeUInt8(bankSelect);
+    d.deserializeUInt8(bankData);
+    d.deserializeBool(mirroring);
+    d.deserializeUInt8(prgRamProtect);
+    d.deserializeUInt8(irqReloadValue);
+    d.deserializeUInt8(irqTimer);
+    d.deserializeBool(irqEnabled);
+    d.deserializeBool(irqReloadPending);
+    d.deserializeBool(irqRequest);
+    d.deserializeArray(prgSwitchableBankSelect, d.uInt8Func);
+    d.deserializeArray(chrSwitchableBankSelect, d.uInt8Func);
+    d.deserializeVector(prgRam, d.uInt8Func);
+    d.deserializeVector(customNametable, d.uInt8Func);
 }

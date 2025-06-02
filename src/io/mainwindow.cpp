@@ -5,9 +5,10 @@
 #include "io/emulatorthread.hpp"
 
 #include <QColor>
+#include <QDir>
+#include <QFileDialog>
 #include <QFont>
 #include <QFontDatabase>
-#include <QKeyEvent>
 #include <QPainter>
 
 QAudioFormat MainWindow::defaultAudioFormat() {
@@ -28,7 +29,7 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
 	controllerStatus[1].store(0, std::memory_order_relaxed);
 	resetFlag.store(false, std::memory_order_relaxed);
 	debugWindowEnabled.store(false, std::memory_order_relaxed);
-	stepModeEnabled.store(false, std::memory_order_relaxed);
+	pauseFlag.store(false, std::memory_order_relaxed);
 	stepRequested.store(false, std::memory_order_relaxed);
 	spritePallete.store(0, std::memory_order_relaxed);
 	backgroundPallete.store(0, std::memory_order_relaxed);
@@ -45,12 +46,15 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
 	KeyboardInput keyInput = {
 		&controllerStatus,
 		&resetFlag,
+		&pauseFlag,
 		&debugWindowEnabled,
-		&stepModeEnabled,
 		&stepRequested,
 		&spritePallete,
 		&backgroundPallete,
-		&globalMuteFlag
+		&globalMuteFlag,
+		&saveRequested,
+		&loadRequested,
+		&saveFilePath,
 	};
 	emulatorThread = new EmulatorThread(this, filePath, keyInput, &audioSamples);
 
@@ -92,8 +96,8 @@ void MainWindow::displayNewFrame(const QImage& image) {
 void MainWindow::displayNewDebugFrame(const DebugWindowState& state) {
 	debugWindowData = state;
 
-	// displayNewFrame will handle updates if emulator is running at full speed
-	if (stepModeEnabled.load(std::memory_order_relaxed)) {
+	// displayNewDebugFrame handles updates only when we are step-through mode
+	if (debugWindowEnabled.load(std::memory_order_relaxed) && pauseFlag.load(std::memory_order_acquire)) {
 		update();
 	}
 }
@@ -101,62 +105,98 @@ void MainWindow::displayNewDebugFrame(const DebugWindowState& state) {
 // TODO: Key inputs for second controller
 void MainWindow::keyPressEvent(QKeyEvent* event) {
 	// Game keys
-	if (event->key() == Qt::Key_Up) {
+	if (event->key() == UP_KEY) {
 		setControllerData(0, Controller::Button::UP, 1);
 	}
-	else if (event->key() == Qt::Key_Down) {
+	else if (event->key() == DOWN_KEY) {
 		setControllerData(0, Controller::Button::DOWN, 1);
 	}
-	else if (event->key() == Qt::Key_Left) {
+	else if (event->key() == LEFT_KEY) {
 		setControllerData(0, Controller::Button::LEFT, 1);
 	}
-	else if (event->key() == Qt::Key_Right) {
+	else if (event->key() == RIGHT_KEY) {
 		setControllerData(0, Controller::Button::RIGHT, 1);
 	}
-	else if (event->key() == Qt::Key_Shift) {
+	else if (event->key() == SELECT_KEY) {
 		setControllerData(0, Controller::Button::SELECT, 1);
 	}
-	else if (event->key() == Qt::Key_Return) {
+	else if (event->key() == START_KEY) {
 		setControllerData(0, Controller::Button::START, 1);
 	}
-	else if (event->key() == Qt::Key_Z) {
+	else if (event->key() == B_KEY) {
 		setControllerData(0, Controller::Button::B, 1);
 	}
-	else if (event->key() == Qt::Key_X) {
+	else if (event->key() == A_KEY) {
 		setControllerData(0, Controller::Button::A, 1);
 	}
 
 	// Reset button
-	else if (event->key() == Qt::Key_R) {
+	else if (event->key() == RESET_KEY) {
 		resetFlag.store(true, std::memory_order_relaxed);
 	}
 
+	// Pause button
+	else if (event->key() == PAUSE_KEY) {
+		pauseFlag.fetch_xor(1, std::memory_order_relaxed);
+		updateAudioState();
+	}
+
 	// Mute button
-	else if (event->key() == Qt::Key_M) {
-		if (!stepModeEnabled.load(std::memory_order_relaxed)) {
-			globalMuteFlag.fetch_xor(1, std::memory_order_relaxed);
-			updateAudioState();
-		}
+	else if (event->key() == MUTE_KEY) {
+		globalMuteFlag.fetch_xor(1, std::memory_order_relaxed);
+		updateAudioState();
+	}
+
+	// Save states
+	else if (event->key() == SAVE_KEY) {
+		audioSamples.erase();
+		pauseFlag.store(1, std::memory_order_release);
+		updateAudioState();
+
+		saveFilePath = QFileDialog::getSaveFileName(
+			this, "Create save state", QDir::homePath(), "(*.sstate)"
+		);
+
+		saveRequested.store(true, std::memory_order_release);
+		emulatorThread->requestSoundReactivation();
+	}
+
+	else if (event->key() == LOAD_KEY) {
+		audioSamples.erase();
+		pauseFlag.store(1, std::memory_order_release);
+		updateAudioState();
+
+		saveFilePath = QFileDialog::getOpenFileName(
+			this, "Load save state", QDir::homePath(), "(*.sstate)"
+		);
+
+		loadRequested.store(true, std::memory_order_release);
+		emulatorThread->requestSoundReactivation();
+	}
+
+	else if (event->key() == QUICK_LOAD_KEY) {
+		audioSamples.erase();
+		pauseFlag.store(1, std::memory_order_release);
+		updateAudioState();
+
+		loadRequested.store(true, std::memory_order_release);
+		emulatorThread->requestSoundReactivation();
 	}
 
 	// Debugging keys
-	else if (event->key() == Qt::Key_D) {
+	else if (event->key() == DEBUG_WINDOW_KEY) {
 		toggleDebugMode();
 	}
 	else if (debugWindowEnabled.load(std::memory_order_relaxed)) {
-		if (event->key() == Qt::Key_Space) {
-			if (stepModeEnabled.load(std::memory_order_relaxed)) {
+		if (event->key() == STEP_KEY) {
+			if (pauseFlag.load(std::memory_order_relaxed)) {
 				stepRequested.store(true, std::memory_order_relaxed);
 			}
 		}
-		else if (event->key() == Qt::Key_C) {
-			stepModeEnabled.fetch_xor(1, std::memory_order_relaxed);
-			updateAudioState();
-		}
-		else if (event->key() == Qt::Key_O) {
+		else if (event->key() == BACKGROUND_PATTETE_KEY) {
 			backgroundPallete.fetch_add(1, std::memory_order_relaxed);
 		}
-		else if (event->key() == Qt::Key_P) {
+		else if (event->key() == BACKGROUND_PATTETE_KEY) {
 			spritePallete.fetch_add(1, std::memory_order_relaxed);
 		}
 	}
@@ -164,28 +204,28 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 
 void MainWindow::keyReleaseEvent(QKeyEvent* event) {
 	// Game keys
-	if (event->key() == Qt::Key_Up) {
+	if (event->key() == UP_KEY) {
 		setControllerData(0, Controller::Button::UP, 0);
 	}
-	else if (event->key() == Qt::Key_Down) {
+	else if (event->key() == DOWN_KEY) {
 		setControllerData(0, Controller::Button::DOWN, 0);
 	}
-	else if (event->key() == Qt::Key_Left) {
+	else if (event->key() == LEFT_KEY) {
 		setControllerData(0, Controller::Button::LEFT, 0);
 	}
-	else if (event->key() == Qt::Key_Right) {
+	else if (event->key() == RIGHT_KEY) {
 		setControllerData(0, Controller::Button::RIGHT, 0);
 	}
-	else if (event->key() == Qt::Key_Shift) {
+	else if (event->key() == SELECT_KEY) {
 		setControllerData(0, Controller::Button::SELECT, 0);
 	}
-	else if (event->key() == Qt::Key_Return) {
+	else if (event->key() == START_KEY) {
 		setControllerData(0, Controller::Button::START, 0);
 	}
-	else if (event->key() == Qt::Key_Z) {
+	else if (event->key() == B_KEY) {
 		setControllerData(0, Controller::Button::B, 0);
 	}
-	else if (event->key() == Qt::Key_X) {
+	else if (event->key() == A_KEY) {
 		setControllerData(0, Controller::Button::A, 0);
 	}
 }
@@ -216,9 +256,9 @@ void MainWindow::updateAudioState() {
 		}
 	};
 
-	bool globalMute = globalMuteFlag.load(std::memory_order_relaxed) & 1;
-	bool stepMode = stepModeEnabled.load(std::memory_order_relaxed) & 1;
-	if (globalMute || stepMode) {
+	bool globalMute = globalMuteFlag.load(std::memory_order_acquire) & 1;
+	bool paused = pauseFlag.load(std::memory_order_acquire) & 1;
+	if (globalMute || paused) {
 		tryToMute();
 	}
 	else {
@@ -266,7 +306,6 @@ void MainWindow::toggleDebugMode() {
 	bool debugMode = debugWindowEnabled.load(std::memory_order_relaxed);
 	if (debugMode) {
 		debugWindowEnabled.store(false, std::memory_order_relaxed);
-		stepModeEnabled.store(0, std::memory_order_release);
 		setFixedSize(GAME_WIDTH, GAME_HEIGHT);
 	}
 	else {

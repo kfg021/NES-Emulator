@@ -118,8 +118,7 @@ uint8_t Mapper1::mapCHRView(uint16_t ppuAddress) const {
 }
 
 void Mapper1::mapCHRWrite(uint16_t ppuAddress, uint8_t value) {
-    if (CHR_RANGE.contains(ppuAddress) && config.chrChunks == 0) {
-        // If chrChunks == 0, we assume we have CHR RAM
+    if (CHR_RANGE.contains(ppuAddress) && hasChrRam()) {
         chr[ppuAddress] = value;
     }
 }
@@ -137,7 +136,7 @@ Mapper1::Control::Control(uint8_t data) {
     setFromUInt8(data);
 }
 
-uint16_t Mapper1::Control::toUInt8() const {
+uint8_t Mapper1::Control::toUInt8() const {
     uint8_t data =
         mirroring |
         (prgRomMode << 2) |
@@ -145,7 +144,7 @@ uint16_t Mapper1::Control::toUInt8() const {
     return data;
 }
 
-void Mapper1::Control::setFromUInt8(uint16_t data) {
+void Mapper1::Control::setFromUInt8(uint8_t data) {
     mirroring = data & 0x3;
     prgRomMode = (data >> 2) & 0x3;
     chrRomMode = (data >> 4) & 0x1;
@@ -155,14 +154,51 @@ Mapper1::PRGBank::PRGBank(uint8_t data) {
     setFromUInt8(data);
 }
 
-uint16_t Mapper1::PRGBank::toUInt8() const {
+uint8_t Mapper1::PRGBank::toUInt8() const {
     uint8_t data =
         prgRomSelect |
         (prgRamDisable << 4);
     return data;
 }
 
-void Mapper1::PRGBank::setFromUInt8(uint16_t data) {
+void Mapper1::PRGBank::setFromUInt8(uint8_t data) {
     prgRomSelect = data & 0xF;
     prgRamDisable = (data >> 4) & 0x1;
+}
+
+bool Mapper1::hasChrRam() const {
+    // If chrChunks == 0, we assume we have CHR RAM
+    return config.chrChunks == 0;
+}
+
+void Mapper1::serialize(Serializer& s) const {
+    s.serializeUInt8(shiftRegister);
+    s.serializeUInt8(control.toUInt8());
+    s.serializeUInt8(chrBank0);
+    s.serializeUInt8(chrBank1);
+    s.serializeUInt8(prgBank.toUInt8());
+    s.serializeVector(prgRam, s.uInt8Func);
+    if (hasChrRam()) {
+        s.serializeVector(chr, s.uInt8Func);
+    }
+}
+
+void Mapper1::deserialize(Deserializer& d) {
+    d.deserializeUInt8(shiftRegister);
+
+    uint8_t controlTemp;
+    d.deserializeUInt8(controlTemp);
+    control.setFromUInt8(controlTemp);
+
+    d.deserializeUInt8(chrBank0);
+    d.deserializeUInt8(chrBank1);
+
+    uint8_t prgBankTemp;
+    d.deserializeUInt8(prgBankTemp);
+    prgBank.setFromUInt8(prgBankTemp);
+
+    d.deserializeVector(prgRam, d.uInt8Func);
+    if (hasChrRam()) {
+        d.deserializeVector(chr, d.uInt8Func);
+    }
 }
