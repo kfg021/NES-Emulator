@@ -41,42 +41,55 @@ A Nintendo Entertainment System (NES) emulator implemented in C++ with a Qt6-bas
 ### macOS/Linux
 1. Clone the repository:
 ```bash
-git clone https://github.com/kennangumbs/nes-emulator.git
-cd NES
+git clone https://github.com/kfg021/NES-Emulator.git
+cd NES-Emulator
 ```
 
-2. Create a build directory and navigate to it:
+2. Obtain Qt6 development libraries:
+   If you don't have Qt6 installed, the easiest ways are:
+   *   On **macOS** using Homebrew:
+      ```bash
+      brew install qt
+      ```
+   *   On **Debian/Ubuntu**:
+      ```bash
+      sudo apt update
+      sudo apt install qt6-base-dev qt6-multimedia-dev
+      ```
+   *   For other distributions or if you prefer, use the **Qt online installer for open source development** from the official Qt website ([https://www.qt.io/download-qt-installer-oss](https://www.qt.io/download-qt-installer-oss)). Ensure you select a Qt6 version (e.g., Qt 6.7.3), and the necessary modules (Qt Base, Qt Multimedia).
+
+3. Create a build directory and navigate to it:
 ```bash
 mkdir build
 cd build
 ```
 
-3. Generate build files with CMake:
+4. Generate build files with CMake:
 ```bash
 cmake -DCMAKE_BUILD_TYPE=Release ..
 ```
 
-4. Build the project:
+5. Build the project:
 ```bash
 make
 ```
 
 ### Windows (Visual Studio)
 1. Prerequisites:
-   - Visual Studio 2019 or later with C++ development workload
+   - Visual Studio with C++ development workload
    - CMake 3.21.1 or later
-   - Qt6 SDK (install using the Qt online installer)
    - Git
+   - **Qt6 SDK:** Download and install using the **Qt online installer for open source development** ([https://www.qt.io/download-qt-installer-oss](https://www.qt.io/download-qt-installer-oss)). Ensure you select a Qt6 version (e.g., Qt 6.7.3), the necessary modules (Qt Base, Qt Multimedia), and the kit corresponding to your Visual Studio version (e.g., MSVC 2022 64-bit).
 
 2. Clone the repository:
 ```cmd
-git clone https://github.com/kennangumbs/nes-emulator.git
-cd nes-emulator
+git clone https://github.com/kfg021/NES-Emulator.git
+cd NES-Emulator
 ```
 
-3. Set up Qt:
-   - Add Qt's installation directory to your system's PATH environment variable
-   - Set the `Qt6_DIR` environment variable to point to your Qt installation (e.g., `C:\Qt\6.5.2\msvc2019_64`)
+3. Set up Qt Environment:
+   - Ensure Qt's installation directory (specifically the `bin` folder containing `qmake.exe`) is added to your system's PATH environment variable.
+   - Set the `Qt6_DIR` environment variable to point to your Qt installation (e.g., `C:\Qt\6.7.3\msvc2022_64`). Visual Studio's CMake integration often relies on this.
 
 4. Generate Visual Studio solution:
    - Open Visual Studio
@@ -90,7 +103,7 @@ cd nes-emulator
 
 Note: If CMake has trouble finding Qt, you may need to specify the Qt6_DIR path explicitly:
 ```cmd
-cmake -B build -S . -DQt6_DIR="C:\Qt\6.5.2\msvc2019_64\lib\cmake\Qt6"
+cmake -B build -S . -DQt6_DIR="C:\Path\To\Your\Qt\6.7.3\msvc2022_64\lib\cmake\Qt6"
 ```
 
 ## Usage
@@ -103,6 +116,8 @@ You can launch the emulator in two ways:
 ```bash
 ./NES_Emulator
 ```
+*(Replace ./NES_Emulator with NES_Emulator.exe on Windows)*
+
 This will open a file selector dialog to select a ROM file.
 
 2. With a ROM file as a command-line argument:
@@ -194,10 +209,20 @@ The following features and improvements are planned for future development:
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project (NES-Emulator) is licensed under the MIT License. See the [LICENSE](LICENSE) file for the full text.
+
+## Third-Party Libraries & Licensing
+
+### Qt6 Framework
+
+This project utilizes the Qt6 framework. The Qt6 modules used in this project (Core, Gui, Multimedia, Widgets) are licensed under the GNU Lesser General Public License v.3 (LGPLv3).
+
+- A copy of the LGPLv3 is included in this repository as [LICENSE.LGPLv3](LICENSE.LGPLv3). It is recommended to include a copy of this license with any distributed binaries of this application.
+- The source code for the Qt libraries can be obtained from the official Qt Company website: [https://download.qt.io/archive/qt/](https://download.qt.io/archive/qt/).
+- In compliance with the LGPLv3, users of this application have the right to modify and re-link the Qt libraries. This application is dynamically linked against Qt to facilitate this.
 
 ## Acknowledgments
 - [NESDev Wiki](http://wiki.nesdev.com/) - Comprehensive documentation of NES hardware
 - [6502.org](http://6502.org/) - In-depth information about the 6502 CPU
-- [Javidx9](https://www.youtube.com/watch?v=nViZg02IMQo&list=PLrOv9FMX8xJHqMvSGB_9G9nZZ_4IgteYf) - Extermely useful NES Emulator tutorial series
+- [Javidx9](https://www.youtube.com/watch?v=nViZg02IMQo&list=PLrOv9FMX8xJHqMvSGB_9G9nZZ_4IgteYf) - Extremely useful NES Emulator tutorial series
 - [NESHacker](https://www.youtube.com/@NesHacker) - Excellent NES development tutorials and open-source test ROMs
