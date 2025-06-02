@@ -140,11 +140,15 @@ The emulator window will show:
   - Pattern tables / Palettes
 
 ### Controls
+
+#### Emulator controls
 - Arrow keys: D-pad
 - Z: B button
 - X: A button
 - Return/Enter: Start
 - Shift: Select
+
+#### Menu controls
 - R: Reset game
 - C: Pause/Unpause game
 - M: Toggle sound
@@ -153,7 +157,7 @@ The emulator window will show:
 - L: Load save state (opens file dialog to choose file)
 - K: Quick load save state (loads most recently saved/loaded file)
 
-Debug Window controls (when open):
+#### Debug window controls (when open)
 - Space (If paused): Step to next instruction
 - O: Cycle background palette
 - P: Cycle sprite palette
