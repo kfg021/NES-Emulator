@@ -149,28 +149,38 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 
 	// Save states
 	else if (event->key() == SAVE_KEY) {
-		pauseFlag.store(1, std::memory_order_relaxed);
+		audioSamples.erase();
+		pauseFlag.store(1, std::memory_order_release);
+		updateAudioState();
 
 		saveFilePath = QFileDialog::getSaveFileName(
-			nullptr, "Create save state", QDir::homePath(), "(*.sstate)"
+			this, "Create save state", QDir::homePath(), "(*.sstate)"
 		);
 
 		saveRequested.store(true, std::memory_order_release);
+		emulatorThread->requestSoundReactivation();
 	}
 
 	else if (event->key() == LOAD_KEY) {
-		pauseFlag.store(1, std::memory_order_relaxed);
+		audioSamples.erase();
+		pauseFlag.store(1, std::memory_order_release);
+		updateAudioState();
 
 		saveFilePath = QFileDialog::getOpenFileName(
-			nullptr, "Load save state", QDir::homePath(), "(*.sstate)"
+			this, "Load save state", QDir::homePath(), "(*.sstate)"
 		);
 
 		loadRequested.store(true, std::memory_order_release);
+		emulatorThread->requestSoundReactivation();
 	}
 
 	else if (event->key() == QUICK_LOAD_KEY) {
-		pauseFlag.store(1, std::memory_order_relaxed);
+		audioSamples.erase();
+		pauseFlag.store(1, std::memory_order_release);
+		updateAudioState();
+
 		loadRequested.store(true, std::memory_order_release);
+		emulatorThread->requestSoundReactivation();
 	}
 
 	// Debugging keys
@@ -246,8 +256,8 @@ void MainWindow::updateAudioState() {
 		}
 	};
 
-	bool globalMute = globalMuteFlag.load(std::memory_order_relaxed) & 1;
-	bool paused = pauseFlag.load(std::memory_order_relaxed) & 1;
+	bool globalMute = globalMuteFlag.load(std::memory_order_acquire) & 1;
+	bool paused = pauseFlag.load(std::memory_order_acquire) & 1;
 	if (globalMute || paused) {
 		tryToMute();
 	}

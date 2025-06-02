@@ -70,10 +70,10 @@ void EmulatorThread::run() {
 			keyInput.saveRequested->store(false, std::memory_order_release);
 		}
 		else if (loadRequested) {
+			audioSamples->erase();
+
 			SaveState::LoadStatus saveStatus = saveState.loadSaveState(*keyInput.saveFilePath);
 			qDebug().noquote() << saveStatus.message;
-
-			audioSamples->erase();
 
 			keyInput.pauseFlag->store(0, std::memory_order_relaxed);
 			keyInput.loadRequested->store(false, std::memory_order_release);
