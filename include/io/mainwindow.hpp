@@ -106,6 +106,7 @@ private:
 	// Save states
 	static constexpr Qt::Key SAVE_KEY = Qt::Key_S;
 	static constexpr Qt::Key LOAD_KEY = Qt::Key_L;
+	static constexpr Qt::Key QUICK_LOAD_KEY = Qt::Key_K;
 };
 
 #endif // MAINWINDOW_HPP

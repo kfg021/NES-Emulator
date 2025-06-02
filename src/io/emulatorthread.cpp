@@ -66,7 +66,6 @@ void EmulatorThread::run() {
 			// TODO: check success/failure
 			createSaveState(*keyInput.saveFilePath, bus);
 
-			keyInput.saveFilePath->clear();
 			keyInput.pauseFlag->store(0, std::memory_order_relaxed);
 			keyInput.saveRequested->store(false, std::memory_order_release);
 		}
@@ -76,7 +75,6 @@ void EmulatorThread::run() {
 
 			audioSamples->erase();
 
-			keyInput.saveFilePath->clear();
 			keyInput.pauseFlag->store(0, std::memory_order_relaxed);
 			keyInput.loadRequested->store(false, std::memory_order_release);
 		}

@@ -54,7 +54,7 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
 		&globalMuteFlag,
 		&saveRequested,
 		&loadRequested,
-		&saveFilePath
+		&saveFilePath,
 	};
 	emulatorThread = new EmulatorThread(this, filePath, keyInput, &audioSamples);
 
@@ -147,6 +147,7 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 		updateAudioState();
 	}
 
+	// Save states
 	else if (event->key() == SAVE_KEY) {
 		pauseFlag.store(1, std::memory_order_relaxed);
 
@@ -163,7 +164,12 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 		saveFilePath = QFileDialog::getOpenFileName(
 			nullptr, "Load save state", QDir::homePath(), "(*.bin)"
 		);
-		
+
+		loadRequested.store(true, std::memory_order_release);
+	}
+
+	else if (event->key() == QUICK_LOAD_KEY) {
+		pauseFlag.store(1, std::memory_order_relaxed);
 		loadRequested.store(true, std::memory_order_release);
 	}
 
