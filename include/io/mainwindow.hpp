@@ -10,6 +10,7 @@
 #include <array>
 #include <atomic>
 #include <memory>
+#include <optional>
 #include <string>
 #include <queue>
 
@@ -26,7 +27,7 @@ class MainWindow : public QMainWindow {
 	Q_OBJECT
 
 public:
-	MainWindow(QWidget* parent, const std::string& filePath);
+	MainWindow(QWidget* parent, const std::string& romFilePath, const std::optional<std::string>& saveFilePathOption);
 	~MainWindow() override;
 
 	static constexpr int GAME_WIDTH = 256 * 3;

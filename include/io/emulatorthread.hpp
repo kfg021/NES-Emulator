@@ -7,6 +7,7 @@
 #include "io/threadsafeaudioqueue.hpp"
 
 #include <array>
+#include <optional>
 #include <queue>
 
 #include <QImage>
@@ -17,7 +18,13 @@
 class EmulatorThread : public QThread {
 	Q_OBJECT
 public:
-	EmulatorThread(QObject* parent, const std::string& filePath, const KeyboardInput& keyInput, ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>* audioSamples);
+	EmulatorThread(
+		QObject* parent,
+		const std::string& romFilePath,
+		const std::optional<std::string>& saveFilePath,
+		const KeyboardInput& keyInput,
+		ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>* audioSamples
+	);
 	~EmulatorThread() override;
 	void run() override;
 

@@ -297,6 +297,7 @@ private:
         uint8_t patternTableHi;
     };
 
+    static constexpr int MAX_SPRITES = 8;
     std::vector<SpriteData> currentScanlineSprites;
     bool sprite0OnCurrentScanline;
     void fillCurrentScanlineSprites();

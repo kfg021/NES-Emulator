@@ -5,16 +5,28 @@
 #include <QElapsedTimer>
 #include <QString>
 
-EmulatorThread::EmulatorThread(QObject* parent, const std::string& filePath, const KeyboardInput& keyInput, ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>* audioSamples) :
+EmulatorThread::EmulatorThread(
+	QObject* parent,
+	const std::string& romFilePath,
+	const std::optional<std::string>& saveFilePathOption,
+	const KeyboardInput& keyInput,
+	ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>* audioSamples
+) :
 	QThread(parent),
 	keyInput(keyInput),
 	audioSamples(audioSamples),
-	saveState(bus, QString::fromStdString(filePath)) {
+	saveState(bus, QString::fromStdString(romFilePath)) {
 	isRunning.store(false, std::memory_order_relaxed);
 
-	Cartridge::Status status = bus.loadROM(filePath);
+	Cartridge::Status status = bus.loadROM(romFilePath);
 	if (status.code != Cartridge::Code::SUCCESS) {
 		qFatal("%s", status.message.c_str());
+	}
+
+	if (saveFilePathOption.has_value()) {
+		*keyInput.saveFilePath = QString::fromStdString(saveFilePathOption.value());
+		SaveState::LoadStatus saveStatus = saveState.loadSaveState(*keyInput.saveFilePath);
+		qDebug().noquote() << saveStatus.message;
 	}
 
 	scaledAudioClock = 0;

@@ -19,7 +19,7 @@ QAudioFormat MainWindow::defaultAudioFormat() {
 	return audioFormat;
 }
 
-MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
+MainWindow::MainWindow(QWidget* parent, const std::string& romFilePath, const std::optional<std::string>& saveFilePathOption)
 	: QMainWindow(parent),
 	audioFormat(defaultAudioFormat()) {
 	setWindowTitle("NES Emulator");
@@ -56,7 +56,7 @@ MainWindow::MainWindow(QWidget* parent, const std::string& filePath)
 		&loadRequested,
 		&saveFilePath,
 	};
-	emulatorThread = new EmulatorThread(this, filePath, keyInput, &audioSamples);
+	emulatorThread = new EmulatorThread(this, romFilePath, saveFilePathOption, keyInput, &audioSamples);
 
 	connect(emulatorThread, &EmulatorThread::soundReadySignal, this, &MainWindow::enableAudioSink, Qt::QueuedConnection);
 	connect(emulatorThread, &EmulatorThread::frameReadySignal, this, &MainWindow::displayNewFrame, Qt::QueuedConnection);

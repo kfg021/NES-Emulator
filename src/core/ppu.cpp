@@ -52,6 +52,7 @@ void PPU::initPPU() {
     oamAddress = 0;
 
     currentScanlineSprites = {};
+    currentScanlineSprites.reserve(MAX_SPRITES);
     sprite0OnCurrentScanline = false;
 
     frameReadyFlag = false;
@@ -703,7 +704,6 @@ void PPU::incrementY() {
 }
 
 void PPU::fillCurrentScanlineSprites() {
-    static constexpr uint8_t MAX_SPRITES = 8;
     currentScanlineSprites.clear();
     sprite0OnCurrentScanline = false;
     for (int i = 0; i < OAM_SPRITES; i++) {
