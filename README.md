@@ -111,7 +111,7 @@ cmake -B build -S . -DQt6_DIR="C:\Path\To\Your\Qt\6.7.3\msvc2022_64\lib\cmake\Qt
 
 ### Running the Emulator
 
-You can launch the emulator in two ways:
+You can launch the emulator in a few ways:
 
 1. Without a ROM file:
 ```bash
@@ -126,10 +126,18 @@ This will open a file selector dialog to select a ROM file.
 ./NES_Emulator path/to/your/game.nes
 ```
 
+3. With a ROM file and a save state file:
+```bash
+./NES_Emulator path/to/your/game.nes path/to/your/save.sstate
+```
+
 ### ROM Support
 - Only .nes files with iNES header format are supported
 - The emulator will verify the ROM header before loading
 - Supported mappers are listed in the Features section above
+
+### Save States
+- Save states use a proprietary .sstate format and can only be created using this emulator
 
 ### Output
 The emulator window will show:
