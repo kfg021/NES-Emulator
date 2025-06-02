@@ -23,6 +23,7 @@ A Nintendo Entertainment System (NES) emulator implemented in C++ with a Qt6-bas
   viewer
   - PPU pattern table and palette viewer
   - Step-by-step execution control
+- Save states
 
 
 ## Prerequisites
@@ -148,6 +149,9 @@ The emulator window will show:
 - C: Pause/Unpause game
 - M: Toggle sound
 - D: Toggle debug window
+- S: Create save state (opens file dialog to choose location)
+- L: Load save state (opens file dialog to choose file)
+- K: Quick load save state (loads most recently saved/loaded file)
 
 Debug Window controls (when open):
 - Space (If paused): Step to next instruction
@@ -195,7 +199,6 @@ The following features and improvements are planned for future development:
 - Frame timing optimizations
 
 ### User Experience
-- Save state support
 - Recording/replay functionality
 - Controller/Gamepad key button support
 
