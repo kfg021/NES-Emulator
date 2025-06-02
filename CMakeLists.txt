@@ -1,7 +1,3 @@
-# mkdir build/ && cd build/
-# cmake -DCMAKE_BUILD_TYPE=Release ..
-# make
-
 cmake_minimum_required(VERSION 3.21.1)
 
 set(PROJECT_NAME NES_Emulator)
