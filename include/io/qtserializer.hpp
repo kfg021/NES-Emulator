@@ -11,6 +11,7 @@ class QtSerializer : public Serializer {
 public:
     QtSerializer();
 
+    bool good();
     bool openFile(const QString& filePath);
 
     void serializeUInt8(uint8_t data) override;
@@ -28,6 +29,7 @@ class QtDeserializer : public Deserializer {
 public:
     QtDeserializer();
 
+    bool good();
     bool openFile(const QString& filePath);
 
     void deserializeUInt8(uint8_t& data) override;

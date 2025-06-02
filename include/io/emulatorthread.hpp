@@ -3,6 +3,7 @@
 
 #include "core/bus.hpp"
 #include "io/guitypes.hpp"
+#include "io/savestate.hpp"
 #include "io/threadsafeaudioqueue.hpp"
 
 #include <array>
@@ -50,6 +51,9 @@ private:
 	ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>* audioSamples;
 
 	int scaledAudioClock;
+
+	// Save states
+	SaveState saveState;
 };
 
 #endif // EMULATORTHREAD_HPP

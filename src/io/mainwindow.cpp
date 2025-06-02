@@ -152,7 +152,7 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 		pauseFlag.store(1, std::memory_order_relaxed);
 
 		saveFilePath = QFileDialog::getSaveFileName(
-			nullptr, "Create save state", QDir::homePath(), "(*.bin)"
+			nullptr, "Create save state", QDir::homePath(), "(*.sstate)"
 		);
 
 		saveRequested.store(true, std::memory_order_release);
@@ -162,7 +162,7 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 		pauseFlag.store(1, std::memory_order_relaxed);
 
 		saveFilePath = QFileDialog::getOpenFileName(
-			nullptr, "Load save state", QDir::homePath(), "(*.bin)"
+			nullptr, "Load save state", QDir::homePath(), "(*.sstate)"
 		);
 
 		loadRequested.store(true, std::memory_order_release);

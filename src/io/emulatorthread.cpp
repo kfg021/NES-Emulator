@@ -1,15 +1,15 @@
 #include "io/emulatorthread.hpp"
-
-#include "io/savestate.hpp"
-
 #include <cstdint>
 
+#include <QDebug>
 #include <QElapsedTimer>
+#include <QString>
 
 EmulatorThread::EmulatorThread(QObject* parent, const std::string& filePath, const KeyboardInput& keyInput, ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>* audioSamples) :
 	QThread(parent),
 	keyInput(keyInput),
-	audioSamples(audioSamples) {
+	audioSamples(audioSamples),
+	saveState(bus, QString::fromStdString(filePath)) {
 	isRunning.store(false, std::memory_order_relaxed);
 
 	Cartridge::Status status = bus.loadROM(filePath);
@@ -63,15 +63,15 @@ void EmulatorThread::run() {
 		if (saveRequested) {
 			audioSamples->erase();
 
-			// TODO: check success/failure
-			createSaveState(*keyInput.saveFilePath, bus);
+			SaveState::CreateStatus saveStatus = saveState.createSaveState(*keyInput.saveFilePath);
+			qDebug().noquote() << saveStatus.message;
 
 			keyInput.pauseFlag->store(0, std::memory_order_relaxed);
 			keyInput.saveRequested->store(false, std::memory_order_release);
 		}
 		else if (loadRequested) {
-			// TODO: check success/failure
-			loadSaveState(*keyInput.saveFilePath, bus);
+			SaveState::LoadStatus saveStatus = saveState.loadSaveState(*keyInput.saveFilePath);
+			qDebug().noquote() << saveStatus.message;
 
 			audioSamples->erase();
 
