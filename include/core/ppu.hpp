@@ -62,9 +62,9 @@ public:
 
     bool frameReadyFlag;
 
-    bool nmiRequested();
+    bool nmiRequested() const;
     void clearNMIRequest();
-    bool irqRequested();
+    bool irqRequested() const;
 
     // Serialization
     void serialize(Serializer& s) const;

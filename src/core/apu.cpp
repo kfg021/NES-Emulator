@@ -71,7 +71,7 @@ void APU::write(uint16_t addr, uint8_t value) {
                 pulse.timerCounter = timerReload;
 
                 pulse.lengthCounterLoad = (value >> 3) & 0x1F;
-                bool pulseStatus = (status >> pulseNum) & 1;
+                bool pulseStatus = (status >> static_cast<int>(pulseNum)) & 1;
                 if (pulseStatus) {
                     pulse.lengthCounter = LENGTH_COUNTER_TABLE[pulse.lengthCounterLoad];
                 }
@@ -284,6 +284,7 @@ void APU::executeHalfCycle() {
                 break;
             case 0: /*STEP_SEQUENCE[3] + 1*/
                 if (frameCounter > 0) frameInterruptFlag = !interruptInhibitFlag;
+                break;
             default:
                 break;
         }

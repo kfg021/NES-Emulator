@@ -1,6 +1,8 @@
 #include "core/bus.hpp"
 
 Bus::Bus() {
+    initBus();
+
     cpu = std::make_unique<CPU>();
     cpu->setBus(this);
 
@@ -10,16 +12,12 @@ Bus::Bus() {
     apu->setBus(this);
 }
 
-void Bus::initDevices() {
+void Bus::initBus() {
     ram = {};
 
     controllers = {};
     controllerData = {};
     strobe = 0;
-
-    cpu->initCPU();
-    ppu->initPPU();
-    apu->initAPU();
 
     totalCycles = 0;
 
@@ -27,12 +25,19 @@ void Bus::initDevices() {
     dmcDma = {};
 }
 
+void Bus::reset() {
+    initBus();
+    cpu->initCPU();
+    ppu->initPPU();
+    apu->initAPU();
+}
+
 Cartridge::Status Bus::loadROM(const std::string& filePath) {
     ppu->cartridge = Cartridge(filePath);
 
     const Cartridge::Status& status = ppu->cartridge.getStatus();
     if (status.code == Cartridge::Code::SUCCESS) {
-        initDevices();
+        cpu->reset();
     }
 
     return status;

@@ -57,7 +57,7 @@ void EmulatorThread::run() {
 		// Check reset
 		bool resetRequested = keyInput.resetFlag->load(std::memory_order_relaxed);
 		if (resetRequested) {
-			bus.initDevices();
+			bus.reset();
 
 			audioSamples->erase();
 			scaledAudioClock = 0;

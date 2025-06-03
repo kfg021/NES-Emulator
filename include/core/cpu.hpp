@@ -12,9 +12,10 @@ class Bus;
 
 class CPU {
 public:
-    CPU() = default;
+    CPU();
     void setBus(Bus* bus);
     void initCPU();
+    void initCPUNoReset();
 
     void executeCycle();
 

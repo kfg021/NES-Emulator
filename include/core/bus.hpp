@@ -17,7 +17,7 @@ public:
     Bus();
 
     Cartridge::Status loadROM(const std::string& filePath);
-    void initDevices();
+    void reset();
 
     uint8_t view(uint16_t address) const;
     uint8_t read(uint16_t address);
@@ -41,6 +41,8 @@ public:
     void deserialize(Deserializer& d);
 
 private:
+    void initBus();
+
     // Memory ranges for devices
     static constexpr MemoryRange RAM_ADDRESSABLE_RANGE{ 0x0000, 0x1FFF };
     static constexpr MemoryRange PPU_ADDRESSABLE_RANGE{ 0x2000, 0x3FFF };

@@ -13,6 +13,8 @@ const std::array<uint32_t, PPU::NUM_SCREEN_COLORS> PPU::SCREEN_COLORS = {
 PPU::PPU() {
     workingDisplay = std::make_unique<Display>();
     finishedDisplay = std::make_unique<Display>();
+
+    initPPU();
 }
 
 void PPU::initPPU() {
@@ -61,7 +63,7 @@ void PPU::initPPU() {
     irqRequest = false;
 }
 
-bool PPU::nmiRequested() {
+bool PPU::nmiRequested() const {
     return nmiRequest;
 }
 
@@ -69,7 +71,7 @@ void PPU::clearNMIRequest() {
     nmiRequest = false;
 }
 
-bool PPU::irqRequested() {
+bool PPU::irqRequested() const {
     return irqRequest;
 }
 

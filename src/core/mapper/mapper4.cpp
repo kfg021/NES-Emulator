@@ -1,6 +1,6 @@
 #include "core/mapper/mapper4.hpp"
 
-Mapper::Config editConfigMapper4(Mapper::Config config) {
+static Mapper::Config editConfigMapper4(Mapper::Config config) {
     // Mapper 4 has PRG RAM by default
     config.hasBatteryBackedPrgRam = true;
 
@@ -43,7 +43,7 @@ void Mapper4::clockIRQTimer() {
     irqRequest = irqEnabled && (irqTimer == 0);
 }
 
-bool Mapper4::irqRequested() {
+bool Mapper4::irqRequested() const {
     return irqRequest;
 }
 

@@ -18,7 +18,7 @@ public:
     MirrorMode getMirrorMode() const override;
 
     void clockIRQTimer();
-    bool irqRequested();
+    bool irqRequested() const;
 
     // Serialization
     void serialize(Serializer& s) const override;

@@ -2,7 +2,7 @@
 
 #include "util/util.hpp"
 
-Mapper::Config editConfigMapper1(Mapper::Config config) {
+static Mapper::Config editConfigMapper1(Mapper::Config config) {
     // Mapper 1 has PRG RAM by default
     config.hasBatteryBackedPrgRam = true;
     return config;

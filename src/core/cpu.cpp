@@ -10,7 +10,11 @@
 
 const std::array<CPU::Opcode, CPU::MAX_NUM_OPCODES> CPU::lookup = CPU::initLookup();
 
-void CPU::initCPU() {
+CPU::CPU() {
+    initCPUNoReset();
+}
+
+void CPU::initCPUNoReset() {
     // Init registers
     a = 0;
     x = 0;
@@ -18,7 +22,10 @@ void CPU::initCPU() {
     sp = 0;
     sr = 0;
     setFlag(Flag::UNUSED, 1);
+}
 
+void CPU::initCPU() {
+    initCPUNoReset();
     reset();
 }
 
