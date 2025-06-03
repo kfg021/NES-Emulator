@@ -5,8 +5,10 @@
 
 #include <array>
 #include <atomic>
+#include <memory>
 #include <queue>
 
+#include <QMetaType>
 #include <QString>
 
 using ControllerStatus = std::array<std::atomic<uint8_t>, 2>;
@@ -44,9 +46,10 @@ struct DebugWindowState {
     uint8_t backgroundPallete;
     uint8_t spritePallete;
     std::array<uint32_t, 0x20> palleteRamColors;
-    PPU::PatternTable table1, table2;
+    std::shared_ptr<PPU::PatternTables> patternTables;
     std::array<QString, NUM_INSTS_TOTAL> insts;
 };
+Q_DECLARE_METATYPE(DebugWindowState)
 
 static constexpr int AUDIO_SAMPLE_RATE = 44100;	
 static constexpr size_t AUDIO_QUEUE_MAX_CAPACITY = AUDIO_SAMPLE_RATE / 10;

@@ -45,8 +45,8 @@ void PPU::initPPU() {
 
     nameTable = {};
 
-    (*workingDisplay) = {};
-    (*finishedDisplay) = {};
+    workingDisplay->fill(std::array<uint32_t, 256>{});
+    finishedDisplay->fill(std::array<uint32_t, 256>{});
 
     // Reset the OAM buffer to 0xFF so that sprites start off the screen
     oamBuffer.fill(0xFF);
@@ -317,34 +317,40 @@ void PPU::ppuWrite(uint16_t address, uint8_t value) {
     }
 }
 
-PPU::PatternTable PPU::getPatternTable(bool isBackground, uint8_t palleteNumber) const {
-    PatternTable table{};
+std::unique_ptr<PPU::PatternTables> PPU::getPatternTables(uint8_t backgroundPalleteNumber, uint8_t spritePalleteNumber) const {
+    std::unique_ptr<PPU::PatternTables> tables = std::make_unique<PPU::PatternTables>();
 
-    bool tableNumber = isBackground ? control.backgroundPatternTable : control.spritePatternTable;
+    for (int i = 0; i < 2; i++) {
+        bool isBackground = !i;
+        bool tableNumber = isBackground ? control.backgroundPatternTable : control.spritePatternTable;
+        uint8_t palleteNumber = isBackground ? backgroundPalleteNumber : spritePalleteNumber;
+        PatternTable& table = isBackground ? tables->backgroundPatternTable : tables->spritePatternTable;
 
-    for (int tileRow = 0; tileRow < PATTERN_TABLE_NUM_TILES; tileRow++) {
-        for (int tileCol = 0; tileCol < PATTERN_TABLE_NUM_TILES; tileCol++) {
-            uint16_t tableOffset = PATTERN_TABLE_TILE_BYTES * (PATTERN_TABLE_NUM_TILES * tileRow + tileCol);
+        for (int tileRow = 0; tileRow < PATTERN_TABLE_NUM_TILES; tileRow++) {
+            for (int tileCol = 0; tileCol < PATTERN_TABLE_NUM_TILES; tileCol++) {
+                uint16_t tableOffset = PATTERN_TABLE_TILE_BYTES * (PATTERN_TABLE_NUM_TILES * tileRow + tileCol);
 
-            for (int spriteRow = 0; spriteRow < PATTERN_TABLE_TILE_SIZE; spriteRow++) {
-                uint8_t loBits = ppuView(PATTERN_TABLE_TOTAL_BYTES * tableNumber + tableOffset + spriteRow);
-                uint8_t hiBits = ppuView(PATTERN_TABLE_TOTAL_BYTES * tableNumber + tableOffset + spriteRow + 0x8);
+                for (int spriteRow = 0; spriteRow < PATTERN_TABLE_TILE_SIZE; spriteRow++) {
+                    uint8_t loBits = ppuView(PATTERN_TABLE_TOTAL_BYTES * tableNumber + tableOffset + spriteRow);
+                    uint8_t hiBits = ppuView(PATTERN_TABLE_TOTAL_BYTES * tableNumber + tableOffset + spriteRow + 0x8);
 
-                for (int spriteCol = 0; spriteCol < PATTERN_TABLE_TILE_SIZE; spriteCol++) {
-                    bool currentLoBit = (loBits >> spriteCol) & 1;
-                    bool currentHiBit = (hiBits >> spriteCol) & 1;
-                    uint8_t palleteIndex = ((!isBackground) << 4) | (currentHiBit << 1) | static_cast<uint8_t>(currentLoBit);
+                    for (int spriteCol = 0; spriteCol < PATTERN_TABLE_TILE_SIZE; spriteCol++) {
+                        bool currentLoBit = (loBits >> spriteCol) & 1;
+                        bool currentHiBit = (hiBits >> spriteCol) & 1;
+                        uint8_t palleteIndex = ((!isBackground) << 4) | (currentHiBit << 1) | static_cast<uint8_t>(currentLoBit);
 
-                    uint16_t pixelRow = PATTERN_TABLE_TILE_SIZE * tileRow + spriteRow;
-                    uint16_t pixelCol = PATTERN_TABLE_TILE_SIZE * tileCol + PATTERN_TABLE_TILE_SIZE - 1 - spriteCol;
+                        uint16_t pixelRow = PATTERN_TABLE_TILE_SIZE * tileRow + spriteRow;
+                        uint16_t pixelCol = PATTERN_TABLE_TILE_SIZE * tileCol + PATTERN_TABLE_TILE_SIZE - 1 - spriteCol;
 
-                    uint16_t addr = getPalleteRamAddress(palleteIndex, palleteNumber);
-                    table[pixelRow][pixelCol] = SCREEN_COLORS[ppuView(addr) & 0x3F];
+                        uint16_t addr = getPalleteRamAddress(palleteIndex, palleteNumber);
+                        table[pixelRow][pixelCol] = SCREEN_COLORS[ppuView(addr) & 0x3F];
+                    }
                 }
             }
         }
     }
-    return table;
+    
+    return tables;
 }
 
 void PPU::executeCycle() {

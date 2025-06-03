@@ -46,7 +46,11 @@ public:
     static constexpr uint16_t PATTERN_TABLE_TOTAL_BYTES = PATTERN_TABLE_TILE_BYTES * PATTERN_TABLE_NUM_TILES * PATTERN_TABLE_NUM_TILES;
 
     using PatternTable = std::array<std::array<uint32_t, PATTERN_TABLE_SIZE>, PATTERN_TABLE_SIZE>;
-    PatternTable getPatternTable(bool isBackground, uint8_t palleteNumber) const;
+    struct PatternTables {
+        PatternTable backgroundPatternTable;
+        PatternTable spritePatternTable;
+    };
+    std::unique_ptr<PatternTables> getPatternTables(uint8_t backgroundPalleteNumber, uint8_t spritePalleteNumber) const;
 
     std::array<uint32_t, 0x20> getPalleteRamColors() const;
 

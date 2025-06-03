@@ -39,6 +39,8 @@ MainWindow::MainWindow(QWidget* parent, const std::string& romFilePath, const st
 	audioPlayer = new AudioPlayer(this, audioFormat, muted, &audioSamples);
 	audioSink = nullptr;
 
+	debugWindowData = {};
+
 	defaultAudioDevice = QMediaDevices::defaultAudioOutput();
 	mediaDevices = new QMediaDevices(this);
 	connect(mediaDevices, &QMediaDevices::audioOutputsChanged, this, &MainWindow::onDefaultAudioDeviceChanged);
@@ -193,10 +195,10 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 				stepRequested.store(true, std::memory_order_relaxed);
 			}
 		}
-		else if (event->key() == BACKGROUND_PATTETE_KEY) {
+		else if (event->key() == BACKGROUND_PALLETE_KEY) {
 			backgroundPallete.fetch_add(1, std::memory_order_relaxed);
 		}
-		else if (event->key() == BACKGROUND_PATTETE_KEY) {
+		else if (event->key() == SPRITE_PALLETE_KEY) {
 			spritePallete.fetch_add(1, std::memory_order_relaxed);
 		}
 	}
@@ -381,43 +383,44 @@ void MainWindow::renderDebugWindow() {
 		painter.drawText(START_X, START_Y + LETTER_HEIGHT * (8 + i), debugWindowData.insts[i]);
 	}
 
-	const std::array<uint32_t, 0x20> palletes = debugWindowData.palleteRamColors;
+	const std::array<uint32_t, 0x20>& palletes = debugWindowData.palleteRamColors;
 
 	static constexpr int PALLETE_DISPLAY_SIZE = 7;
 	static constexpr int NUM_INSTS = DebugWindowState::NUM_INSTS_ABOVE_AND_BELOW;
 
-	{
-		// Display each of the 4 background color palletes
-		painter.setBrush(Qt::white);
-		painter.drawRect(START_X + (PALLETE_DISPLAY_SIZE * 5) * debugWindowData.backgroundPallete - 2, START_Y + LETTER_HEIGHT * (9 + 2 * NUM_INSTS) - 2, 4 * PALLETE_DISPLAY_SIZE + 4, 1 * PALLETE_DISPLAY_SIZE + 4);
+	if (debugWindowData.patternTables) {
+		{
+			// Display each of the 4 background color palletes
+			painter.setBrush(Qt::white);
+			painter.drawRect(START_X + (PALLETE_DISPLAY_SIZE * 5) * debugWindowData.backgroundPallete - 2, START_Y + LETTER_HEIGHT * (9 + 2 * NUM_INSTS) - 2, 4 * PALLETE_DISPLAY_SIZE + 4, 1 * PALLETE_DISPLAY_SIZE + 4);
 
-		for (int i = 0; i < 4; i++) {
-			QImage image3(reinterpret_cast<const uint8_t*>(&palletes[i * 4]), 4, 1, QImage::Format::Format_ARGB32);
-			const QPixmap palletePixmap = QPixmap::fromImage(image3);
-			painter.drawPixmap(START_X + (PALLETE_DISPLAY_SIZE * 5) * i, START_Y + LETTER_HEIGHT * (9 + 2 * NUM_INSTS), 4 * PALLETE_DISPLAY_SIZE, 1 * PALLETE_DISPLAY_SIZE, palletePixmap);
-		}
-		const PPU::PatternTable table1 = debugWindowData.table1;
-		QImage image1(reinterpret_cast<const uint8_t*>(&table1), PPU::PATTERN_TABLE_SIZE, PPU::PATTERN_TABLE_SIZE, QImage::Format::Format_ARGB32);
-		const QPixmap pixmap1 = QPixmap::fromImage(image1);
-		painter.drawPixmap(START_X, START_Y + LETTER_HEIGHT * (10 + 2 * NUM_INSTS), PPU::PATTERN_TABLE_SIZE, PPU::PATTERN_TABLE_SIZE, pixmap1);
-	}
+			for (int i = 0; i < 4; i++) {
+				QImage backgroundPallete(reinterpret_cast<const uint8_t*>(&palletes[i * 4]), 4, 1, QImage::Format::Format_ARGB32);
+				const QPixmap palletePixmap = QPixmap::fromImage(backgroundPallete);
+				painter.drawPixmap(START_X + (PALLETE_DISPLAY_SIZE * 5) * i, START_Y + LETTER_HEIGHT * (9 + 2 * NUM_INSTS), 4 * PALLETE_DISPLAY_SIZE, 1 * PALLETE_DISPLAY_SIZE, palletePixmap);
+			}
 
-	{
-		// Display each of the 4 sprite color palletes
-		static constexpr int START_TABLE_2 = TOTAL_WIDTH - X_OFFSET - PPU::PATTERN_TABLE_SIZE;
-
-		painter.setBrush(Qt::white);
-		painter.drawRect(START_TABLE_2 + (PALLETE_DISPLAY_SIZE * 5) * debugWindowData.spritePallete - 2, START_Y + LETTER_HEIGHT * (9 + 2 * NUM_INSTS) - 2, 4 * PALLETE_DISPLAY_SIZE + 4, 1 * PALLETE_DISPLAY_SIZE + 4);
-
-		for (int i = 0; i < 4; i++) {
-			QImage image3(reinterpret_cast<const uint8_t*>(&palletes[0x10 + i * 4]), 4, 1, QImage::Format::Format_ARGB32);
-			const QPixmap palletePixmap = QPixmap::fromImage(image3);
-			painter.drawPixmap(START_TABLE_2 + (PALLETE_DISPLAY_SIZE * 5) * i, START_Y + LETTER_HEIGHT * (9 + 2 * NUM_INSTS), 4 * PALLETE_DISPLAY_SIZE, 1 * PALLETE_DISPLAY_SIZE, palletePixmap);
+			QImage backgroundPattern(reinterpret_cast<const uint8_t*>(&debugWindowData.patternTables->backgroundPatternTable), PPU::PATTERN_TABLE_SIZE, PPU::PATTERN_TABLE_SIZE, QImage::Format::Format_ARGB32);
+			const QPixmap pixmap = QPixmap::fromImage(backgroundPattern);
+			painter.drawPixmap(START_X, START_Y + LETTER_HEIGHT * (10 + 2 * NUM_INSTS), PPU::PATTERN_TABLE_SIZE, PPU::PATTERN_TABLE_SIZE, pixmap);
 		}
 
-		const PPU::PatternTable table2 = debugWindowData.table2;
-		QImage image2(reinterpret_cast<const uint8_t*>(&table2), PPU::PATTERN_TABLE_SIZE, PPU::PATTERN_TABLE_SIZE, QImage::Format::Format_ARGB32);
-		const QPixmap pixmap2 = QPixmap::fromImage(image2);
-		painter.drawPixmap(START_TABLE_2, START_Y + LETTER_HEIGHT * (10 + 2 * NUM_INSTS), PPU::PATTERN_TABLE_SIZE, PPU::PATTERN_TABLE_SIZE, pixmap2);
+		{
+			// Display each of the 4 sprite color palletes
+			static constexpr int START_TABLE_2 = TOTAL_WIDTH - X_OFFSET - PPU::PATTERN_TABLE_SIZE;
+
+			painter.setBrush(Qt::white);
+			painter.drawRect(START_TABLE_2 + (PALLETE_DISPLAY_SIZE * 5) * debugWindowData.spritePallete - 2, START_Y + LETTER_HEIGHT * (9 + 2 * NUM_INSTS) - 2, 4 * PALLETE_DISPLAY_SIZE + 4, 1 * PALLETE_DISPLAY_SIZE + 4);
+
+			for (int i = 0; i < 4; i++) {
+				QImage spritePallete(reinterpret_cast<const uint8_t*>(&palletes[0x10 + i * 4]), 4, 1, QImage::Format::Format_ARGB32);
+				const QPixmap palletePixmap = QPixmap::fromImage(spritePallete);
+				painter.drawPixmap(START_TABLE_2 + (PALLETE_DISPLAY_SIZE * 5) * i, START_Y + LETTER_HEIGHT * (9 + 2 * NUM_INSTS), 4 * PALLETE_DISPLAY_SIZE, 1 * PALLETE_DISPLAY_SIZE, palletePixmap);
+			}
+
+			QImage spritePattern(reinterpret_cast<const uint8_t*>(&debugWindowData.patternTables->spritePatternTable), PPU::PATTERN_TABLE_SIZE, PPU::PATTERN_TABLE_SIZE, QImage::Format::Format_ARGB32);
+			const QPixmap pixmap = QPixmap::fromImage(spritePattern);
+			painter.drawPixmap(START_TABLE_2, START_Y + LETTER_HEIGHT * (10 + 2 * NUM_INSTS), PPU::PATTERN_TABLE_SIZE, PPU::PATTERN_TABLE_SIZE, pixmap);
+		}
 	}
 }

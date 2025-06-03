@@ -31,6 +31,8 @@ EmulatorThread::EmulatorThread(
 
 	scaledAudioClock = 0;
 	soundActivated.store(false, std::memory_order_relaxed);
+
+	qRegisterMetaType<DebugWindowState>("DebugWindowState");
 }
 
 EmulatorThread::~EmulatorThread() {
@@ -111,7 +113,9 @@ void EmulatorThread::run() {
 		if (keyInput.debugWindowEnabled->load(std::memory_order_relaxed)) {
 			uint8_t backgroundPallete = keyInput.backgroundPallete->load(std::memory_order_relaxed) & 3;
 			uint8_t spritePallete = keyInput.spritePallete->load(std::memory_order_relaxed) & 3;
-
+			std::unique_ptr<PPU::PatternTables> patternTablesTemp = bus.ppu->getPatternTables(backgroundPallete, spritePallete);
+			std::shared_ptr<PPU::PatternTables> patternTables(std::move(patternTablesTemp));
+			
 			DebugWindowState state = {
 				bus.cpu->getPC(),
 				bus.cpu->getA(),
@@ -122,8 +126,7 @@ void EmulatorThread::run() {
 				backgroundPallete,
 				spritePallete,
 				bus.ppu->getPalleteRamColors(),
-				bus.ppu->getPatternTable(true, backgroundPallete),
-				bus.ppu->getPatternTable(false, spritePallete),
+				patternTables,
 				getInsts()
 			};
 

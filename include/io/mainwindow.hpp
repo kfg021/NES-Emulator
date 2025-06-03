@@ -100,8 +100,8 @@ private:
 	// Debug controls
 	static constexpr Qt::Key DEBUG_WINDOW_KEY = Qt::Key_D;
 	static constexpr Qt::Key STEP_KEY = Qt::Key_Space;
-	static constexpr Qt::Key BACKGROUND_PATTETE_KEY = Qt::Key_O;
-	static constexpr Qt::Key SPRITE_PATTETE_KEY = Qt::Key_P;
+	static constexpr Qt::Key BACKGROUND_PALLETE_KEY = Qt::Key_O;
+	static constexpr Qt::Key SPRITE_PALLETE_KEY = Qt::Key_P;
 
 	// Save state controls
 	static constexpr Qt::Key SAVE_KEY = Qt::Key_S;
