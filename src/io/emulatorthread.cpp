@@ -18,7 +18,7 @@ EmulatorThread::EmulatorThread(
 	saveState(bus, QString::fromStdString(romFilePath)) {
 	isRunning.store(false, std::memory_order_relaxed);
 
-	Cartridge::Status status = bus.loadROM(romFilePath);
+	Cartridge::Status status = bus.tryInitDevices(romFilePath);
 	if (status.code != Cartridge::Code::SUCCESS) {
 		qFatal("%s", status.message.c_str());
 	}

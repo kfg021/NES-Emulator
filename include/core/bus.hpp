@@ -14,19 +14,21 @@
 
 class Bus {
 public:
-    Bus();
+    Bus() = default;
 
-    Cartridge::Status loadROM(const std::string& filePath);
+    Cartridge::Status tryInitDevices(const std::string& filePath);
     void reset();
 
     uint8_t view(uint16_t address) const;
     uint8_t read(uint16_t address);
     void write(uint16_t address, uint8_t value);
 
-    // Devices connected to bus
+
+    std::unique_ptr<Cartridge> cartridge;
+
+    std::unique_ptr<APU> apu;
     std::unique_ptr<CPU> cpu;
     std::unique_ptr<PPU> ppu;
-    std::unique_ptr<APU> apu;
 
     uint64_t totalCycles;
 

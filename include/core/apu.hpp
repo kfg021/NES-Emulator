@@ -11,10 +11,9 @@ class Bus;
 
 class APU {
 public:
-    APU();
+    APU(Bus& bus);
 
     void initAPU();
-    void setBus(Bus* bus);
 
     void write(uint16_t addr, uint8_t value);
 
@@ -166,8 +165,7 @@ private:
     uint64_t frameCounter;
     uint64_t totalCycles;
 
-    // Pointer to the Bus instance that the APU is attached to. The APU is not responsible for clearing this memory as it will get deleted when the Bus goes out of scope
-    Bus* bus;
+    Bus& bus;
 
     static constexpr std::array<int, 5> STEP_SEQUENCE = { 7457, 14913, 22371, 29829, 37281 };
     static constexpr int FOUR_STEP_SEQUENCE_LENGTH = 29830;

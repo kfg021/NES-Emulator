@@ -10,7 +10,7 @@
 
 class PPU {
 public:
-    PPU();
+    PPU(Cartridge& cartridge);
     void initPPU();
 
     enum class Register {
@@ -31,8 +31,6 @@ public:
     uint8_t ppuView(uint16_t address) const;
     uint8_t ppuRead(uint16_t address);
     void ppuWrite(uint16_t address, uint8_t value);
-
-    Cartridge cartridge;
 
     // Width/height of an tile in the pattern table
     static constexpr uint16_t PATTERN_TABLE_TILE_SIZE = 0x8;
@@ -75,6 +73,8 @@ public:
     void deserialize(Deserializer& d);
 
 private:
+    Cartridge& cartridge;
+
     // PPU internal data structures (descriptions from https://www.nesdev.org/wiki/PPU_registers)
 
     // Controller ($2000) > write

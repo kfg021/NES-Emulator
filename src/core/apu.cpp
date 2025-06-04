@@ -2,7 +2,7 @@
 
 #include "core/bus.hpp"
 
-APU::APU() {
+APU::APU(Bus& bus) : bus(bus) {
     initAPU();
 }
 
@@ -30,10 +30,6 @@ void APU::initAPU() {
     frameSequenceMode = false;
     interruptInhibitFlag = false;
     frameInterruptFlag = false;
-}
-
-void APU::setBus(Bus* bus) {
-    this->bus = bus;
 }
 
 void APU::write(uint16_t addr, uint8_t value) {
@@ -415,7 +411,7 @@ void APU::executeHalfCycle() {
 
                         // Try to reload sample buffer via DMA
                         if (dmc.bytesRemaining) {
-                            bus->requestDmcDma(dmc.currentAddress);
+                            bus.requestDmcDma(dmc.currentAddress);
                         }
                         else if (dmc.bytesRemaining == 0) {
                             if (dmc.loopSample) {
@@ -670,7 +666,7 @@ void APU::restartDmcSample() {
     dmc.bytesRemaining = (static_cast<uint16_t>(dmc.sampleLength) << 4) + 1;
 
     // Request the first sample of the new loop
-    bus->requestDmcDma(dmc.currentAddress);
+    bus.requestDmcDma(dmc.currentAddress);
 }
 
 void APU::serialize(Serializer& s) const {

@@ -10,7 +10,7 @@ const std::array<uint32_t, PPU::NUM_SCREEN_COLORS> PPU::SCREEN_COLORS = {
     0xFFFFFFFF, 0xFFB6E1FF, 0xFFCED1FF, 0xFFE9C3FF, 0xFFFFBCFF, 0xFFFFBDF4, 0xFFFFC6C3, 0xFFFFD59A, 0xFFE9E681, 0xFFCEF481, 0xFFB6FB9A, 0xFFA9FAC3, 0xFFA9F0F4, 0xFFB8B8B8, 0xFF000000, 0xFF000000,
 };
 
-PPU::PPU() {
+PPU::PPU(Cartridge& cartridge) : cartridge(cartridge) {
     workingDisplay = std::make_unique<Display>();
     finishedDisplay = std::make_unique<Display>();
 
@@ -53,7 +53,6 @@ void PPU::initPPU() {
 
     oamAddress = 0;
 
-    currentScanlineSprites = {};
     currentScanlineSprites.reserve(MAX_SPRITES);
     sprite0OnCurrentScanline = false;
 
@@ -349,7 +348,7 @@ std::unique_ptr<PPU::PatternTables> PPU::getPatternTables(uint8_t backgroundPall
             }
         }
     }
-    
+
     return tables;
 }
 

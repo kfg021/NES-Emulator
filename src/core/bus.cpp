@@ -1,17 +1,5 @@
 #include "core/bus.hpp"
 
-Bus::Bus() {
-    initBus();
-
-    cpu = std::make_unique<CPU>();
-    cpu->setBus(this);
-
-    ppu = std::make_unique<PPU>();
-
-    apu = std::make_unique<APU>();
-    apu->setBus(this);
-}
-
 void Bus::initBus() {
     ram = {};
 
@@ -27,18 +15,26 @@ void Bus::initBus() {
 
 void Bus::reset() {
     initBus();
+
+    cartridge->mapper->reset();
+
+    apu->initAPU();
     cpu->initCPU();
     ppu->initPPU();
-    apu->initAPU();
 }
 
-Cartridge::Status Bus::loadROM(const std::string& filePath) {
-    ppu->cartridge = Cartridge(filePath);
-
-    const Cartridge::Status& status = ppu->cartridge.getStatus();
-    if (status.code == Cartridge::Code::SUCCESS) {
-        cpu->reset();
+Cartridge::Status Bus::tryInitDevices(const std::string& filePath) {
+    cartridge = std::make_unique<Cartridge>(filePath);
+    const Cartridge::Status& status = cartridge->getStatus();
+    if (status.code != Cartridge::Code::SUCCESS) {
+        return status;
     }
+
+    initBus();
+
+    apu = std::make_unique<APU>(*this);
+    cpu = std::make_unique<CPU>(*this);
+    ppu = std::make_unique<PPU>(*cartridge);
 
     return status;
 }
@@ -63,7 +59,7 @@ uint8_t Bus::view(uint16_t address) const {
         }
     }
     else { // if (CARTRIDGE_ADDRESSABLE_RANGE.contains(address))
-        return ppu->cartridge.mapper->mapPRGView(address);
+        return cartridge->mapper->mapPRGView(address);
     }
 }
 
@@ -90,7 +86,7 @@ uint8_t Bus::read(uint16_t address) {
         }
     }
     else { // if (CARTRIDGE_ADDRESSABLE_RANGE.contains(address))
-        return ppu->cartridge.mapper->mapPRGRead(address);
+        return cartridge->mapper->mapPRGRead(address);
     }
 }
 
@@ -124,7 +120,7 @@ void Bus::write(uint16_t address, uint8_t value) {
         }
     }
     else { // if (CARTRIDGE_ADDRESSABLE_RANGE.contains(address)) 
-        ppu->cartridge.mapper->mapPRGWrite(address, value);
+        cartridge->mapper->mapPRGWrite(address, value);
     }
 }
 

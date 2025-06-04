@@ -10,11 +10,11 @@
 
 const std::array<CPU::Opcode, CPU::MAX_NUM_OPCODES> CPU::lookup = CPU::initLookup();
 
-CPU::CPU() {
-    initCPUNoReset();
+CPU::CPU(Bus& bus) : bus(bus) {
+    initCPU();
 }
 
-void CPU::initCPUNoReset() {
+void CPU::initCPU() {
     // Init registers
     a = 0;
     x = 0;
@@ -22,15 +22,9 @@ void CPU::initCPUNoReset() {
     sp = 0;
     sr = 0;
     setFlag(Flag::UNUSED, 1);
-}
+    shouldAdvancePC = false;
 
-void CPU::initCPU() {
-    initCPUNoReset();
     reset();
-}
-
-void CPU::setBus(Bus* bus) {
-    this->bus = bus;
 }
 
 void CPU::executeCycle() {
@@ -40,7 +34,7 @@ void CPU::executeCycle() {
         // Those instructions should set shouldAdvancePC to false.
         shouldAdvancePC = true;
 
-        uint8_t index = bus->read(pc);
+        uint8_t index = bus.read(pc);
         const Opcode& currentOpcode = lookup[index];
         const Instruction& inst = currentOpcode.instruction;
         const AddressingMode& mode = currentOpcode.addressingMode;
@@ -426,12 +420,12 @@ uint8_t CPU::getDataRead(const AddressingMode::ReturnType& operand) {
     }
     else {
         uint16_t address = std::get<uint16_t>(operand.addressingModeOutput);
-        return bus->read(address);
+        return bus.read(address);
     }
 }
 
 uint8_t CPU::getDataView(const AddressingMode::ReturnType& operand) const {
-    // Same code as getDataRead(), but we call bus->view() instead of bus->read().
+    // Same code as getDataRead(), but we call bus.view() instead of bus.read().
     // This function is used when we want to look under the hood of the console without changing its state (i.e. debugging information)
     const uint8_t* data = std::get_if<uint8_t>(&operand.addressingModeOutput);
     if (data != nullptr) {
@@ -439,7 +433,7 @@ uint8_t CPU::getDataView(const AddressingMode::ReturnType& operand) const {
     }
     else {
         uint16_t address = std::get<uint16_t>(operand.addressingModeOutput);
-        return bus->view(address);
+        return bus.view(address);
     }
 }
 
@@ -459,15 +453,15 @@ void CPU::setNZFlags(uint8_t x) {
 }
 
 uint16_t CPU::view16BitData(uint16_t address) const {
-    uint8_t lo = bus->view(address);
-    uint8_t hi = bus->view(address + 1);
+    uint8_t lo = bus.view(address);
+    uint8_t hi = bus.view(address + 1);
     uint16_t data = (hi << 8) | lo;
     return data;
 }
 
 uint16_t CPU::read16BitData(uint16_t address) {
-    uint8_t lo = bus->read(address);
-    uint8_t hi = bus->read(address + 1);
+    uint8_t lo = bus.read(address);
+    uint8_t hi = bus.read(address + 1);
     uint16_t data = (hi << 8) | lo;
     return data;
 }
@@ -475,18 +469,18 @@ uint16_t CPU::read16BitData(uint16_t address) {
 void CPU::write16BitData(uint16_t address, uint16_t data) {
     uint8_t lo = data & 0xFF;
     uint8_t hi = (data >> 8) & 0xFF;
-    bus->write(address, lo);
-    bus->write(address + 1, hi);
+    bus.write(address, lo);
+    bus.write(address + 1, hi);
 }
 
 void CPU::push8BitDataToStack(uint8_t data) {
-    bus->write(STACK_OFFSET + sp, data);
+    bus.write(STACK_OFFSET + sp, data);
     sp--;
 }
 
 uint8_t CPU::pop8BitDataFromStack() {
     // Since the stack grows backwards, we need to read from sp + 1
-    uint8_t data = bus->read(STACK_OFFSET + ((sp + 1) & 0xFF));
+    uint8_t data = bus.read(STACK_OFFSET + ((sp + 1) & 0xFF));
     sp++;
     return data;
 }
@@ -495,16 +489,16 @@ void CPU::push16BitDataToStack(uint16_t data) {
     // Since the stack grows backwards, we need to write the least signifigant bit to sp - 1
     uint8_t lo = data & 0xFF;
     uint8_t hi = (data >> 8) & 0xFF;
-    bus->write(STACK_OFFSET + ((sp - 1) & 0xFF), lo);
-    bus->write(STACK_OFFSET + sp, hi);
+    bus.write(STACK_OFFSET + ((sp - 1) & 0xFF), lo);
+    bus.write(STACK_OFFSET + sp, hi);
     sp -= 2;
 }
 
 uint16_t CPU::pop16BitDataFromStack() {
     // Since the stack grows backwards, we need to read from sp + 1
     // uint16_t data = read16BitData(STACK_OFFSET + sp + 1);
-    uint8_t lo = bus->read(STACK_OFFSET + ((sp + 1) & 0xFF));
-    uint8_t hi = bus->read(STACK_OFFSET + ((sp + 2) & 0xFF));
+    uint8_t lo = bus.read(STACK_OFFSET + ((sp + 1) & 0xFF));
+    uint8_t hi = bus.read(STACK_OFFSET + ((sp + 2) & 0xFF));
     sp += 2;
 
     uint16_t data = (hi << 8) | lo;
@@ -550,7 +544,7 @@ CPU::AddressingMode::ReturnType CPU::ABY() {
 // Immediate
 // These instructions have their data defined as the next byte after the opcode. ORA #$B2 will perform a logical (also called bitwise) of the value B2 with the accumulator. Remember that in assembly when you see a # sign, it indicates an immediate value. If $B2 was written without a #, it would indicate an address or offset.
 CPU::AddressingMode::ReturnType CPU::IMM() {
-    return { bus->read(pc + 1), 0 };
+    return { bus.read(pc + 1), 0 };
 }
 
 // Implied
@@ -569,8 +563,8 @@ CPU::AddressingMode::ReturnType CPU::IND() {
     // Due to a bug, indirect address reads cannot cross page boundaries and instead wrap around.
     // Because of this, we can't use read16BitData(pointer) when the bottom two bytes are FF.
     if ((pointer & 0xFF) == 0xFF) {
-        uint8_t lo = bus->read(pointer);
-        uint8_t hi = bus->read(pointer & 0xFF00);
+        uint8_t lo = bus.read(pointer);
+        uint8_t hi = bus.read(pointer & 0xFF00);
         address = (hi << 8) | lo;
     }
     else {
@@ -585,11 +579,11 @@ CPU::AddressingMode::ReturnType CPU::IND() {
 // If X + the immediate byte will wrap around to a zero-page address. So you could code that like targetAddress = (X + opcode[1]) & 0xFF .
 // Indexed Indirect instructions are 2 bytes - the second byte is the zero-page address - $20 in the example. Obviously the fetched address has to be stored in the zero page.
 CPU::AddressingMode::ReturnType CPU::IZX() {
-    uint8_t pointer = bus->read(pc + 1) + x;
+    uint8_t pointer = bus.read(pc + 1) + x;
 
     // We can't use read16BitData(pointer) because of zero page wrapping
-    uint8_t lo = bus->read(pointer);
-    uint8_t hi = bus->read((pointer + 1) & 0xFF);
+    uint8_t lo = bus.read(pointer);
+    uint8_t hi = bus.read((pointer + 1) & 0xFF);
     uint16_t address = (hi << 8) | lo;
 
     return { address, 0 };
@@ -600,11 +594,11 @@ CPU::AddressingMode::ReturnType CPU::IZX() {
 // Indirect Indexed instructions are 2 bytes - the second byte is the zero-page address - $86 in the example. (So the fetched address has to be stored in the zero page.)
 // While indexed indirect addressing will only generate a zero-page address, this mode's target address is not wrapped - it can be anywhere in the 16-bit address space.
 CPU::AddressingMode::ReturnType CPU::IZY() {
-    uint8_t pointer = bus->read(pc + 1);
+    uint8_t pointer = bus.read(pc + 1);
 
     // We can't use read16BitData(pointer) because of zero page wrapping
-    uint8_t lo = bus->read(pointer);
-    uint8_t hi = bus->read((pointer + 1) & 0xFF);
+    uint8_t lo = bus.read(pointer);
+    uint8_t hi = bus.read((pointer + 1) & 0xFF);
     uint16_t oldAddress = (hi << 8) | lo;
 
     uint16_t newAddress = oldAddress + y;
@@ -614,7 +608,7 @@ CPU::AddressingMode::ReturnType CPU::IZY() {
 // Relative
 // Relative addressing on the 6502 is only used for branch operations. The byte after the opcode is the branch offset. If the branch is taken, the new address will the the current PC plus the offset. The offset is a signed byte, so it can jump a maximum of 127 bytes forward, or 128 bytes backward. (For more info about signed numbers, check here.)
 CPU::AddressingMode::ReturnType CPU::REL() {
-    uint8_t offset = bus->read(pc + 1);
+    uint8_t offset = bus.read(pc + 1);
 
     // Relative addressing is done from the end of the instruction, so we need to add 2 to this address.
     uint16_t newAddress = pc + 2 + static_cast<int8_t>(offset);
@@ -624,7 +618,7 @@ CPU::AddressingMode::ReturnType CPU::REL() {
 // Zero-Page
 // Zero-Page is an addressing mode that is only capable of addressing the first 256 bytes of the CPU's memory map. You can think of it as absolute addressing for the first 256 bytes. The instruction LDA $35 will put the value stored in memory location $35 into A. The advantage of zero-page are two - the instruction takes one less byte to specify, and it executes in less CPU cycles. Most programs are written to store the most frequently used variables in the first 256 memory locations so they can take advantage of zero page addressing.
 CPU::AddressingMode::ReturnType CPU::ZPG() {
-    uint16_t address = bus->read(pc + 1);
+    uint16_t address = bus.read(pc + 1);
     return { address, 0 };
 }
 
@@ -632,7 +626,7 @@ CPU::AddressingMode::ReturnType CPU::ZPG() {
 // This works just like absolute indexed, but the target address is limited to the first 0xFF bytes.
 // The target address will wrap around and will always be in the zero page. If the instruction is LDA $C0,X, and X is $60, then the target address will be $20. $C0+$60 = $120, but the carry is discarded in the calculation of the target address.
 CPU::AddressingMode::ReturnType CPU::ZPX() {
-    uint16_t address = (bus->read(pc + 1) + x) & 0xFF;
+    uint16_t address = (bus.read(pc + 1) + x) & 0xFF;
     return { address, 0 };
 }
 
@@ -640,7 +634,7 @@ CPU::AddressingMode::ReturnType CPU::ZPX() {
 // This works just like absolute indexed, but the target address is limited to the first 0xFF bytes.
 // The target address will wrap around and will always be in the zero page. If the instruction is LDA $C0,X, and X is $60, then the target address will be $20. $C0+$60 = $120, but the carry is discarded in the calculation of the target address.
 CPU::AddressingMode::ReturnType CPU::ZPY() {
-    uint16_t address = (bus->read(pc + 1) + y) & 0xFF;
+    uint16_t address = (bus.read(pc + 1) + y) & 0xFF;
     return { address, 0 };
 }
 
@@ -691,7 +685,7 @@ void CPU::ASL(const AddressingMode::ReturnType& operand) {
         uint8_t data = getDataRead(operand);
 
         shift = data << 1;
-        bus->write(addr, static_cast<uint8_t>(shift));
+        bus.write(addr, static_cast<uint8_t>(shift));
     }
     else {
         // If there is no address to write to, then we are in accumulator addressing mode
@@ -959,8 +953,8 @@ void CPU::CPY(const AddressingMode::ReturnType& operand) {
 //  +	+	-	-	-	-
 void CPU::DEC(const AddressingMode::ReturnType& operand) {
     uint16_t addr = getAddress(operand);
-    uint8_t newData = bus->read(addr) - 1;
-    bus->write(addr, newData);
+    uint8_t newData = bus.read(addr) - 1;
+    bus.write(addr, newData);
     setNZFlags(newData);
 }
 
@@ -1002,8 +996,8 @@ void CPU::EOR(const AddressingMode::ReturnType& operand) {
 //  +	+	-	-	-	-
 void CPU::INC(const AddressingMode::ReturnType& operand) {
     uint16_t addr = getAddress(operand);
-    uint8_t newData = bus->read(addr) + 1;
-    bus->write(addr, newData);
+    uint8_t newData = bus.read(addr) + 1;
+    bus.write(addr, newData);
     setNZFlags(newData);
 }
 
@@ -1098,7 +1092,7 @@ void CPU::LSR(const AddressingMode::ReturnType& operand) {
         setFlag(Flag::CARRY, data & 1);
 
         data >>= 1;
-        bus->write(addr, data);
+        bus.write(addr, data);
 
         setNZFlags(data);
     }
@@ -1187,7 +1181,7 @@ void CPU::ROL(const AddressingMode::ReturnType& operand) {
         uint8_t data = getDataRead(operand);
 
         shift = (data << 1) | static_cast<uint8_t>(getFlag(Flag::CARRY));
-        bus->write(addr, static_cast<uint8_t>(shift));
+        bus.write(addr, static_cast<uint8_t>(shift));
     }
     else {
         // If there is no address to write to, then we are in accumulator addressing mode
@@ -1213,7 +1207,7 @@ void CPU::ROR(const AddressingMode::ReturnType& operand) {
 
         shift = (getFlag(Flag::CARRY) << 7) | (data >> 1);
         setFlag(Flag::CARRY, data & 1);
-        bus->write(addr, shift);
+        bus.write(addr, shift);
     }
     else {
         // If there is no address to write to, then we are in accumulator addressing mode
@@ -1305,7 +1299,7 @@ void CPU::SEI(const AddressingMode::ReturnType& /*operand*/) {
 //  -	-	-	-	-	-
 void CPU::STA(const AddressingMode::ReturnType& operand) {
     uint16_t addr = getAddress(operand);
-    bus->write(addr, a);
+    bus.write(addr, a);
 }
 
 // STX
@@ -1315,7 +1309,7 @@ void CPU::STA(const AddressingMode::ReturnType& operand) {
 //  -	-	-	-	-	-
 void CPU::STX(const AddressingMode::ReturnType& operand) {
     uint16_t addr = getAddress(operand);
-    bus->write(addr, x);
+    bus.write(addr, x);
 }
 
 // STY
@@ -1325,7 +1319,7 @@ void CPU::STX(const AddressingMode::ReturnType& operand) {
 //  -	-	-	-	-	-
 void CPU::STY(const AddressingMode::ReturnType& operand) {
     uint16_t addr = getAddress(operand);
-    bus->write(addr, y);
+    bus.write(addr, y);
 }
 
 // TAX
@@ -1407,7 +1401,7 @@ std::string CPU::strABY(uint16_t address) const {
     return "$" + toHexString16(view16BitData(address + 1)) + ",Y";
 }
 std::string CPU::strIMM(uint16_t address) const {
-    return "#$" + toHexString8(bus->view(address + 1));
+    return "#$" + toHexString8(bus.view(address + 1));
 }
 std::string CPU::strIMP(uint16_t /*address*/) const {
     return "";
@@ -1416,34 +1410,34 @@ std::string CPU::strIND(uint16_t address) const {
     return "($" + toHexString16(view16BitData(address + 1)) + ")";
 }
 std::string CPU::strIZX(uint16_t address) const {
-    return "($" + toHexString8(bus->view(address + 1)) + ",X)";
+    return "($" + toHexString8(bus.view(address + 1)) + ",X)";
 }
 std::string CPU::strIZY(uint16_t address) const {
-    return "($" + toHexString8(bus->view(address + 1)) + "),Y";
+    return "($" + toHexString8(bus.view(address + 1)) + "),Y";
 }
 std::string CPU::strREL(uint16_t address) const {
-    uint8_t relAddress = bus->view(address + 1);
+    uint8_t relAddress = bus.view(address + 1);
     uint16_t newAddress = address + 2 + static_cast<int8_t>(relAddress);
     return "$" + toHexString16(newAddress);
 }
 std::string CPU::strZPG(uint16_t address) const {
-    return "$" + toHexString8(bus->view(address + 1));
+    return "$" + toHexString8(bus.view(address + 1));
 }
 std::string CPU::strZPX(uint16_t address) const {
-    return "$" + toHexString8(bus->view(address + 1)) + ",X";
+    return "$" + toHexString8(bus.view(address + 1)) + ",X";
 }
 std::string CPU::strZPY(uint16_t address) const {
-    return "$" + toHexString8(bus->view(address + 1)) + ",Y";
+    return "$" + toHexString8(bus.view(address + 1)) + ",Y";
 }
 
 std::string CPU::toString(uint16_t address) const {
-    uint8_t index = bus->view(address);
+    uint8_t index = bus.view(address);
     const Opcode& opcode = lookup[index];
     return opcode.instruction.name + " " + (this->*opcode.addressingMode.toString)(address);
 }
 
 const CPU::Opcode& CPU::getOpcode(uint16_t address) const {
-    uint8_t index = bus->view(address);
+    uint8_t index = bus.view(address);
     return lookup[index];
 }
 

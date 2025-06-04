@@ -4,10 +4,6 @@
 #include <fstream>
 #include <vector>
 
-Cartridge::Cartridge() {
-    status = { Code::MISSING_FILE, "No file was requested." };
-}
-
 Cartridge::Cartridge(const std::string& filePath) {
     status = loadINESFile(filePath);
 }

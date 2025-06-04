@@ -62,7 +62,7 @@ SaveState::CreateStatus SaveState::createSaveState(const QString& saveFilePath) 
         bus.cpu->serialize(s);
         bus.ppu->serialize(s);
         bus.apu->serialize(s);
-        bus.ppu->cartridge.mapper->serialize(s);
+        bus.cartridge->mapper->serialize(s);
 
         if (!s.good()) {
             return {
@@ -139,7 +139,7 @@ SaveState::LoadStatus SaveState::loadSaveState(const QString& filePath) {
         bus.cpu->deserialize(d);
         bus.ppu->deserialize(d);
         bus.apu->deserialize(d);
-        bus.ppu->cartridge.mapper->deserialize(d);
+        bus.cartridge->mapper->deserialize(d);
 
         // TODO: More robust save file checking
         if (!d.good()) {

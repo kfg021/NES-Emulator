@@ -12,10 +12,8 @@ class Bus;
 
 class CPU {
 public:
-    CPU();
-    void setBus(Bus* bus);
+    CPU(Bus& bus);
     void initCPU();
-    void initCPUNoReset();
 
     void executeCycle();
 
@@ -106,8 +104,7 @@ private:
     bool shouldAdvancePC;
     static const std::array<Opcode, MAX_NUM_OPCODES> lookup;
 
-    // Pointer to the Bus instance that the CPU is attached to. The CPU is not responsible for clearing this memory as it will get deleted when the Bus goes out of scope
-    Bus* bus;
+    Bus& bus;
 
     // Initialization
     static std::array<Opcode, MAX_NUM_OPCODES> initLookup();
