@@ -2,7 +2,10 @@
 
 Mapper9::Mapper9(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr)
     : Mapper(config, prg, chr) {
+    reset();
+}
 
+void Mapper9::reset() {
     prgBankSelect = 0;
     chrLatch1 = 0;
     chrLatch2 = 0;

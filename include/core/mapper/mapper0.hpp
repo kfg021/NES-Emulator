@@ -7,6 +7,8 @@ class Mapper0 : public Mapper {
 public:
     Mapper0(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr);
 
+    void reset() override;
+
     uint8_t mapPRGView(uint16_t cpuAddress) const override;
     void mapPRGWrite(uint16_t cpuAddress, uint8_t value) override;
 

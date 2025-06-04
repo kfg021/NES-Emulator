@@ -5,6 +5,10 @@
 Mapper66::Mapper66(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr)
     : Mapper(config, prg, chr) {
 
+    reset();
+}
+
+void Mapper66::reset() {
     currentPRGBank = 0;
     currentCHRBank = 0;
 }

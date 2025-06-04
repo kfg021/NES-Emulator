@@ -4,6 +4,10 @@ Mapper0::Mapper0(const Config& config, const std::vector<uint8_t>& prg, const st
     : Mapper(config, prg, chr) {
 }
 
+void Mapper0::reset() {
+    // Mapper 0 has no state
+}
+
 uint8_t Mapper0::mapPRGView(uint16_t cpuAddress) const {
     if (PRG_RANGE.contains(cpuAddress)) {
         if (config.prgChunks == 1) {

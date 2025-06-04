@@ -13,6 +13,10 @@ static Mapper::Config editConfigMapper4(Mapper::Config config) {
 
 Mapper4::Mapper4(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr)
     : Mapper(editConfigMapper4(config), prg, chr) {
+    reset();
+}
+
+void Mapper4::reset() {
     bankSelect = 0;
     bankData = 0;
     mirroring = (config.initialMirrorMode == MirrorMode::HORIZONTAL);
@@ -27,7 +31,7 @@ Mapper4::Mapper4(const Config& config, const std::vector<uint8_t>& prg, const st
     chrSwitchableBankSelect = {};
 
     if (config.alternativeNametableLayout) {
-        customNametable = std::vector<uint8_t>(4 * KB, 0);
+        customNametable.assign(4 * KB, 0);
     }
 }
 

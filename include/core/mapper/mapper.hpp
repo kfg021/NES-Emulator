@@ -35,6 +35,8 @@ public:
     Mapper(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr);
     virtual ~Mapper() = default;
 
+    virtual void reset() = 0;
+
     static std::unique_ptr<Mapper> createMapper(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr);
 
     // "View" is different from "read" because view functions do not change the state of the mapper.

@@ -5,6 +5,10 @@
 Mapper3::Mapper3(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr)
     : Mapper(config, prg, chr) {
 
+    reset();
+}
+
+void Mapper3::reset() {
     currentBank = 0;
 }
 

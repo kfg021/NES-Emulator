@@ -10,7 +10,10 @@ static Mapper::Config editConfigMapper1(Mapper::Config config) {
 
 Mapper1::Mapper1(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr) :
     Mapper(editConfigMapper1(config), prg, chr) {
+    reset();
+}
 
+void Mapper1::reset() {
     shiftRegister = SHIFT_REGISTER_RESET;
 
     control = 0;
