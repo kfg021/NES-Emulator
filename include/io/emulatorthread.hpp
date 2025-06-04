@@ -22,17 +22,16 @@ public:
 		QObject* parent,
 		const std::string& romFilePath,
 		const std::optional<std::string>& saveFilePath,
-		const KeyboardInput& keyInput,
+		const KeyboardInput& sharedKeyInput,
+		std::mutex& keyInputMutex,
 		ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>* audioSamples
 	);
 	~EmulatorThread() override;
 	void run() override;
 
 	void requestStop();
-	void requestSoundReactivation();
 
 signals:
-	void soundReadySignal();
 	void frameReadySignal(const QImage& display);
 	void debugFrameReadySignal(const DebugWindowState& state);
 
@@ -46,10 +45,15 @@ private:
 
 	Bus bus;
 	std::atomic<bool> isRunning;
-	std::atomic<bool> soundActivated;
 
-	// EmulatorThread is not responsible for managing this memory
-	KeyboardInput keyInput;
+	KeyboardInput localKeyInput;
+	const KeyboardInput& sharedKeyInput;
+	std::mutex& keyInputMutex;
+
+	uint8_t lastResetCount;
+    uint8_t lastStepCount;
+    uint8_t lastSaveCount;
+	uint8_t lastLoadCount;
 
 	void runCycles();
 	std::queue<uint16_t> recentPCs;

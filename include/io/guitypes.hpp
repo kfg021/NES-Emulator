@@ -4,33 +4,37 @@
 #include "core/ppu.hpp"
 
 #include <array>
-#include <atomic>
 #include <memory>
-#include <queue>
+#include <mutex>
 
 #include <QMetaType>
 #include <QString>
 
-using ControllerStatus = std::array<std::atomic<uint8_t>, 2>;
 struct KeyboardInput {
-    // Game input
-    const ControllerStatus* controllerStatus;
-    std::atomic<bool>* resetFlag;
-    std::atomic<uint8_t>* pauseFlag; // Treated as a boolean
+    // NES controllers
+    uint8_t controller1ButtonMask;
+    uint8_t controller2ButtonMask;
+
+    // Menu settings
+    bool paused;
+    bool muted;
+    bool debugWindowEnabled;
 
     // Debug window settings
-    const std::atomic<bool>* debugWindowEnabled;
-    std::atomic<bool>* stepRequested;
-    const std::atomic<uint8_t>* spritePallete;
-    const std::atomic<uint8_t>* backgroundPallete;
+    uint8_t spritePallete;
+    uint8_t backgroundPallete;
 
-    // Sound settings
-    const std::atomic<uint8_t>* globalMuteFlag; // Treated as a boolean
+    // One-shot requests
+    // The main thread will increment these variables each time there is a new request.
+    // The emulator will use the (unsigned) difference between the current request count and its last seen request count to determine the number of requests to make.
+    // Overflow is possible but will only be an issue if a key is somehow pressed over 255 times in a single frame :)
+    uint8_t resetCount;
+    uint8_t stepCount;
+    uint8_t saveCount;
+    uint8_t loadCount;
 
-    // Save state settings
-    std::atomic<bool>* saveRequested;
-	std::atomic<bool>* loadRequested;
-    QString* saveFilePath;
+    // Data corresponding to a save/load request
+    QString mostRecentSaveFilePath;
 };
 
 struct DebugWindowState {
@@ -51,7 +55,7 @@ struct DebugWindowState {
 };
 Q_DECLARE_METATYPE(DebugWindowState)
 
-static constexpr int AUDIO_SAMPLE_RATE = 44100;	
+static constexpr int AUDIO_SAMPLE_RATE = 44100;
 static constexpr size_t AUDIO_QUEUE_MAX_CAPACITY = AUDIO_SAMPLE_RATE / 10;
 
-#endif // GUITYPES_HPP 
+#endif // GUITYPES_HPP

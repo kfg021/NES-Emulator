@@ -16,11 +16,7 @@ class AudioPlayer : public QIODevice {
     Q_OBJECT
 
 public:
-    AudioPlayer(QWidget* parent, const QAudioFormat& audioFormat, bool muted, ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>* audioSamples);
-    
-    void tryToMute();
-    void tryToUnmute();
-
+    AudioPlayer(QWidget* parent, const QAudioFormat& audioFormat, ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>* audioSamples);
 protected:
     int64_t readData(char* data, int64_t maxSize) override;
     int64_t writeData(const char* data, int64_t maxSize) override;
@@ -28,7 +24,6 @@ protected:
 
 private:
     QAudioFormat audioFormat;
-    bool muted;
     ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>* audioSamples;
 };
 
