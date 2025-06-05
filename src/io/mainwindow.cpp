@@ -60,6 +60,12 @@ MainWindow::MainWindow(QWidget* parent, const std::string& romFilePath, const st
 }
 
 MainWindow::~MainWindow() {
+	if (audioSink) {
+		if (audioSink->state() != QAudio::StoppedState) {
+			audioSink->stop();
+		}
+	}
+
 	if (emulatorThread) {
 		emulatorThread->requestStop();
 
@@ -68,12 +74,6 @@ MainWindow::~MainWindow() {
 			// Thread still running, terminate it as a last resort
 			emulatorThread->terminate();
 			emulatorThread->wait();
-		}
-	}
-
-	if (audioSink) {
-		if (audioSink->state() != QAudio::StoppedState) {
-			audioSink->stop();
 		}
 	}
 }
