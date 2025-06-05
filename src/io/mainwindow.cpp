@@ -23,9 +23,11 @@ MainWindow::MainWindow(QWidget* parent, const std::string& romFilePath, const st
 	: QMainWindow(parent),
 	audioFormat(defaultAudioFormat()) {
 	setWindowTitle("NES Emulator");
-	setFixedSize(GAME_WIDTH, GAME_HEIGHT);
 
 	localKeyInput = {};
+	localKeyInput.debugWindowEnabled = true;
+	updateDebugWindowState();
+
 	if (saveFilePathOption.has_value()) {
 		localKeyInput.mostRecentSaveFilePath = QString::fromStdString(saveFilePathOption.value());
 	}
@@ -158,14 +160,8 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 			localKeyInput.loadCount++;
 			break;
 		case DEBUG_WINDOW_KEY:
-			if (localKeyInput.debugWindowEnabled) {
-				localKeyInput.debugWindowEnabled = false;
-				setFixedSize(GAME_WIDTH, GAME_HEIGHT);
-			}
-			else {
-				localKeyInput.debugWindowEnabled = true;
-				setFixedSize(TOTAL_WIDTH, GAME_HEIGHT);
-			}
+			localKeyInput.debugWindowEnabled ^= 1;
+			updateDebugWindowState();
 			break;
 		case STEP_KEY:
 			if (localKeyInput.debugWindowEnabled && localKeyInput.paused) {
@@ -277,6 +273,15 @@ void MainWindow::onAudioOutputsChanged() {
 		}
 
 		createAudioSink();
+	}
+}
+
+void MainWindow::updateDebugWindowState() {
+	if (localKeyInput.debugWindowEnabled) {
+		setFixedSize(TOTAL_WIDTH, GAME_HEIGHT);
+	}
+	else {	
+		setFixedSize(GAME_WIDTH, GAME_HEIGHT);
 	}
 }
 

@@ -57,6 +57,7 @@ private:
 	QImage mainWindowData;
 	DebugWindowState debugWindowData;
 	void renderDebugWindow();
+	void updateDebugWindowState();
 
 	// Audio
 	const QAudioFormat audioFormat;
