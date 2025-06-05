@@ -36,7 +36,6 @@ public:
 	static constexpr int TOTAL_WIDTH = GAME_WIDTH + DEBUG_WIDTH;
 
 public slots:
-	// void enableAudioSink();
 	void displayNewFrame(const QImage& image);
 	void displayNewDebugFrame(const DebugWindowState& state);
 
@@ -53,7 +52,6 @@ private:
 	std::mutex keyInputMutex;
 
 	void setControllerData(bool controller, Controller::Button button, bool value);
-	void toggleDebugMode();
 
 	// Rendering
 	QImage mainWindowData;
@@ -69,7 +67,7 @@ private:
 	ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY> audioSamples;
 	void updateAudioState();
 	void createAudioSink();
-	void onDefaultAudioDeviceChanged();
+	void onAudioOutputsChanged();
 	static QAudioFormat defaultAudioFormat();
 
 	// NES controller controls

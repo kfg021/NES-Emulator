@@ -40,7 +40,7 @@ MainWindow::MainWindow(QWidget* parent, const std::string& romFilePath, const st
 
 	defaultAudioDevice = QMediaDevices::defaultAudioOutput();
 	mediaDevices = new QMediaDevices(this);
-	connect(mediaDevices, &QMediaDevices::audioOutputsChanged, this, &MainWindow::onDefaultAudioDeviceChanged);
+	connect(mediaDevices, &QMediaDevices::audioOutputsChanged, this, &MainWindow::onAudioOutputsChanged);
 
 
 	emulatorThread = new EmulatorThread(
@@ -175,7 +175,14 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 
 	// Debugging keys
 	else if (event->key() == DEBUG_WINDOW_KEY) {
-		toggleDebugMode();
+		if (localKeyInput.debugWindowEnabled) {
+			localKeyInput.debugWindowEnabled = false;
+			setFixedSize(GAME_WIDTH, GAME_HEIGHT);
+		}
+		else {
+			localKeyInput.debugWindowEnabled = true;
+			setFixedSize(TOTAL_WIDTH, GAME_HEIGHT);
+		}
 	}
 	else if (localKeyInput.debugWindowEnabled) {
 		if (event->key() == STEP_KEY) {
@@ -266,7 +273,7 @@ void MainWindow::createAudioSink() {
 	}
 }
 
-void MainWindow::onDefaultAudioDeviceChanged() {
+void MainWindow::onAudioOutputsChanged() {
 	auto newDefaultAudioDevice = QMediaDevices::defaultAudioOutput();
 	if (newDefaultAudioDevice != defaultAudioDevice) {
 		defaultAudioDevice = newDefaultAudioDevice;
@@ -278,17 +285,6 @@ void MainWindow::onDefaultAudioDeviceChanged() {
 		}
 
 		createAudioSink();
-	}
-}
-
-void MainWindow::toggleDebugMode() {
-	if (localKeyInput.debugWindowEnabled) {
-		localKeyInput.debugWindowEnabled = false;
-		setFixedSize(GAME_WIDTH, GAME_HEIGHT);
-	}
-	else {
-		localKeyInput.debugWindowEnabled = true;
-		setFixedSize(TOTAL_WIDTH, GAME_HEIGHT);
 	}
 }
 
