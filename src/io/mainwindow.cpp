@@ -131,12 +131,24 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 			updateAudioState();
 			break;
 		case SAVE_KEY:
+			// Block the emulator thread until the user chooses a file
 			{
 				std::lock_guard<std::mutex> guard(keyInputMutex);
+				bool wasPaused = localKeyInput.paused;
+				if (!wasPaused) {
+					localKeyInput.paused = true;
+					updateAudioState();
+				}
+
 				localKeyInput.mostRecentSaveFilePath = QFileDialog::getSaveFileName(
 					this, "Create save state", QDir::homePath(), "(*.sstate)"
 				);
 				localKeyInput.saveCount++;
+
+				if (!wasPaused) {
+					localKeyInput.paused = false;
+					updateAudioState();
+				}
 
 				sharedKeyInput = localKeyInput;
 			}
@@ -144,12 +156,25 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 			// Already passed user input to emulator thread, so we can return
 			return;
 		case LOAD_KEY:
+			// Block the emulator thread until the user chooses a file
 			{
 				std::lock_guard<std::mutex> guard(keyInputMutex);
+
+				bool wasPaused = localKeyInput.paused;
+				if (!wasPaused) {
+					localKeyInput.paused = true;
+					updateAudioState();
+				}
+
 				localKeyInput.mostRecentSaveFilePath = QFileDialog::getOpenFileName(
 					this, "Load save state", QDir::homePath(), "(*.sstate)"
 				);
 				localKeyInput.loadCount++;
+
+				if (!wasPaused) {
+					localKeyInput.paused = false;
+					updateAudioState();
+				}
 
 				sharedKeyInput = localKeyInput;
 			}
