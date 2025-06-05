@@ -15,7 +15,6 @@ Mapper::Mapper(const Config& config, const std::vector<uint8_t>& prg, const std:
     : config(config), prg(prg), chr(chr) {
 
     if (config.hasBatteryBackedPrgRam) {
-        // TODO: Load this from a save file
         prgRam = std::vector<uint8_t>(PRG_RAM_RANGE.size(), 0);
     }
 }
