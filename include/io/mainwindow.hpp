@@ -8,8 +8,8 @@
 #include "io/threadsafeaudioqueue.hpp"
 
 #include <array>
-#include <atomic>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <queue>
@@ -36,7 +36,6 @@ public:
 	static constexpr int TOTAL_WIDTH = GAME_WIDTH + DEBUG_WIDTH;
 
 public slots:
-	void enableAudioSink();
 	void displayNewFrame(const QImage& image);
 	void displayNewDebugFrame(const DebugWindowState& state);
 
@@ -48,27 +47,17 @@ protected:
 private:
 	EmulatorThread* emulatorThread;
 
-	ControllerStatus controllerStatus;
-	std::atomic<bool> resetFlag;
-	std::atomic<uint8_t> pauseFlag;
-
-	std::atomic<bool> debugWindowEnabled;
-	std::atomic<bool> stepRequested;
-	std::atomic<uint8_t> spritePallete;
-	std::atomic<uint8_t> backgroundPallete;
-	std::atomic<uint8_t> globalMuteFlag;
-
-	std::atomic<bool> saveRequested;
-	std::atomic<bool> loadRequested;
-	QString saveFilePath;
+	KeyboardInput localKeyInput;
+	KeyboardInput sharedKeyInput;
+	std::mutex keyInputMutex;
 
 	void setControllerData(bool controller, Controller::Button button, bool value);
-	void toggleDebugMode();
 
 	// Rendering
 	QImage mainWindowData;
 	DebugWindowState debugWindowData;
 	void renderDebugWindow();
+	void updateDebugWindowState();
 
 	// Audio
 	const QAudioFormat audioFormat;
@@ -79,7 +68,7 @@ private:
 	ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY> audioSamples;
 	void updateAudioState();
 	void createAudioSink();
-	void onDefaultAudioDeviceChanged();
+	void onAudioOutputsChanged();
 	static QAudioFormat defaultAudioFormat();
 
 	// NES controller controls

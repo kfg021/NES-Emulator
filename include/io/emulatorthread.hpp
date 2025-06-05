@@ -22,40 +22,50 @@ public:
 		QObject* parent,
 		const std::string& romFilePath,
 		const std::optional<std::string>& saveFilePath,
-		const KeyboardInput& keyInput,
-		ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>* audioSamples
+		const KeyboardInput& sharedKeyInput,
+		std::mutex& keyInputMutex,
+		ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>& audioSamples
 	);
 	~EmulatorThread() override;
 	void run() override;
 
 	void requestStop();
-	void requestSoundReactivation();
 
 signals:
-	void soundReadySignal();
 	void frameReadySignal(const QImage& display);
 	void debugFrameReadySignal(const DebugWindowState& state);
+	void soundReadySignal();
 
 private:
 	static constexpr int FPS = 60;
-	static constexpr int TARGET_FRAME_US = 1000000 / FPS;
+	static constexpr int TARGET_FRAME_NS = static_cast<int>(1e9) / FPS;
 
 	// 262 scanlines, 341 cycles per scanline, 3 PPU cycles per CPU cycle
 	static constexpr int EXPECTED_CPU_CYCLES_PER_FRAME = (262 * 341) / 3;
 	static constexpr int INSTRUCTIONS_PER_SECOND = EXPECTED_CPU_CYCLES_PER_FRAME * FPS;
 
+	// Audio pacing constants
+	static constexpr size_t AUDIO_QUEUE_TARGET_FILL_SAMPLES = AUDIO_SAMPLE_RATE / 20; // 50ms audio latency
+	static constexpr size_t AUDIO_QUEUE_UPPER_THRESHOLD_SAMPLES = AUDIO_QUEUE_TARGET_FILL_SAMPLES * 3 / 2;
+
 	Bus bus;
 	std::atomic<bool> isRunning;
-	std::atomic<bool> soundActivated;
+	bool soundReady;
 
-	// EmulatorThread is not responsible for managing this memory
-	KeyboardInput keyInput;
+	KeyboardInput localKeyInput;
+	const KeyboardInput& sharedKeyInput;
+	std::mutex& keyInputMutex;
+
+	uint8_t lastResetCount;
+	uint8_t lastStepCount;
+	uint8_t lastSaveCount;
+	uint8_t lastLoadCount;
 
 	void runCycles();
 	std::queue<uint16_t> recentPCs;
 	std::array<QString, DebugWindowState::NUM_INSTS_TOTAL> getInsts() const;
 
-	ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>* audioSamples;
+	ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>& audioSamples;
 
 	int scaledAudioClock;
 

@@ -33,12 +33,11 @@ public:
         std::lock_guard<std::mutex> guard(mtx);
 
         // This evicts the oldest item in the audio queue if there are too many samples.
-        // It keeps the audio in sync with the video but sometimes leads to audio glitches
-        // TODO: More robust audio/video sync method
+        // It keeps the audio in sync with the video but sometimes leads to audio glitches if audio is ahead
         if (currentSize == capacity) {
             popInternal();
         }
-        
+
         pushInternal(data);
     }
 
