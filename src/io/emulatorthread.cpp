@@ -54,9 +54,9 @@ void EmulatorThread::requestStop() {
 void EmulatorThread::run() {
 	isRunning.store(true);
 
-	int desiredNextFrameUs = TARGET_FRAME_US;
-	QElapsedTimer elapsedTimer;
-	elapsedTimer.start();
+	QElapsedTimer framePacingTimer;
+	framePacingTimer.start();
+	int64_t nextFrameTargetNs = framePacingTimer.nsecsElapsed() + TARGET_FRAME_NS;
 
 	while (isRunning.load()) {
 		// Load keyboard input
@@ -77,28 +77,28 @@ void EmulatorThread::run() {
 			std::queue<uint16_t> empty;
 			std::swap(recentPCs, empty);
 
-			desiredNextFrameUs = (elapsedTimer.nsecsElapsed() / 1000) + TARGET_FRAME_US;
+			nextFrameTargetNs = framePacingTimer.nsecsElapsed() + TARGET_FRAME_NS;
 		}
 
 		// Check load/save
 		uint8_t numLoads = localKeyInput.loadCount - lastLoadCount;
 		lastLoadCount = localKeyInput.loadCount;
 		if (numLoads >= 1) { // Only perform a max of one load each frame
-			audioSamples.erase();
-
 			SaveState::LoadStatus saveStatus = saveState.loadSaveState(localKeyInput.mostRecentSaveFilePath);
 			qDebug().noquote() << saveStatus.message;
 
-			std::queue<uint16_t> empty;
-			std::swap(recentPCs, empty);
-		}
+			if (saveStatus.code == SaveState::LoadStatus::Code::SUCCESS) {
+				audioSamples.erase();
+				scaledAudioClock = 0;
 
+				std::queue<uint16_t> empty;
+				std::swap(recentPCs, empty);
+			}
+		}
 
 		uint8_t numSaves = localKeyInput.saveCount - lastSaveCount;
 		lastSaveCount = localKeyInput.saveCount;
 		if (numSaves >= 1) { // Only perform a max of one save each frame
-			audioSamples.erase();
-
 			SaveState::CreateStatus saveStatus = saveState.createSaveState(localKeyInput.mostRecentSaveFilePath);
 			qDebug().noquote() << saveStatus.message;
 		}
@@ -113,9 +113,43 @@ void EmulatorThread::run() {
 
 		if (bus.ppu->frameReadyFlag) {
 			const PPU::Display& display = *(bus.ppu->finishedDisplay);
-			QImage image(reinterpret_cast<const uint8_t*>(&display), 256, 240, QImage::Format::Format_ARGB32);
+			QImage image(reinterpret_cast<const uint8_t*>(&display), 256, 240, QImage::Format_ARGB32_Premultiplied);
 			emit frameReadySignal(image.copy());
 			bus.ppu->frameReadyFlag = false;
+
+			size_t currentAudioQueueSize = audioSamples.size();
+
+			if (currentAudioQueueSize > AUDIO_QUEUE_UPPER_THRESHOLD_SAMPLES) {
+				// We have too much audio buffered, which means were generating frames too quickly.
+				// Let audio catch up by adding a small delay to the next video frame target
+				int64_t excessAudioNs = ((currentAudioQueueSize - AUDIO_QUEUE_TARGET_FILL_SAMPLES) * static_cast<int64_t>(1e9)) / AUDIO_SAMPLE_RATE;
+				if (excessAudioNs > static_cast<int64_t>(1e6)) { // 1ms
+					// Delay next frame target by half of the excess
+					int64_t delayNs = excessAudioNs / 2;
+					nextFrameTargetNs += delayNs;
+				}
+			}
+			// TODO: Also handle audio underflow
+
+			int64_t currentTimeNs = framePacingTimer.nsecsElapsed();
+			int64_t sleepTimeNs = nextFrameTargetNs - currentTimeNs;
+
+			static constexpr int64_t MIN_SLEEP_TIME_NS = static_cast<int64_t>(1e6); // 1ms
+
+			if (sleepTimeNs > MIN_SLEEP_TIME_NS) {
+				QThread::usleep(sleepTimeNs / 1000LL);
+			}
+			else if (sleepTimeNs > 0) {
+				QThread::yieldCurrentThread();
+			}
+			else {
+				// We missed the deadline for this frame, so reset the frame deadline.
+				nextFrameTargetNs = currentTimeNs;
+
+				QThread::yieldCurrentThread();
+			}
+
+			nextFrameTargetNs += TARGET_FRAME_NS;
 		}
 
 		if (localKeyInput.debugWindowEnabled) {
@@ -138,26 +172,6 @@ void EmulatorThread::run() {
 
 			emit debugFrameReadySignal(state);
 		}
-
-		int currentTimeUs = elapsedTimer.nsecsElapsed() / 1000;
-		int sleepTimeUs = desiredNextFrameUs - currentTimeUs;
-
-		// Small sleep times are generally unreliable
-		static constexpr int MIN_SLEEP_TIME_US = 1000;
-		if (sleepTimeUs > MIN_SLEEP_TIME_US) {
-			QThread::usleep(sleepTimeUs);
-		}
-		else if (sleepTimeUs > 0) {
-			QThread::yieldCurrentThread();
-		}
-		else {
-			// We missed the deadline for this frame, so reset the frame deadline.
-			desiredNextFrameUs = currentTimeUs;
-
-			QThread::yieldCurrentThread();
-		}
-
-		desiredNextFrameUs += TARGET_FRAME_US;
 	}
 }
 

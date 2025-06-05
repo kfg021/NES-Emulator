@@ -56,6 +56,6 @@ struct DebugWindowState {
 Q_DECLARE_METATYPE(DebugWindowState)
 
 static constexpr int AUDIO_SAMPLE_RATE = 44100;
-static constexpr size_t AUDIO_QUEUE_MAX_CAPACITY = AUDIO_SAMPLE_RATE / 10;
+static constexpr size_t AUDIO_QUEUE_MAX_CAPACITY = AUDIO_SAMPLE_RATE / 2; // Enough space to store 0.5s of audio 
 
 #endif // GUITYPES_HPP
