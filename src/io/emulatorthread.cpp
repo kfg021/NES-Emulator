@@ -11,7 +11,7 @@ EmulatorThread::EmulatorThread(
 	const std::optional<std::string>& saveFilePathOption,
 	const KeyboardInput& sharedKeyInput,
 	std::mutex& keyInputMutex,
-	ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>* audioSamples
+	ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>& audioSamples
 ) :
 	QThread(parent),
 	sharedKeyInput(sharedKeyInput),
@@ -71,7 +71,7 @@ void EmulatorThread::run() {
 		if (numResets >= 1) { // Only perform a max of one reset each frame
 			bus.reset();
 
-			audioSamples->erase();
+			audioSamples.erase();
 			scaledAudioClock = 0;
 
 			std::queue<uint16_t> empty;
@@ -84,7 +84,7 @@ void EmulatorThread::run() {
 		uint8_t numLoads = localKeyInput.loadCount - lastLoadCount;
 		lastLoadCount = localKeyInput.loadCount;
 		if (numLoads >= 1) { // Only perform a max of one load each frame
-			audioSamples->erase();
+			audioSamples.erase();
 
 			SaveState::LoadStatus saveStatus = saveState.loadSaveState(localKeyInput.mostRecentSaveFilePath);
 			qDebug().noquote() << saveStatus.message;
@@ -97,7 +97,7 @@ void EmulatorThread::run() {
 		uint8_t numSaves = localKeyInput.saveCount - lastSaveCount;
 		lastSaveCount = localKeyInput.saveCount;
 		if (numSaves >= 1) { // Only perform a max of one save each frame
-			audioSamples->erase();
+			audioSamples.erase();
 
 			SaveState::CreateStatus saveStatus = saveState.createSaveState(localKeyInput.mostRecentSaveFilePath);
 			qDebug().noquote() << saveStatus.message;
@@ -179,7 +179,7 @@ void EmulatorThread::runCycles() {
 		if (audioEnabled) {
 			while (scaledAudioClock >= INSTRUCTIONS_PER_SECOND) {
 				float sample = bus.apu->getAudioSample();
-				audioSamples->push(sample);
+				audioSamples.push(sample);
 
 				scaledAudioClock -= INSTRUCTIONS_PER_SECOND;
 			}

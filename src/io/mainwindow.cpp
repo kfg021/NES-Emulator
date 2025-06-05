@@ -49,7 +49,7 @@ MainWindow::MainWindow(QWidget* parent, const std::string& romFilePath, const st
 		saveFilePathOption,
 		sharedKeyInput,
 		keyInputMutex,
-		&audioSamples
+		audioSamples
 	);
 
 	connect(emulatorThread, &EmulatorThread::frameReadySignal, this, &MainWindow::displayNewFrame, Qt::QueuedConnection);

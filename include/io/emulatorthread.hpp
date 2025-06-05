@@ -24,7 +24,7 @@ public:
 		const std::optional<std::string>& saveFilePath,
 		const KeyboardInput& sharedKeyInput,
 		std::mutex& keyInputMutex,
-		ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>* audioSamples
+		ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>& audioSamples
 	);
 	~EmulatorThread() override;
 	void run() override;
@@ -59,7 +59,7 @@ private:
 	std::queue<uint16_t> recentPCs;
 	std::array<QString, DebugWindowState::NUM_INSTS_TOTAL> getInsts() const;
 
-	ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>* audioSamples;
+	ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>& audioSamples;
 
 	int scaledAudioClock;
 
