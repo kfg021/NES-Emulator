@@ -92,112 +92,100 @@ void MainWindow::displayNewDebugFrame(const DebugWindowState& state) {
 
 // TODO: Key inputs for second controller
 void MainWindow::keyPressEvent(QKeyEvent* event) {
-	// Game keys
-	if (event->key() == UP_KEY) {
-		setControllerData(0, Controller::Button::UP, 1);
-	}
-	else if (event->key() == DOWN_KEY) {
-		setControllerData(0, Controller::Button::DOWN, 1);
-	}
-	else if (event->key() == LEFT_KEY) {
-		setControllerData(0, Controller::Button::LEFT, 1);
-	}
-	else if (event->key() == RIGHT_KEY) {
-		setControllerData(0, Controller::Button::RIGHT, 1);
-	}
-	else if (event->key() == SELECT_KEY) {
-		setControllerData(0, Controller::Button::SELECT, 1);
-	}
-	else if (event->key() == START_KEY) {
-		setControllerData(0, Controller::Button::START, 1);
-	}
-	else if (event->key() == B_KEY) {
-		setControllerData(0, Controller::Button::B, 1);
-	}
-	else if (event->key() == A_KEY) {
-		setControllerData(0, Controller::Button::A, 1);
-	}
+	switch (event->key()) {
+		case UP_KEY:
+			setControllerData(0, Controller::Button::UP, 1);
+			break;
+		case DOWN_KEY:
+			setControllerData(0, Controller::Button::DOWN, 1);
+			break;
+		case LEFT_KEY:
+			setControllerData(0, Controller::Button::LEFT, 1);
+			break;
+		case RIGHT_KEY:
+			setControllerData(0, Controller::Button::RIGHT, 1);
+			break;
+		case SELECT_KEY:
+			setControllerData(0, Controller::Button::SELECT, 1);
+			break;
+		case START_KEY:
+			setControllerData(0, Controller::Button::START, 1);
+			break;
+		case B_KEY:
+			setControllerData(0, Controller::Button::B, 1);
+			break;
+		case A_KEY:
+			setControllerData(0, Controller::Button::A, 1);
+			break;
+		case RESET_KEY:
+			localKeyInput.resetCount++;
+			break;
+		case PAUSE_KEY:
+			localKeyInput.paused ^= 1;
+			updateAudioState();
+			break;
+		case MUTE_KEY:
+			localKeyInput.muted ^= 1;
+			updateAudioState();
+			break;
+		case SAVE_KEY:
+			{
+				std::lock_guard<std::mutex> guard(keyInputMutex);
+				localKeyInput.mostRecentSaveFilePath = QFileDialog::getSaveFileName(
+					this, "Create save state", QDir::homePath(), "(*.sstate)"
+				);
+				localKeyInput.saveCount++;
 
-	// Reset button
-	else if (event->key() == RESET_KEY) {
-		localKeyInput.resetCount++;
-	}
+				sharedKeyInput = localKeyInput;
+			}
 
-	// Pause button
-	else if (event->key() == PAUSE_KEY) {
-		localKeyInput.paused ^= 1;
-		updateAudioState();
-	}
+			// Already passed user input to emulator thread, so we can return
+			return;
+		case LOAD_KEY:
+			{
+				std::lock_guard<std::mutex> guard(keyInputMutex);
+				localKeyInput.mostRecentSaveFilePath = QFileDialog::getOpenFileName(
+					this, "Load save state", QDir::homePath(), "(*.sstate)"
+				);
+				localKeyInput.loadCount++;
 
-	// Mute button
-	else if (event->key() == MUTE_KEY) {
-		localKeyInput.muted ^= 1;
-		updateAudioState();
-	}
+				sharedKeyInput = localKeyInput;
+			}
 
-	// Save states
-	else if (event->key() == SAVE_KEY) {
-		// Block the emulator thread until the user chooses a file or closes the file dialog
-		{
-			std::lock_guard<std::mutex> guard(keyInputMutex);
-			localKeyInput.mostRecentSaveFilePath = QFileDialog::getSaveFileName(
-				this, "Create save state", QDir::homePath(), "(*.sstate)"
-			);
-			localKeyInput.saveCount++;
-
-			sharedKeyInput = localKeyInput;
-		}
-
-		// Already passed user input to emulator thread, so we can return
-		return;
-	}
-
-	else if (event->key() == LOAD_KEY) {
-		// Block the emulator thread until the user chooses a file or closes the file dialog
-		{
-			std::lock_guard<std::mutex> guard(keyInputMutex);
-			localKeyInput.mostRecentSaveFilePath = QFileDialog::getOpenFileName(
-				this, "Load save state", QDir::homePath(), "(*.sstate)"
-			);
+			// Already passed user input to emulator thread, so we can return
+			return;
+		case QUICK_LOAD_KEY:
 			localKeyInput.loadCount++;
-
-			sharedKeyInput = localKeyInput;
-		}
-
-		// Already passed user input to emulator thread, so we can return
-		return;
-	}
-
-	else if (event->key() == QUICK_LOAD_KEY) {
-		localKeyInput.loadCount++;
-	}
-
-	// Debugging keys
-	else if (event->key() == DEBUG_WINDOW_KEY) {
-		if (localKeyInput.debugWindowEnabled) {
-			localKeyInput.debugWindowEnabled = false;
-			setFixedSize(GAME_WIDTH, GAME_HEIGHT);
-		}
-		else {
-			localKeyInput.debugWindowEnabled = true;
-			setFixedSize(TOTAL_WIDTH, GAME_HEIGHT);
-		}
-	}
-	else if (localKeyInput.debugWindowEnabled) {
-		if (event->key() == STEP_KEY) {
-			if (localKeyInput.paused) {
+			break;
+		case DEBUG_WINDOW_KEY:
+			if (localKeyInput.debugWindowEnabled) {
+				localKeyInput.debugWindowEnabled = false;
+				setFixedSize(GAME_WIDTH, GAME_HEIGHT);
+			}
+			else {
+				localKeyInput.debugWindowEnabled = true;
+				setFixedSize(TOTAL_WIDTH, GAME_HEIGHT);
+			}
+			break;
+		case STEP_KEY:
+			if (localKeyInput.debugWindowEnabled && localKeyInput.paused) {
 				localKeyInput.stepCount++;
 			}
-		}
-		else if (event->key() == BACKGROUND_PALLETE_KEY) {
-			localKeyInput.backgroundPallete = (localKeyInput.backgroundPallete + 1) & 3;
-		}
-		else if (event->key() == SPRITE_PALLETE_KEY) {
-			localKeyInput.spritePallete = (localKeyInput.spritePallete + 1) & 3;
-		}
+			break;
+		case BACKGROUND_PALLETE_KEY:
+			if (localKeyInput.debugWindowEnabled) {
+				localKeyInput.backgroundPallete = (localKeyInput.backgroundPallete + 1) & 3;
+			}
+			break;
+		case SPRITE_PALLETE_KEY:
+			if (localKeyInput.debugWindowEnabled) {
+				localKeyInput.spritePallete = (localKeyInput.spritePallete + 1) & 3;
+			}
+			break;
+		default:
+			break;
 	}
 
-	// Pass the user input to the main thread
 	{
 		std::lock_guard<std::mutex> guard(keyInputMutex);
 		sharedKeyInput = localKeyInput;
@@ -205,33 +193,35 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 }
 
 void MainWindow::keyReleaseEvent(QKeyEvent* event) {
-	// Game keys
-	if (event->key() == UP_KEY) {
-		setControllerData(0, Controller::Button::UP, 0);
-	}
-	else if (event->key() == DOWN_KEY) {
-		setControllerData(0, Controller::Button::DOWN, 0);
-	}
-	else if (event->key() == LEFT_KEY) {
-		setControllerData(0, Controller::Button::LEFT, 0);
-	}
-	else if (event->key() == RIGHT_KEY) {
-		setControllerData(0, Controller::Button::RIGHT, 0);
-	}
-	else if (event->key() == SELECT_KEY) {
-		setControllerData(0, Controller::Button::SELECT, 0);
-	}
-	else if (event->key() == START_KEY) {
-		setControllerData(0, Controller::Button::START, 0);
-	}
-	else if (event->key() == B_KEY) {
-		setControllerData(0, Controller::Button::B, 0);
-	}
-	else if (event->key() == A_KEY) {
-		setControllerData(0, Controller::Button::A, 0);
+	switch (event->key()) {
+		case UP_KEY:
+			setControllerData(0, Controller::Button::UP, 0);
+			break;
+		case DOWN_KEY:
+			setControllerData(0, Controller::Button::DOWN, 0);
+			break;
+		case LEFT_KEY:
+			setControllerData(0, Controller::Button::LEFT, 0);
+			break;
+		case RIGHT_KEY:
+			setControllerData(0, Controller::Button::RIGHT, 0);
+			break;
+		case SELECT_KEY:
+			setControllerData(0, Controller::Button::SELECT, 0);
+			break;
+		case START_KEY:
+			setControllerData(0, Controller::Button::START, 0);
+			break;
+		case B_KEY:
+			setControllerData(0, Controller::Button::B, 0);
+			break;
+		case A_KEY:
+			setControllerData(0, Controller::Button::A, 0);
+			break;
+		default:
+			break;
 	}
 
-	// Pass the user input to the main thread
 	{
 		std::lock_guard<std::mutex> guard(keyInputMutex);
 		sharedKeyInput = localKeyInput;
