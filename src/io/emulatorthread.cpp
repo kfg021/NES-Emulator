@@ -32,6 +32,7 @@ EmulatorThread::EmulatorThread(
 	}
 
 	scaledAudioClock = 0;
+	soundReady = false;
 
 	localKeyInput = {};
 	lastResetCount = 0;
@@ -71,9 +72,6 @@ void EmulatorThread::run() {
 		if (numResets >= 1) { // Only perform a max of one reset each frame
 			bus.reset();
 
-			audioSamples.erase();
-			scaledAudioClock = 0;
-
 			std::queue<uint16_t> empty;
 			std::swap(recentPCs, empty);
 
@@ -88,9 +86,6 @@ void EmulatorThread::run() {
 			qDebug().noquote() << saveStatus.message;
 
 			if (saveStatus.code == SaveState::LoadStatus::Code::SUCCESS) {
-				audioSamples.erase();
-				scaledAudioClock = 0;
-
 				std::queue<uint16_t> empty;
 				std::swap(recentPCs, empty);
 			}
@@ -120,7 +115,7 @@ void EmulatorThread::run() {
 			size_t currentAudioQueueSize = audioSamples.size();
 
 			if (currentAudioQueueSize > AUDIO_QUEUE_UPPER_THRESHOLD_SAMPLES) {
-				// We have too much audio buffered, which means were generating frames too quickly.
+				// We have too much audio buffered, which means we are generating frames too quickly.
 				// Let audio catch up by adding a small delay to the next video frame target
 				int64_t excessAudioNs = ((currentAudioQueueSize - AUDIO_QUEUE_TARGET_FILL_SAMPLES) * static_cast<int64_t>(1e9)) / AUDIO_SAMPLE_RATE;
 				if (excessAudioNs > static_cast<int64_t>(1e6)) { // 1ms
@@ -192,8 +187,11 @@ void EmulatorThread::runCycles() {
 
 		if (audioEnabled) {
 			while (scaledAudioClock >= INSTRUCTIONS_PER_SECOND) {
-				float sample = bus.apu->getAudioSample();
-				audioSamples.push(sample);
+				audioSamples.push(bus.apu->getAudioSample());
+				if (!soundReady) {
+					soundReady = true;
+					emit soundReadySignal();
+				}
 
 				scaledAudioClock -= INSTRUCTIONS_PER_SECOND;
 			}

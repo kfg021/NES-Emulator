@@ -33,8 +33,6 @@ MainWindow::MainWindow(QWidget* parent, const std::string& romFilePath, const st
 
 	audioPlayer = new AudioPlayer(this, audioFormat, &audioSamples);
 	audioSink = nullptr;
-	createAudioSink();
-	updateAudioState();
 
 	debugWindowData = {};
 
@@ -54,6 +52,7 @@ MainWindow::MainWindow(QWidget* parent, const std::string& romFilePath, const st
 
 	connect(emulatorThread, &EmulatorThread::frameReadySignal, this, &MainWindow::displayNewFrame, Qt::QueuedConnection);
 	connect(emulatorThread, &EmulatorThread::debugFrameReadySignal, this, &MainWindow::displayNewDebugFrame, Qt::QueuedConnection);
+	connect(emulatorThread, &EmulatorThread::soundReadySignal, this, &MainWindow::createAudioSink, Qt::QueuedConnection);
 
 	emulatorThread->start();
 }
@@ -232,6 +231,7 @@ void MainWindow::keyReleaseEvent(QKeyEvent* event) {
 		setControllerData(0, Controller::Button::A, 0);
 	}
 
+	// Pass the user input to the main thread
 	{
 		std::lock_guard<std::mutex> guard(keyInputMutex);
 		sharedKeyInput = localKeyInput;
@@ -270,6 +270,8 @@ void MainWindow::createAudioSink() {
 		defaultAudioDevice = QMediaDevices::defaultAudioOutput();
 		audioSink = new QAudioSink(defaultAudioDevice, audioFormat, this);
 		audioSink->start(audioPlayer);
+
+		updateAudioState();
 	}
 }
 

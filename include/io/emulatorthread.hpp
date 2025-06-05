@@ -34,6 +34,7 @@ public:
 signals:
 	void frameReadySignal(const QImage& display);
 	void debugFrameReadySignal(const DebugWindowState& state);
+	void soundReadySignal();
 
 private:
 	static constexpr int FPS = 60;
@@ -44,12 +45,12 @@ private:
 	static constexpr int INSTRUCTIONS_PER_SECOND = EXPECTED_CPU_CYCLES_PER_FRAME * FPS;
 
 	// Audio pacing constants
-	static constexpr size_t AUDIO_QUEUE_TARGET_FILL_SAMPLES = AUDIO_SAMPLE_RATE / 20; // 0.05s audio latency
-	static constexpr size_t AUDIO_QUEUE_UPPER_THRESHOLD_SAMPLES = 3 * AUDIO_QUEUE_TARGET_FILL_SAMPLES / 2;
-	static_assert(AUDIO_QUEUE_TARGET_FILL_SAMPLES < AUDIO_QUEUE_MAX_CAPACITY && AUDIO_QUEUE_UPPER_THRESHOLD_SAMPLES < AUDIO_QUEUE_MAX_CAPACITY);
+	static constexpr size_t AUDIO_QUEUE_TARGET_FILL_SAMPLES = AUDIO_SAMPLE_RATE / 20; // 50ms audio latency
+	static constexpr size_t AUDIO_QUEUE_UPPER_THRESHOLD_SAMPLES = AUDIO_QUEUE_TARGET_FILL_SAMPLES * 3 / 2;
 
 	Bus bus;
 	std::atomic<bool> isRunning;
+	bool soundReady;
 
 	KeyboardInput localKeyInput;
 	const KeyboardInput& sharedKeyInput;

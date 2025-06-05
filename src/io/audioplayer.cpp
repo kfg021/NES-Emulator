@@ -9,16 +9,7 @@ AudioPlayer::AudioPlayer(QWidget* parent, const QAudioFormat& audioFormat, Threa
 }
 
 int64_t AudioPlayer::readData(char* data, int64_t maxSize) {
-    // Try to fill the buffer with bytes if we have any
-    // If not the audio is falling behind a bit, so sill the entire buffer with 0s so we can catch up
-    size_t bytesFilled = audioSamples->popManyIntoBuffer(data, maxSize);
-    if (bytesFilled) {
-        return bytesFilled;
-    }
-    else {
-        std::memset(data, 0x00, maxSize);
-        return maxSize;
-    }
+    return audioSamples->popManyIntoBuffer(data, maxSize);
 }
 
 int64_t AudioPlayer::writeData(const char* /*data*/, int64_t /*maxSize*/) {
@@ -26,11 +17,5 @@ int64_t AudioPlayer::writeData(const char* /*data*/, int64_t /*maxSize*/) {
 }
 
 int64_t AudioPlayer::bytesAvailable() const {
-    size_t bytesInQueue = audioSamples->size() * sizeof(float);
-    if (bytesInQueue) {
-        return bytesInQueue;
-    }
-    else {
-        return AUDIO_QUEUE_MAX_CAPACITY * sizeof(float);
-    }
+    return audioSamples->size() * sizeof(float);
 }
