@@ -549,7 +549,7 @@ void PPU::drawPixel() {
         }
     }
     uint16_t backgroundAddr = getPalleteRamAddress(backgroundPatternTable, backgroundAttributeTable);
-    uint32_t backgroundColor = SCREEN_COLORS[ppuRead(backgroundAddr) & 0x3F];
+    uint8_t backgroundColorIndex = ppuRead(backgroundAddr) & 0x3F;
 
     // Get color from sprites
     uint8_t spritePatternTable = 0;
@@ -595,10 +595,10 @@ void PPU::drawPixel() {
         }
     }
     uint16_t spriteAddr = getPalleteRamAddress(spritePatternTable, spriteAttributeTable);
-    uint32_t spriteColor = SCREEN_COLORS[ppuRead(spriteAddr) & 0x3F];
+    uint8_t spriteColorIndex = ppuRead(spriteAddr) & 0x3F;
 
     // Now combine the background color, sprite color, and priority to get the final color
-    uint32_t finalColor;
+    uint8_t finalColorIndex;
 
     bool bothTransparent = (backgroundPatternTable == 0 && spritePatternTable == 0);
     // bool onlyBackgroundTransparent = (backgroundPatternTable == 0 && spritePatternTable > 0);
@@ -606,10 +606,10 @@ void PPU::drawPixel() {
     bool bothVisible = (backgroundPatternTable > 0 && spritePatternTable > 0);
 
     if (bothTransparent || onlySpriteTransparent || (bothVisible && spritePriority == 0)) {
-        finalColor = backgroundColor;
+        finalColorIndex = backgroundColorIndex;
     }
     else { // if (onlyBackgroundTransparent || (bothVisible && spritePriority == 1)) {
-        finalColor = spriteColor;
+        finalColorIndex = spriteColorIndex;
     }
 
     if (sprite0Rendered && bothVisible && mask.showBackground && mask.showSprites && (cycle - 1) != 0xFF) {
@@ -619,7 +619,40 @@ void PPU::drawPixel() {
         }
     }
 
-    // TODO: Use the PPU's emphasis bits to modify the final color
+    uint32_t finalColor = SCREEN_COLORS[finalColorIndex];
+
+    // Modify the final color based on the PPU's emphasis bits
+    if (mask.emphRed || mask.emphGreen || mask.emphBlue) {
+        // Color tint bits (https://www.nesdev.org/wiki/NTSC_video)
+        // Tests performed on NTSC NES show that emphasis does not affect the black colors in columns $E or $F, but it does affect all other columns, including the blacks and greys in column $D.
+        // The terminated measurements above suggest that resulting attenuated absolute voltage is on average 0.816328 times the un-attenuated absolute voltage.
+        // attenuated absolute = absolute * 0.816328
+        uint8_t colorColumn = finalColorIndex & 0xF;
+        if (colorColumn != 0xE && colorColumn != 0xF) {
+            static constexpr float ATTENUATION = 0.816328f;
+
+            uint8_t red = (finalColor >> 16) & 0xFF;
+            uint8_t green = (finalColor >> 8) & 0xFF;
+            uint8_t blue = finalColor & 0xFF;
+
+            if (mask.emphRed) {
+                green *= ATTENUATION;
+                blue *= ATTENUATION;
+            }
+            if (mask.emphGreen) {
+                red *= ATTENUATION;
+                blue *= ATTENUATION;
+            }
+            if (mask.emphBlue) {
+                red *= ATTENUATION;
+                green *= ATTENUATION;
+            }
+
+            finalColor &= 0xFF000000;
+            finalColor |= (red << 16) | (green << 8) | blue;
+        }
+    }
+
     (*workingDisplay)[scanline][cycle - 1] = finalColor;
 }
 

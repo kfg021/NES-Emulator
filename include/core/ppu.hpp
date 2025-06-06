@@ -137,8 +137,6 @@ private:
         bool showSpritesLeft : 1;
         bool showBackground : 1;
         bool showSprites : 1;
-
-        // Unused for now
         bool emphRed : 1;
         bool emphGreen : 1;
         bool emphBlue : 1;
