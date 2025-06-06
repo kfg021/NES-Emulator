@@ -16,6 +16,7 @@ A Nintendo Entertainment System (NES) emulator implemented in C++ with a Qt6-bas
   - UxROM (Mapper 2)
   - CNROM (Mapper 3)
   - MMC3 (Mapper 4)
+  - AxROM (Mapper 7)
   - MMC2 (Mapper 9)
   - GxROM (Mapper 66)
 - Debug window for development and testing
