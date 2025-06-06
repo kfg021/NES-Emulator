@@ -4,7 +4,6 @@
 #include <array>
 #include <cstring>
 #include <mutex>
-#include <optional>
 #include <type_traits>
 
 template <typename T, size_t capacity, typename = typename std::enable_if<std::is_trivially_copyable<T>::value>::type>
