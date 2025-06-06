@@ -41,30 +41,6 @@ public:
         pushInternal(data);
     }
 
-    std::optional<T> front() const {
-        {
-            std::lock_guard<std::mutex> guard(mtx);
-            if (currentSize) {
-                return buffer[readPointer];
-            }
-        }
-
-        return std::nullopt;
-    }
-
-    std::optional<T> pop() {
-        {
-            std::lock_guard<std::mutex> guard(mtx);
-            if (currentSize) {
-                T data = std::move(buffer[readPointer]);
-                popInternal();
-                return data;
-            }
-        }
-
-        return std::nullopt;
-    }
-
     void erase() {
         std::lock_guard<std::mutex> guard(mtx);
         readPointer = 0;
