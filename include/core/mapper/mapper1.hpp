@@ -12,7 +12,7 @@ public:
     Mapper1(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr);
 
     void reset() override;
-    
+
     uint8_t mapPRGView(uint16_t cpuAddress) const override;
     void mapPRGWrite(uint16_t cpuAddress, uint8_t value) override;
 
@@ -20,8 +20,6 @@ public:
     void mapCHRWrite(uint16_t ppuAddress, uint8_t value) override;
 
     MirrorMode getMirrorMode() const override;
-
-    bool hasChrRam() const;
 
     // Serialization
     void serialize(Serializer& s) const override;
@@ -93,6 +91,8 @@ private:
         void setFromUInt8(uint8_t data);
     };
     PRGBank prgBank;
+
+    bool hasChrRam() const;
 };
 
 #endif // MAPPER1_HPP
