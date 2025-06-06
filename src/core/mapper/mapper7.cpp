@@ -18,6 +18,8 @@ uint8_t Mapper7::mapPRGView(uint16_t cpuAddress) const {
     else if (canAccessPrgRam(cpuAddress)) {
         return getPrgRam(cpuAddress);
     }
+
+    return 0;
 }
 
 void Mapper7::mapPRGWrite(uint16_t cpuAddress, uint8_t value) {
