@@ -140,10 +140,13 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 					updateAudioState();
 				}
 
-				localKeyInput.mostRecentSaveFilePath = QFileDialog::getSaveFileName(
+				QString file = QFileDialog::getSaveFileName(
 					this, "Create save state", QDir::homePath(), "(*.sstate)"
 				);
-				localKeyInput.saveCount++;
+				if (!file.isEmpty()) {
+					localKeyInput.mostRecentSaveFilePath = file;
+					localKeyInput.saveCount++;
+				}
 
 				if (!wasPaused) {
 					localKeyInput.paused = false;
@@ -166,10 +169,13 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 					updateAudioState();
 				}
 
-				localKeyInput.mostRecentSaveFilePath = QFileDialog::getOpenFileName(
+				QString file = QFileDialog::getOpenFileName(
 					this, "Load save state", QDir::homePath(), "(*.sstate)"
 				);
-				localKeyInput.loadCount++;
+				if (!file.isEmpty()) {
+					localKeyInput.mostRecentSaveFilePath = file;
+					localKeyInput.loadCount++;
+				}
 
 				if (!wasPaused) {
 					localKeyInput.paused = false;
@@ -306,7 +312,7 @@ void MainWindow::updateDebugWindowState() {
 	if (localKeyInput.debugWindowEnabled) {
 		setFixedSize(TOTAL_WIDTH, GAME_HEIGHT);
 	}
-	else {	
+	else {
 		setFixedSize(GAME_WIDTH, GAME_HEIGHT);
 	}
 }
