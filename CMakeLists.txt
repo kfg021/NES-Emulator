@@ -25,6 +25,7 @@ set(HEADERS
     include/core/mapper/mapper2.hpp
     include/core/mapper/mapper3.hpp
     include/core/mapper/mapper4.hpp
+    include/core/mapper/mapper7.hpp
     include/core/mapper/mapper9.hpp
     include/core/mapper/mapper66.hpp
     include/io/audioplayer.hpp
@@ -51,6 +52,7 @@ set(SOURCES
     src/core/mapper/mapper2.cpp
     src/core/mapper/mapper3.cpp
     src/core/mapper/mapper4.cpp
+    src/core/mapper/mapper7.cpp
     src/core/mapper/mapper9.cpp
     src/core/mapper/mapper66.cpp
     src/io/audioplayer.cpp

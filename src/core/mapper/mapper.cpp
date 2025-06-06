@@ -6,6 +6,7 @@
 #include "core/mapper/mapper2.hpp"
 #include "core/mapper/mapper3.hpp"
 #include "core/mapper/mapper4.hpp"
+#include "core/mapper/mapper7.hpp"
 #include "core/mapper/mapper9.hpp"
 #include "core/mapper/mapper66.hpp"
 
@@ -26,6 +27,7 @@ std::unique_ptr<Mapper> Mapper::createMapper(const Config& config, const std::ve
         case 2:     return std::make_unique<Mapper2>(config, prg, chr);
         case 3:     return std::make_unique<Mapper3>(config, prg, chr);
         case 4:     return std::make_unique<Mapper4>(config, prg, chr);
+        case 7:     return std::make_unique<Mapper7>(config, prg, chr);
         case 9:     return std::make_unique<Mapper9>(config, prg, chr);
         case 66:    return std::make_unique<Mapper66>(config, prg, chr);
         default:    return nullptr; // TODO: Add more mappers
