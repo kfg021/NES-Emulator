@@ -266,6 +266,7 @@ void MainWindow::updateAudioState() {
 	if (muted) {
 		if (audioSink && audioSink->state() != QAudio::SuspendedState && audioSink->state() != QAudio::StoppedState) {
 			audioSink->suspend();
+			audioSamples.erase();
 		}
 	}
 	else {

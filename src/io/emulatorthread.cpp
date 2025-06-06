@@ -106,47 +106,15 @@ void EmulatorThread::run() {
 
 		if (!isRunning.load()) break;
 
+		// Output game frame
 		if (bus.ppu->frameReadyFlag) {
 			const PPU::Display& display = *(bus.ppu->finishedDisplay);
 			QImage image(reinterpret_cast<const uint8_t*>(&display), 256, 240, QImage::Format_ARGB32_Premultiplied);
 			emit frameReadySignal(image.copy());
 			bus.ppu->frameReadyFlag = false;
-
-			size_t currentAudioQueueSize = audioSamples.size();
-
-			if (currentAudioQueueSize > AUDIO_QUEUE_UPPER_THRESHOLD_SAMPLES) {
-				// We have too much audio buffered, which means we are generating frames too quickly.
-				// Let audio catch up by adding a small delay to the next video frame target
-				int64_t excessAudioNs = ((currentAudioQueueSize - AUDIO_QUEUE_TARGET_FILL_SAMPLES) * static_cast<int64_t>(1e9)) / AUDIO_SAMPLE_RATE;
-				if (excessAudioNs > static_cast<int64_t>(1e6)) { // 1ms
-					// Delay next frame target by half of the excess
-					int64_t delayNs = excessAudioNs / 2;
-					nextFrameTargetNs += delayNs;
-				}
-			}
-			// TODO: Also handle audio underflow
-
-			int64_t currentTimeNs = framePacingTimer.nsecsElapsed();
-			int64_t sleepTimeNs = nextFrameTargetNs - currentTimeNs;
-
-			static constexpr int64_t MIN_SLEEP_TIME_NS = static_cast<int64_t>(1e6); // 1ms
-
-			if (sleepTimeNs > MIN_SLEEP_TIME_NS) {
-				QThread::usleep(sleepTimeNs / 1000LL);
-			}
-			else if (sleepTimeNs > 0) {
-				QThread::yieldCurrentThread();
-			}
-			else {
-				// We missed the deadline for this frame, so reset the frame deadline.
-				nextFrameTargetNs = currentTimeNs;
-
-				QThread::yieldCurrentThread();
-			}
-
-			nextFrameTargetNs += TARGET_FRAME_NS;
 		}
 
+		// Output debug window frame
 		if (localKeyInput.debugWindowEnabled) {
 			std::unique_ptr<PPU::PatternTables> patternTablesTemp = bus.ppu->getPatternTables(localKeyInput.backgroundPallete, localKeyInput.spritePallete);
 			std::shared_ptr<PPU::PatternTables> patternTables(std::move(patternTablesTemp));
@@ -167,6 +135,43 @@ void EmulatorThread::run() {
 
 			emit debugFrameReadySignal(state);
 		}
+
+		// Calculate extra sleep time needed due to audio overflow
+		// TODO: Also handle audio underflow
+		if (!localKeyInput.muted) {
+			size_t currentAudioQueueSize = audioSamples.size();
+			if (currentAudioQueueSize > AUDIO_QUEUE_UPPER_THRESHOLD_SAMPLES) {
+				// We have too much audio buffered, which means we are generating frames too quickly.
+				// Let audio catch up by adding a small delay to the next video frame target
+				int64_t excessAudioNs = ((currentAudioQueueSize - AUDIO_QUEUE_TARGET_FILL_SAMPLES) * static_cast<int64_t>(1e9)) / AUDIO_SAMPLE_RATE;
+				if (excessAudioNs > static_cast<int64_t>(1e6)) { // 1ms
+					// Delay next frame target by half of the excess
+					int64_t delayNs = excessAudioNs / 2;
+					nextFrameTargetNs += delayNs;
+				}
+			}
+		}
+
+		// Calculate total required sleep time
+		int64_t currentTimeNs = framePacingTimer.nsecsElapsed();
+		int64_t sleepTimeNs = nextFrameTargetNs - currentTimeNs;
+
+		static constexpr int64_t MIN_SLEEP_TIME_NS = static_cast<int64_t>(1e6); // 1ms
+
+		if (sleepTimeNs > MIN_SLEEP_TIME_NS) {
+			QThread::usleep(sleepTimeNs / 1000LL);
+		}
+		else if (sleepTimeNs > 0) {
+			QThread::yieldCurrentThread();
+		}
+		else {
+			// We missed the deadline for this frame, so reset the frame deadline.
+			nextFrameTargetNs = currentTimeNs;
+
+			QThread::yieldCurrentThread();
+		}
+
+		nextFrameTargetNs += TARGET_FRAME_NS;
 	}
 }
 
@@ -215,7 +220,7 @@ void EmulatorThread::runCycles() {
 
 	auto loopCondition = [&]() -> bool {
 		static constexpr int UPPER_LIMIT_CYCLES = EXPECTED_CPU_CYCLES_PER_FRAME * 2;
-		return isRunning.load() && !bus.ppu->frameReadyFlag && cycles < UPPER_LIMIT_CYCLES;
+		return !bus.ppu->frameReadyFlag && cycles < UPPER_LIMIT_CYCLES;
 	};
 
 	if (!localKeyInput.paused) {
