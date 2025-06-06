@@ -4,7 +4,6 @@
 #include <array>
 #include <cstring>
 #include <mutex>
-#include <optional>
 #include <type_traits>
 
 template <typename T, size_t capacity, typename = typename std::enable_if<std::is_trivially_copyable<T>::value>::type>
@@ -39,30 +38,6 @@ public:
         }
 
         pushInternal(data);
-    }
-
-    std::optional<T> front() const {
-        {
-            std::lock_guard<std::mutex> guard(mtx);
-            if (currentSize) {
-                return buffer[readPointer];
-            }
-        }
-
-        return std::nullopt;
-    }
-
-    std::optional<T> pop() {
-        {
-            std::lock_guard<std::mutex> guard(mtx);
-            if (currentSize) {
-                T data = std::move(buffer[readPointer]);
-                popInternal();
-                return data;
-            }
-        }
-
-        return std::nullopt;
     }
 
     void erase() {
