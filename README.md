@@ -136,6 +136,7 @@ This will open a file selector dialog to select a ROM file.
 - Only .nes files with iNES header format are supported
 - The emulator will verify the ROM header before loading
 - Supported mappers are listed in the Features section above
+- **This emulator primarily supports NTSC ROMs.** PAL ROMs will probably load if they use a supported mapper, but they will likely run at an incorrect speed (approximately 20% too fast) and have higher audio pitch due to the emulator's fixed NTSC timing.
 
 ### Save States
 - Save states use a proprietary .sstate format and can only be created using this emulator
