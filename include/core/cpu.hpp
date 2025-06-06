@@ -13,7 +13,7 @@ class Bus;
 class CPU {
 public:
     CPU(Bus& bus);
-    void initCPU();
+    void resetCPU();
 
     void executeCycle();
 

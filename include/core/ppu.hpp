@@ -11,7 +11,7 @@
 class PPU {
 public:
     PPU(Cartridge& cartridge);
-    void initPPU();
+    void resetPPU();
 
     enum class Register {
         PPUCTRL,

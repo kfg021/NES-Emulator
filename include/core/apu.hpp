@@ -13,7 +13,7 @@ class APU {
 public:
     APU(Bus& bus);
 
-    void initAPU();
+    void resetAPU();
 
     void write(uint16_t addr, uint8_t value);
 

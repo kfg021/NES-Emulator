@@ -3,10 +3,10 @@
 #include "core/bus.hpp"
 
 APU::APU(Bus& bus) : bus(bus) {
-    initAPU();
+    resetAPU();
 }
 
-void APU::initAPU() {
+void APU::resetAPU() {
     pulses[0] = {};
     pulses[1] = {};
     triangle = {};

@@ -11,10 +11,10 @@
 const std::array<CPU::Opcode, CPU::MAX_NUM_OPCODES> CPU::lookup = CPU::initLookup();
 
 CPU::CPU(Bus& bus) : bus(bus) {
-    initCPU();
+    resetCPU();
 }
 
-void CPU::initCPU() {
+void CPU::resetCPU() {
     // Init registers
     a = 0;
     x = 0;
@@ -691,7 +691,7 @@ void CPU::ASL(const AddressingMode::ReturnType& operand) {
         // If there is no address to write to, then we are in accumulator addressing mode
         shift = a << 1;
         a = static_cast<uint8_t>(shift);
-    };
+    }
 
     setFlag(Flag::CARRY, shift > 0xFF);
     setNZFlags(static_cast<uint8_t>(shift));
@@ -1101,10 +1101,7 @@ void CPU::LSR(const AddressingMode::ReturnType& operand) {
         setFlag(Flag::CARRY, a & 1);
         a >>= 1;
         setNZFlags(a);
-    };
-
-
-
+    }
 }
 
 // NOP

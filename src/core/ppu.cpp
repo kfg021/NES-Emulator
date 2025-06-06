@@ -14,10 +14,10 @@ PPU::PPU(Cartridge& cartridge) : cartridge(cartridge) {
     workingDisplay = std::make_unique<Display>();
     finishedDisplay = std::make_unique<Display>();
 
-    initPPU();
+    resetPPU();
 }
 
-void PPU::initPPU() {
+void PPU::resetPPU() {
     control = 0;
     mask = 0;
     status = 0;

@@ -14,7 +14,7 @@
 
 class Bus {
 public:
-    Bus() = default;
+    Bus();
 
     Cartridge::Status tryInitDevices(const std::string& filePath);
     void reset();
@@ -43,7 +43,7 @@ public:
     void deserialize(Deserializer& d);
 
 private:
-    void initBus();
+    void resetBus();
 
     // Memory ranges for devices
     static constexpr MemoryRange RAM_ADDRESSABLE_RANGE{ 0x0000, 0x1FFF };

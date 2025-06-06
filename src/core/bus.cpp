@@ -1,6 +1,10 @@
 #include "core/bus.hpp"
 
-void Bus::initBus() {
+Bus::Bus() {
+    resetBus();
+}
+
+void Bus::resetBus() {
     ram = {};
 
     controllers = {};
@@ -14,13 +18,13 @@ void Bus::initBus() {
 }
 
 void Bus::reset() {
-    initBus();
+    resetBus();
 
     cartridge->mapper->reset();
 
-    apu->initAPU();
-    cpu->initCPU();
-    ppu->initPPU();
+    apu->resetAPU();
+    cpu->resetCPU();
+    ppu->resetPPU();
 }
 
 Cartridge::Status Bus::tryInitDevices(const std::string& filePath) {
@@ -29,8 +33,6 @@ Cartridge::Status Bus::tryInitDevices(const std::string& filePath) {
     if (status.code != Cartridge::Code::SUCCESS) {
         return status;
     }
-
-    initBus();
 
     apu = std::make_unique<APU>(*this);
     cpu = std::make_unique<CPU>(*this);
