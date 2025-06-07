@@ -79,12 +79,41 @@ private:
     static constexpr uint16_t STACK_OFFSET = 0x100;
     static constexpr uint16_t MAX_NUM_OPCODES = 0x100;
 
+    // CPU flag struct (https://www.nesdev.org/wiki/Status_flags)
+    //     7  bit  0
+    // ---- ----
+    // NV1B DIZC
+    // |||| ||||
+    // |||| |||+- Carry
+    // |||| ||+-- Zero
+    // |||| |+--- Interrupt Disable
+    // |||| +---- Decimal
+    // |||+------ (No CPU effect; see: the B flag)
+    // ||+------- (No CPU effect; always pushed as 1)
+    // |+-------- Overflow
+    // +--------- Negative
+    struct StatusRegister {
+        bool carry : 1;
+        bool zero : 1;
+        bool interrupt : 1;
+        bool decimal : 1; // Unimplemented - not used on the NES
+        bool break_ : 1;
+        bool unused : 1;
+        bool overflow : 1;
+        bool negative : 1;
+
+        StatusRegister() = default;
+        StatusRegister(uint8_t data);
+        uint8_t toUInt8() const;
+        void setFromUInt8(uint8_t data);
+    };
+
     // CPU state variables
     uint16_t pc; // program counter
     uint8_t a; // accumulator
     uint8_t x; // x register
     uint8_t y; // y register
-    uint8_t sr; // status register
+    StatusRegister sr; // status register
     uint8_t sp; // stack pointer
 
     // Helper variables
@@ -97,23 +126,6 @@ private:
     // Initialization
     static std::array<Opcode, MAX_NUM_OPCODES> initLookup();
 
-    // Flags
-    enum class Flag {
-        CARRY,
-        ZERO,
-        INTERRUPT,
-        DECIMAL, // Unimplemented - not used on the NES
-        BREAK,
-        UNUSED,
-        OVERFLOW_, // Underscore to avoid naming conflict with a Windows library
-        NEGATIVE
-    };
-    
-    bool getFlag(Flag flag) const;
-    uint8_t getFlagMask(Flag flag) const;
-    void setFlag(Flag flag, bool value);
-    void setNZFlags(uint8_t x);
-
     // Reading/writing data
     uint16_t view16BitData(uint16_t address) const;
     uint16_t read16BitData(uint16_t address);
@@ -123,6 +135,10 @@ private:
     uint8_t pop8BitDataFromStack();
     void push16BitDataToStack(uint16_t data);
     uint16_t pop16BitDataFromStack();
+
+    // Flags
+    void setNZFlags(uint8_t x);
+    void pushFlagsToStack(bool breakFlagValue);
 
     // Addressing mode functions
     AddressingMode::ReturnType ACC();

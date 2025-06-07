@@ -21,7 +21,7 @@ void CPU::resetCPU() {
     y = 0;
     sp = 0;
     sr = 0;
-    setFlag(Flag::UNUSED, 1);
+    sr.unused = 1;
     shouldAdvancePC = false;
 
     reset();
@@ -73,7 +73,7 @@ void CPU::reset() {
     sp -= 3;
 
     // Set I flag
-    setFlag(Flag::INTERRUPT, 1);
+    sr.interrupt = 1;
 
     // Reset takes 7 cycles
     remainingCycles = 7;
@@ -86,11 +86,11 @@ void CPU::reset() {
 // In any way, the interrupt disable flag is set to inhibit any further IRQ as control is transferred to the interrupt handler specified by the respective interrupt vector.
 // The RTI instruction restores the status register from the stack and behaves otherwise like the JSR instruction. (The break flag is always ignored as the status is read from the stack, as it isn't a real processor flag anyway.)
 bool CPU::IRQ() {
-    if (!getFlag(Flag::INTERRUPT)) {
+    if (!sr.interrupt) {
         push16BitDataToStack(pc);
-        push8BitDataToStack(sr & ~getFlagMask(Flag::BREAK) | getFlagMask(Flag::UNUSED));
+        pushFlagsToStack(0);
 
-        setFlag(Flag::INTERRUPT, 1);
+        sr.interrupt = 1;
 
         pc = read16BitData(IRQ_BRK_VECTOR);
         shouldAdvancePC = false;
@@ -105,9 +105,9 @@ bool CPU::IRQ() {
 
 void CPU::NMI() {
     push16BitDataToStack(pc);
-    push8BitDataToStack(sr & ~getFlagMask(Flag::BREAK) | getFlagMask(Flag::UNUSED));
+    pushFlagsToStack(0);
 
-    setFlag(Flag::INTERRUPT, 1);
+    sr.interrupt = 1;
 
     pc = read16BitData(NMI_VECTOR);
     shouldAdvancePC = false;
@@ -129,7 +129,7 @@ uint8_t CPU::getY() const {
     return y;
 }
 uint8_t CPU::getSR() const {
-    return sr;
+    return sr.toUInt8();
 }
 uint8_t CPU::getSP() const {
     return sp;
@@ -431,27 +431,10 @@ uint8_t CPU::getDataView(const AddressingMode::ReturnType& operand) const {
     }
 }
 
-bool CPU::getFlag(Flag flag) const {
-    return (sr >> static_cast<int>(flag)) & 1;
-}
-
-uint8_t CPU::getFlagMask(Flag flag) const {
-    return (1 << static_cast<int>(flag));
-}
-
-void CPU::setFlag(Flag flag, bool value) {
-    if (value) {
-        sr |= (1 << static_cast<int>(flag));
-    }
-    else {
-        sr &= ~(1 << static_cast<int>(flag));
-    }
-}
-
 // The N and Z flags are often set alongside each other during instructions
 void CPU::setNZFlags(uint8_t x) {
-    setFlag(Flag::NEGATIVE, (x >> 7) & 1);
-    setFlag(Flag::ZERO, x == 0);
+    sr.negative = (x >> 7) & 1;
+    sr.zero = x == 0;
 }
 
 uint16_t CPU::view16BitData(uint16_t address) const {
@@ -505,6 +488,13 @@ uint16_t CPU::pop16BitDataFromStack() {
 
     uint16_t data = (hi << 8) | lo;
     return data;
+}
+
+void CPU::pushFlagsToStack(bool breakFlagValue) {
+    StatusRegister srTemp = sr;
+    srTemp.break_ = breakFlagValue;
+    srTemp.unused = 1;
+    push8BitDataToStack(srTemp.toUInt8());
 }
 
 // Helper function for addressing modes
@@ -651,12 +641,12 @@ CPU::AddressingMode::ReturnType CPU::ZPY() {
 //  +	+	+	-	-	+
 void CPU::ADC(const AddressingMode::ReturnType& operand) {
     uint8_t data = getDataRead(operand);
-    uint16_t fullSum = a + data + getFlag(Flag::CARRY);
+    uint16_t fullSum = a + data + sr.carry;
 
-    setFlag(Flag::CARRY, fullSum > 0xFF);
+    sr.carry = fullSum > 0xFF;
 
     // Set the overflow flag only when the two addends have the same sign, and result has a different sign
-    setFlag(Flag::OVERFLOW_, ~(a ^ data) & (a ^ static_cast<uint8_t>(fullSum)) & 0x80);
+    sr.overflow = ~(a ^ data) & (a ^ static_cast<uint8_t>(fullSum)) & 0x80;
 
     setNZFlags(static_cast<uint8_t>(fullSum));
 
@@ -695,7 +685,7 @@ void CPU::ASL(const AddressingMode::ReturnType& operand) {
         a = static_cast<uint8_t>(shift);
     }
 
-    setFlag(Flag::CARRY, shift > 0xFF);
+    sr.carry = shift > 0xFF;
     setNZFlags(static_cast<uint8_t>(shift));
 }
 
@@ -705,7 +695,7 @@ void CPU::ASL(const AddressingMode::ReturnType& operand) {
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	-
 void CPU::BCC(const AddressingMode::ReturnType& operand) {
-    if (!getFlag(Flag::CARRY)) {
+    if (!sr.carry) {
         pc = getAddress(operand);
         shouldAdvancePC = false;
         remainingCycles++;
@@ -722,7 +712,7 @@ void CPU::BCC(const AddressingMode::ReturnType& operand) {
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	-
 void CPU::BCS(const AddressingMode::ReturnType& operand) {
-    if (getFlag(Flag::CARRY)) {
+    if (sr.carry) {
         pc = getAddress(operand);
         shouldAdvancePC = false;
         remainingCycles++;
@@ -739,7 +729,7 @@ void CPU::BCS(const AddressingMode::ReturnType& operand) {
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	-
 void CPU::BEQ(const AddressingMode::ReturnType& operand) {
-    if (getFlag(Flag::ZERO)) {
+    if (sr.zero) {
         pc = getAddress(operand);
         shouldAdvancePC = false;
         remainingCycles++;
@@ -763,9 +753,9 @@ void CPU::BEQ(const AddressingMode::ReturnType& operand) {
 void CPU::BIT(const AddressingMode::ReturnType& operand) {
     uint8_t data = getDataRead(operand);
 
-    setFlag(Flag::ZERO, (a & data) == 0);
-    setFlag(Flag::NEGATIVE, (data >> 7) & 1);
-    setFlag(Flag::OVERFLOW_, (data >> 6) & 1);
+    sr.zero = (a & data) == 0;
+    sr.negative = (data >> 7) & 1;
+    sr.overflow = (data >> 6) & 1;
 }
 
 // BMI
@@ -774,7 +764,7 @@ void CPU::BIT(const AddressingMode::ReturnType& operand) {
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	-
 void CPU::BMI(const AddressingMode::ReturnType& operand) {
-    if (getFlag(Flag::NEGATIVE)) {
+    if (sr.negative) {
         pc = getAddress(operand);
         shouldAdvancePC = false;
         remainingCycles++;
@@ -791,7 +781,7 @@ void CPU::BMI(const AddressingMode::ReturnType& operand) {
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	-
 void CPU::BNE(const AddressingMode::ReturnType& operand) {
-    if (!getFlag(Flag::ZERO)) {
+    if (!sr.zero) {
         pc = getAddress(operand);
         shouldAdvancePC = false;
         remainingCycles++;
@@ -808,7 +798,7 @@ void CPU::BNE(const AddressingMode::ReturnType& operand) {
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	-
 void CPU::BPL(const AddressingMode::ReturnType& operand) {
-    if (!getFlag(Flag::NEGATIVE)) {
+    if (!sr.negative) {
         pc = getAddress(operand);
         shouldAdvancePC = false;
         remainingCycles++;
@@ -835,9 +825,9 @@ void CPU::BPL(const AddressingMode::ReturnType& operand) {
 //  -	-	-	1	-	-
 void CPU::BRK(const AddressingMode::ReturnType& /*operand*/) {
     push16BitDataToStack(pc + 2);
-    push8BitDataToStack(sr | getFlagMask(Flag::BREAK) | getFlagMask(Flag::UNUSED));
-
-    setFlag(Flag::INTERRUPT, 1);
+    pushFlagsToStack(1);
+    
+    sr.interrupt = 1;
 
     pc = read16BitData(IRQ_BRK_VECTOR);
     shouldAdvancePC = false;
@@ -849,7 +839,7 @@ void CPU::BRK(const AddressingMode::ReturnType& /*operand*/) {
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	-
 void CPU::BVC(const AddressingMode::ReturnType& operand) {
-    if (!getFlag(Flag::OVERFLOW_)) {
+    if (!sr.overflow) {
         pc = getAddress(operand);
         shouldAdvancePC = false;
         remainingCycles++;
@@ -866,7 +856,7 @@ void CPU::BVC(const AddressingMode::ReturnType& operand) {
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	-
 void CPU::BVS(const AddressingMode::ReturnType& operand) {
-    if (getFlag(Flag::OVERFLOW_)) {
+    if (sr.overflow) {
         pc = getAddress(operand);
         shouldAdvancePC = false;
         remainingCycles++;
@@ -883,7 +873,7 @@ void CPU::BVS(const AddressingMode::ReturnType& operand) {
 //  N	Z	C	I	D	V
 //  -	-	0	-	-	-
 void CPU::CLC(const AddressingMode::ReturnType& /*operand*/) {
-    setFlag(Flag::CARRY, 0);
+    sr.carry = 0;
 }
 
 // CLD
@@ -892,7 +882,7 @@ void CPU::CLC(const AddressingMode::ReturnType& /*operand*/) {
 //  N	Z	C	I	D	V
 //  -	-	-	-	0	-
 void CPU::CLD(const AddressingMode::ReturnType& /*operand*/) {
-    setFlag(Flag::DECIMAL, 0);
+    sr.decimal = 0;
 }
 
 // CLI
@@ -901,7 +891,7 @@ void CPU::CLD(const AddressingMode::ReturnType& /*operand*/) {
 //  N	Z	C	I	D	V
 //  -	-	-	0	-	-
 void CPU::CLI(const AddressingMode::ReturnType& /*operand*/) {
-    setFlag(Flag::INTERRUPT, 0);
+    sr.interrupt = 0;
 }
 
 // CLV
@@ -910,7 +900,7 @@ void CPU::CLI(const AddressingMode::ReturnType& /*operand*/) {
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	0
 void CPU::CLV(const AddressingMode::ReturnType& /*operand*/) {
-    setFlag(Flag::OVERFLOW_, 0);
+    sr.overflow = 0;
 }
 
 // Compare Memory with Accumulator
@@ -920,7 +910,7 @@ void CPU::CLV(const AddressingMode::ReturnType& /*operand*/) {
 void CPU::CMP(const AddressingMode::ReturnType& operand) {
     uint8_t data = getDataRead(operand);
     uint16_t cmp = a - data;
-    setFlag(Flag::CARRY, a >= data);
+    sr.carry = a >= data;
     setNZFlags(cmp);
 }
 
@@ -932,7 +922,7 @@ void CPU::CMP(const AddressingMode::ReturnType& operand) {
 void CPU::CPX(const AddressingMode::ReturnType& operand) {
     uint8_t data = getDataRead(operand);
     uint16_t cmp = x - data;
-    setFlag(Flag::CARRY, x >= data);
+    sr.carry = x >= data;
     setNZFlags(cmp);
 }
 
@@ -944,7 +934,7 @@ void CPU::CPX(const AddressingMode::ReturnType& operand) {
 void CPU::CPY(const AddressingMode::ReturnType& operand) {
     uint8_t data = getDataRead(operand);
     uint16_t cmp = y - data;
-    setFlag(Flag::CARRY, y >= data);
+    sr.carry = y >= data;
     setNZFlags(cmp);
 }
 
@@ -1091,7 +1081,7 @@ void CPU::LSR(const AddressingMode::ReturnType& operand) {
         uint16_t addr = getAddress(operand);
         uint8_t data = getDataRead(operand);
 
-        setFlag(Flag::CARRY, data & 1);
+        sr.carry = data & 1;
 
         data >>= 1;
         bus.write(addr, data);
@@ -1100,7 +1090,7 @@ void CPU::LSR(const AddressingMode::ReturnType& operand) {
     }
     else {
         // If there is no address to write to, then we are in accumulator addressing mode
-        setFlag(Flag::CARRY, a & 1);
+        sr.carry = a & 1;
         a >>= 1;
         setNZFlags(a);
     }
@@ -1142,7 +1132,7 @@ void CPU::PHA(const AddressingMode::ReturnType& /*operand*/) {
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	-
 void CPU::PHP(const AddressingMode::ReturnType& /*operand*/) {
-    push8BitDataToStack(sr & ~getFlagMask(Flag::BREAK) | getFlagMask(Flag::UNUSED));
+    pushFlagsToStack(0);
 }
 
 // PLA
@@ -1164,8 +1154,8 @@ void CPU::PLA(const AddressingMode::ReturnType& /*operand*/) {
 //  from stack
 void CPU::PLP(const AddressingMode::ReturnType& /*operand*/) {
     sr = pop8BitDataFromStack();
-    setFlag(Flag::BREAK, 0);
-    setFlag(Flag::UNUSED, 1);
+    sr.break_ = 0;
+    sr.unused = 1;
 }
 
 // ROL
@@ -1179,16 +1169,16 @@ void CPU::ROL(const AddressingMode::ReturnType& operand) {
         uint16_t addr = getAddress(operand);
         uint8_t data = getDataRead(operand);
 
-        shift = (data << 1) | static_cast<uint8_t>(getFlag(Flag::CARRY));
+        shift = (data << 1) | static_cast<uint8_t>(sr.carry);
         bus.write(addr, static_cast<uint8_t>(shift));
     }
     else {
         // If there is no address to write to, then we are in accumulator addressing mode
-        shift = (a << 1) | static_cast<uint8_t>(getFlag(Flag::CARRY));
+        shift = (a << 1) | static_cast<uint8_t>(sr.carry);
         a = static_cast<uint8_t>(shift);
     }
 
-    setFlag(Flag::CARRY, shift > 0xFF);
+    sr.carry = shift > 0xFF;
     setNZFlags(static_cast<uint8_t>(shift));
 }
 
@@ -1204,14 +1194,14 @@ void CPU::ROR(const AddressingMode::ReturnType& operand) {
         uint16_t addr = getAddress(operand);
         uint8_t data = getDataRead(operand);
 
-        shift = (getFlag(Flag::CARRY) << 7) | (data >> 1);
-        setFlag(Flag::CARRY, data & 1);
+        shift = (sr.carry << 7) | (data >> 1);
+        sr.carry = data & 1;
         bus.write(addr, shift);
     }
     else {
         // If there is no address to write to, then we are in accumulator addressing mode
-        shift = (getFlag(Flag::CARRY) << 7) | (a >> 1);
-        setFlag(Flag::CARRY, a & 1);
+        shift = (sr.carry << 7) | (a >> 1);
+        sr.carry = a & 1;
 
         a = shift;
     }
@@ -1228,8 +1218,8 @@ void CPU::ROR(const AddressingMode::ReturnType& operand) {
 //  from stack
 void CPU::RTI(const AddressingMode::ReturnType& /*operand*/) {
     sr = pop8BitDataFromStack();
-    setFlag(Flag::BREAK, 0);
-    setFlag(Flag::UNUSED, 1);
+    sr.break_ = 0;
+    sr.unused = 1;
     pc = pop16BitDataFromStack();
     shouldAdvancePC = false;
 }
@@ -1252,12 +1242,12 @@ void CPU::RTS(const AddressingMode::ReturnType& /*operand*/) {
 void CPU::SBC(const AddressingMode::ReturnType& operand) {
     // SBC becomes equivalent to ADC after we flip the bits of data
     uint8_t data = getDataRead(operand) ^ 0xFF;
-    uint16_t fullSum = a + data + getFlag(Flag::CARRY);
+    uint16_t fullSum = a + data + sr.carry;
 
-    setFlag(Flag::CARRY, fullSum > 0xFF);
+    sr.carry = fullSum > 0xFF;
 
     // Set the overflow flag only when the two addends have the same sign, and result has a different sign
-    setFlag(Flag::OVERFLOW_, ~(a ^ data) & (a ^ static_cast<uint8_t>(fullSum)) & 0x80);
+    sr.overflow = ~(a ^ data) & (a ^ static_cast<uint8_t>(fullSum)) & 0x80;
 
     setNZFlags(static_cast<uint8_t>(fullSum));
 
@@ -1270,7 +1260,7 @@ void CPU::SBC(const AddressingMode::ReturnType& operand) {
 // N	Z	C	I	D	V
 // -	-	1	-	-	-
 void CPU::SEC(const AddressingMode::ReturnType& /*operand*/) {
-    setFlag(Flag::CARRY, 1);
+    sr.carry = 1;
 }
 
 // SED
@@ -1279,7 +1269,7 @@ void CPU::SEC(const AddressingMode::ReturnType& /*operand*/) {
 // N	Z	C	I	D	V
 // -	-	-	-	1	-
 void CPU::SED(const AddressingMode::ReturnType& /*operand*/) {
-    setFlag(Flag::DECIMAL, 1);
+    sr.decimal = 1;
 }
 
 // SEI
@@ -1288,7 +1278,7 @@ void CPU::SED(const AddressingMode::ReturnType& /*operand*/) {
 // N	Z	C	I	D	V
 // -	-	-	1	-	-
 void CPU::SEI(const AddressingMode::ReturnType& /*operand*/) {
-    setFlag(Flag::INTERRUPT, 1);
+    sr.interrupt = 1;
 }
 
 // STA
@@ -1386,6 +1376,34 @@ void CPU::UNI(const AddressingMode::ReturnType& /*operand*/) {
     // TODO: Handle illegal opcodes
 }
 
+CPU::StatusRegister::StatusRegister(uint8_t data) {
+    setFromUInt8(data);
+}
+
+uint8_t CPU::StatusRegister::toUInt8() const {
+    uint8_t data =
+        carry |
+        (zero << 1) |
+        (interrupt << 2) |
+        (decimal << 3) |
+        (break_ << 4) |
+        (unused << 5) |
+        (overflow << 6) |
+        (negative << 7);
+    return data;
+}
+
+void CPU::StatusRegister::setFromUInt8(uint8_t data) {
+    carry = data & 0x1;
+    zero = (data >> 1) & 0x1;
+    interrupt = (data >> 2) & 0x1;
+    decimal = (data >> 3) & 0x1;
+    break_ = (data >> 4) & 0x1;
+    unused = (data >> 5) & 0x1;
+    overflow = (data >> 6) & 0x1;
+    negative = (data >> 7) & 0x1;
+}
+
 // Addressing mode string function definitions
 std::string CPU::strACC(uint16_t /*address*/) const {
     return "A";
@@ -1445,7 +1463,7 @@ void CPU::serialize(Serializer& s) const {
     s.serializeUInt8(a);
     s.serializeUInt8(x);
     s.serializeUInt8(y);
-    s.serializeUInt8(sr);
+    s.serializeUInt8(sr.toUInt8());
     s.serializeUInt8(sp);
     s.serializeUInt8(remainingCycles);
     s.serializeBool(shouldAdvancePC);
@@ -1456,7 +1474,11 @@ void CPU::deserialize(Deserializer& d) {
     d.deserializeUInt8(a);
     d.deserializeUInt8(x);
     d.deserializeUInt8(y);
-    d.deserializeUInt8(sr);
+
+    uint8_t srTemp;
+    d.deserializeUInt8(srTemp);
+    sr.setFromUInt8(srTemp);
+
     d.deserializeUInt8(sp);
     d.deserializeUInt8(remainingCycles);
     d.deserializeBool(shouldAdvancePC);
