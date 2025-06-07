@@ -1132,7 +1132,7 @@ void CPU::PHA(const AddressingMode::ReturnType& /*operand*/) {
 //  N	Z	C	I	D	V
 //  -	-	-	-	-	-
 void CPU::PHP(const AddressingMode::ReturnType& /*operand*/) {
-    pushFlagsToStack(0);
+    pushFlagsToStack(1);
 }
 
 // PLA
