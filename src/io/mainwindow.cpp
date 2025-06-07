@@ -25,7 +25,6 @@ MainWindow::MainWindow(QWidget* parent, const std::string& romFilePath, const st
 	setWindowTitle("NES Emulator");
 
 	localKeyInput = {};
-	localKeyInput.debugWindowEnabled = true;
 	updateDebugWindowState();
 
 	if (saveFilePathOption.has_value()) {
