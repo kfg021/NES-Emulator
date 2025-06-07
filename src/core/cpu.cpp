@@ -134,12 +134,6 @@ uint8_t CPU::getSR() const {
 uint8_t CPU::getSP() const {
     return sp;
 }
-bool CPU::getFlag(Flag flag) const {
-    return (sr >> static_cast<int>(flag)) & 1;
-}
-uint8_t CPU::getFlagMask(Flag flag) const {
-    return (1 << static_cast<int>(flag));
-}
 uint8_t CPU::getRemainingCycles() const {
     return remainingCycles;
 }
@@ -435,6 +429,14 @@ uint8_t CPU::getDataView(const AddressingMode::ReturnType& operand) const {
         uint16_t address = std::get<uint16_t>(operand.addressingModeOutput);
         return bus.view(address);
     }
+}
+
+bool CPU::getFlag(Flag flag) const {
+    return (sr >> static_cast<int>(flag)) & 1;
+}
+
+uint8_t CPU::getFlagMask(Flag flag) const {
+    return (1 << static_cast<int>(flag));
 }
 
 void CPU::setFlag(Flag flag, bool value) {

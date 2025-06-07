@@ -23,16 +23,6 @@ public:
     void NMI();
 
     // Data structures
-    enum class Flag {
-        CARRY,
-        ZERO,
-        INTERRUPT,
-        DECIMAL, // Unimplemented - not used on the NES
-        BREAK,
-        UNUSED,
-        OVERFLOW_, // Underscore to avoid naming conflict with a Windows library
-        NEGATIVE
-    };
     struct AddressingMode {
         struct ReturnType {
             // This is the variable that will be populated after we determine the instruction's addressing mode.
@@ -71,8 +61,6 @@ public:
     uint8_t getY() const;
     uint8_t getSP() const;
     uint8_t getSR() const;
-    bool getFlag(Flag flag) const;
-    uint8_t getFlagMask(Flag flag) const;
     uint8_t getRemainingCycles() const;
 
     // Debugging
@@ -110,6 +98,19 @@ private:
     static std::array<Opcode, MAX_NUM_OPCODES> initLookup();
 
     // Flags
+    enum class Flag {
+        CARRY,
+        ZERO,
+        INTERRUPT,
+        DECIMAL, // Unimplemented - not used on the NES
+        BREAK,
+        UNUSED,
+        OVERFLOW_, // Underscore to avoid naming conflict with a Windows library
+        NEGATIVE
+    };
+    
+    bool getFlag(Flag flag) const;
+    uint8_t getFlagMask(Flag flag) const;
     void setFlag(Flag flag, bool value);
     void setNZFlags(uint8_t x);
 
