@@ -312,6 +312,9 @@ private:
 
     bool nmiRequest;
     bool irqRequest;
+
+    static constexpr uint8_t NMI_DELAY_TIME = 15;
+    uint8_t nmiDelayCounter;
 };
 
 #endif // PPU_HPP

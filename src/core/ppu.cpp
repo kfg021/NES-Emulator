@@ -60,6 +60,8 @@ void PPU::resetPPU() {
 
     nmiRequest = false;
     irqRequest = false;
+
+    nmiDelayCounter = 0;
 }
 
 bool PPU::nmiRequested() const {
@@ -138,7 +140,7 @@ void PPU::write(uint8_t ppuRegister, uint8_t value) {
         // From (https://www.nesdev.org/wiki/PPU_registers#PPUCTRL): 
         // If the PPU is currently in vertical blank, and the PPUSTATUS ($2002) vblank flag is still set (1), changing the NMI flag in bit 7 of $2000 from 0 to 1 will immediately generate an NMI. 
         if (status.vBlankStarted && !oldNmiFlag && newNmiFlag) {
-            nmiRequest = true;
+            nmiDelayCounter = NMI_DELAY_TIME;
         }
 
         temporaryVramAddress.nametableX = control.nametableX;
@@ -353,6 +355,13 @@ std::unique_ptr<PPU::PatternTables> PPU::getPatternTables(uint8_t backgroundPall
 }
 
 void PPU::executeCycle() {
+    if (nmiDelayCounter > 0) {
+        nmiDelayCounter--;
+        if (nmiDelayCounter == 0) {
+            nmiRequest = true;
+        }
+    }
+
     if (scanline == -1) {
         preRenderScanline();
     }
@@ -424,7 +433,7 @@ void PPU::verticalBlankScanlines() {
     if (scanline == 241 && cycle == 1) {
         status.vBlankStarted = 1;
         if (control.nmiEnabled) {
-            nmiRequest = true;
+            nmiDelayCounter = NMI_DELAY_TIME;
         }
     }
 }
