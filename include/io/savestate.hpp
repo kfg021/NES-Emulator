@@ -63,7 +63,7 @@ private:
     static constexpr uint32_t FORMAT_ID = 0xABCD1234;
 
     static constexpr uint8_t VERSION_MAJOR = 1;
-    static constexpr uint8_t VERSION_MINOR = 0;
+    static constexpr uint8_t VERSION_MINOR = 1;
     static constexpr uint8_t VERSION_PATCH = 0;
 
     static constexpr int HASH_BYTES = 32;

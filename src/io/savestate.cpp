@@ -58,6 +58,8 @@ SaveState::CreateStatus SaveState::createSaveState(const QString& saveFilePath) 
         s.serializeUInt8(VERSION_PATCH);
         s.serializeArray(ROM_HASH.value(), s.uInt8Func);
 
+        s.version = { VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH };
+
         bus.serialize(s);
         bus.cpu->serialize(s);
         bus.ppu->serialize(s);
@@ -114,16 +116,13 @@ SaveState::LoadStatus SaveState::loadSaveState(const QString& filePath) {
             };
         }
 
-        // TODO: More specific version checking
         d.deserializeUInt8(header.versionMajor);
         d.deserializeUInt8(header.versionMinor);
         d.deserializeUInt8(header.versionPatch);
-        if (header.versionMajor != VERSION_MAJOR ||
-            header.versionMinor != VERSION_MINOR ||
-            header.versionPatch != VERSION_PATCH) {
+        if (header.versionMajor != VERSION_MAJOR) {
             return {
                 LoadStatus::Code::INVALID_VERSION,
-                ERROR_MESSAGE_START + "Save state version does not match current version."
+                ERROR_MESSAGE_START + "Save state major version does not match current major version."
             };
         }
 
@@ -134,6 +133,8 @@ SaveState::LoadStatus SaveState::loadSaveState(const QString& filePath) {
                 ERROR_MESSAGE_START + "ROM hash from save state does not match current ROM hash."
             };
         }
+
+        d.version = { header.versionMajor, header.versionMinor, header.versionPatch };
 
         bus.deserialize(d);
         bus.cpu->deserialize(d);

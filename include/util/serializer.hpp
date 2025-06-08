@@ -6,9 +6,18 @@
 #include <functional>
 #include <vector>
 
+struct Version {
+    uint8_t major;
+    uint8_t minor;
+    uint8_t patch;
+};
+
 class Serializer {
 public:
+    Serializer() { version = {}; }
     virtual ~Serializer() = default;
+
+    Version version;
 
     virtual void serializeUInt8(uint8_t data) = 0;
     virtual void serializeUInt16(uint16_t data) = 0;
@@ -44,7 +53,10 @@ public:
 
 class Deserializer {
 public:
+    Deserializer() { version = {}; }
     virtual ~Deserializer() = default;
+
+    Version version;
 
     virtual void deserializeUInt8(uint8_t& data) = 0;
     virtual void deserializeUInt16(uint16_t& data) = 0;

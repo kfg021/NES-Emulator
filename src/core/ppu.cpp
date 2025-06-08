@@ -990,6 +990,18 @@ void PPU::serialize(Serializer& s) const {
     s.serializeBool(nmiRequest);
     s.serializeBool(irqRequest);
     s.serializeArray(oamBuffer, s.uInt8Func);
+
+    if (s.version.minor >= 1) {
+        std::function<void(const SpriteData&)> spriteDataFunc = [&](const SpriteData& spriteData) -> void {
+            s.serializeUInt32(spriteData.oam.toUInt32());
+            s.serializeUInt8(spriteData.patternTableLo);
+            s.serializeUInt8(spriteData.patternTableHi);
+        };
+
+        s.serializeVector(currentScanlineSprites, spriteDataFunc);
+        s.serializeBool(sprite0OnCurrentScanline);
+        s.serializeUInt8(nmiDelayCounter);
+    }
 }
 
 void PPU::deserialize(Deserializer& d) {
@@ -1035,4 +1047,24 @@ void PPU::deserialize(Deserializer& d) {
     d.deserializeBool(nmiRequest);
     d.deserializeBool(irqRequest);
     d.deserializeArray(oamBuffer, d.uInt8Func);
+
+    if (d.version.minor >= 1) {
+        std::function<void(SpriteData&)> spriteDataFunc = [&](SpriteData& spriteData) -> void {
+            uint32_t oamTemp;
+            d.deserializeUInt32(oamTemp);
+            spriteData.oam.setFromUInt32(oamTemp);
+
+            d.deserializeUInt8(spriteData.patternTableLo);
+            d.deserializeUInt8(spriteData.patternTableHi);
+        };
+
+        d.deserializeVector(currentScanlineSprites, spriteDataFunc);
+        d.deserializeBool(sprite0OnCurrentScanline);
+        d.deserializeUInt8(nmiDelayCounter);
+    }
+    else {
+        currentScanlineSprites.clear();
+        sprite0OnCurrentScanline = false;
+        nmiDelayCounter = 0;
+    }
 }
