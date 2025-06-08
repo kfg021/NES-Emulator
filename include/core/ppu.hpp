@@ -313,7 +313,7 @@ private:
     bool nmiRequest;
     bool irqRequest;
 
-    static constexpr uint8_t NMI_DELAY_TIME = 15;
+    static constexpr uint8_t NMI_DELAY_TIME = 3;
     uint8_t nmiDelayCounter;
 };
 
