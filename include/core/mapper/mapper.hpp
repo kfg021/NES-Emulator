@@ -63,8 +63,12 @@ private:
     template<uint16_t rangeStart, uint16_t rangeEnd>
     struct Ram8KB {
         Ram8KB(bool enable) : isEnabled(enable) {
-            if (enable) {
-                data.resize(8 * KB);
+            reset();
+        }
+
+        void reset() {
+            if (isEnabled) {
+                data.assign(8 * KB, 0);
             }
         }
 

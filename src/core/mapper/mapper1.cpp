@@ -20,6 +20,10 @@ void Mapper1::reset() {
     chrBank0 = 0;
     chrBank1 = 0;
     prgBank = 0;
+
+    if (!config.hasBatteryBackedPrgRam) {
+        prgRam.reset();
+    }
 }
 
 uint8_t Mapper1::mapPRGView(uint16_t cpuAddress) const {

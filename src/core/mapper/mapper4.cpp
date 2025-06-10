@@ -24,6 +24,10 @@ void Mapper4::reset() {
     if (config.alternativeNametableLayout) {
         customNametable.assign(4 * KB, 0);
     }
+
+    if (!config.hasBatteryBackedPrgRam) {
+        prgRam.reset();
+    }
 }
 
 void Mapper4::clockIRQTimer() {
