@@ -25,6 +25,8 @@ private:
     static constexpr MemoryRange BANK_SELECT_RANGE = PRG_RANGE;
     uint8_t currentPRGBank;
     uint8_t currentCHRBank;
+
+    PrgRam prgRam;
 };
 
 #endif // MAPPER66_HPP

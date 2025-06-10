@@ -92,7 +92,8 @@ private:
     };
     PRGBank prgBank;
 
-    bool hasChrRam() const;
+    PrgRam prgRam;
+    ChrRam chrRam;
 };
 
 #endif // MAPPER1_HPP

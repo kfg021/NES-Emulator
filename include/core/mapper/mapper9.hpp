@@ -52,6 +52,8 @@ private:
     std::array<uint8_t, 2> chrBank2Select;
 
     bool mirroring;
+
+    PrgRam prgRam;
 };
 
 #endif // MAPPER9_HPP

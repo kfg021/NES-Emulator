@@ -115,17 +115,11 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath) {
         return { Code::MISSING_PRG, "Program data missing or incomplete." };
     }
 
-    // For iNES 1.0 we assume that a value of 0 for char rom chunks means we have 1 chunk of CHR RAM.
+    // For iNES 1.0 we assume that a value of 0 for char rom chunks means we have 1 chunk of CHR RAM (handled within mapper).
     // In iNES 2.0 the size is specified
     // TODO: Add iNES 2.0 support
-    std::vector<uint8_t> chr;
-    if (header.chrChunks == 0) {
-        chr = std::vector<uint8_t>(1 * Mapper::CHR_ROM_CHUNK_SIZE, 0);
-    }
-    else {
-        chr = std::vector<uint8_t>(header.chrChunks * Mapper::CHR_ROM_CHUNK_SIZE);
-        file.read(reinterpret_cast<char*>(chr.data()), chr.size() * sizeof(uint8_t));
-    }
+    std::vector<uint8_t> chr(header.chrChunks * Mapper::CHR_ROM_CHUNK_SIZE);
+    file.read(reinterpret_cast<char*>(chr.data()), chr.size() * sizeof(uint8_t));
     if (!file) {
         return { Code::MISSING_CHR, "Character data missing or incomplete." };
     }

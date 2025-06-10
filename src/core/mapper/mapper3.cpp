@@ -2,8 +2,9 @@
 
 #include "core/cartridge.hpp"
 
-Mapper3::Mapper3(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr)
-    : Mapper(config, prg, chr) {
+Mapper3::Mapper3(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr) :
+    Mapper(config, prg, chr),
+    prgRam(config.hasBatteryBackedPrgRam) {
 
     reset();
 }
@@ -20,20 +21,21 @@ uint8_t Mapper3::mapPRGView(uint16_t cpuAddress) const {
         else if (config.prgChunks == 2) {
             return prg[cpuAddress & MASK<32 * KB>()];
         }
+        else {
+            return 0;
+        }
     }
-    else if (canAccessPrgRam(cpuAddress)) {
-        return getPrgRam(cpuAddress);
+    else {
+        return prgRam.tryRead(cpuAddress).value_or(0);
     }
-
-    return 0;
 }
 
 void Mapper3::mapPRGWrite(uint16_t cpuAddress, uint8_t value) {
     if (BANK_SELECT_RANGE.contains(cpuAddress)) {
         currentBank = value;
     }
-    else if (canAccessPrgRam(cpuAddress)) {
-        setPrgRam(cpuAddress, value);
+    else {
+        prgRam.tryWrite(cpuAddress, value);
     }
 }
 
@@ -51,10 +53,10 @@ void Mapper3::mapCHRWrite(uint16_t /*ppuAddress*/, uint8_t /*value*/) {
 
 void Mapper3::serialize(Serializer& s) const {
     s.serializeUInt8(currentBank);
-    s.serializeVector(prgRam, s.uInt8Func);
+    s.serializeVector(prgRam.data, s.uInt8Func);
 }
 
 void Mapper3::deserialize(Deserializer& d) {
     d.deserializeUInt8(currentBank);
-    d.deserializeVector(prgRam, d.uInt8Func);
+    d.deserializeVector(prgRam.data, d.uInt8Func);
 }

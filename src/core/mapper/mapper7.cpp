@@ -1,7 +1,10 @@
 #include "core/mapper/mapper7.hpp"
 
-Mapper7::Mapper7(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr)
-    : Mapper(config, prg, chr) {
+Mapper7::Mapper7(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr) :
+    Mapper(config, prg, chr),
+    prgRam(config.hasBatteryBackedPrgRam),
+    chrRam(config.chrChunks == 0) {
+
     reset();
 }
 
@@ -15,39 +18,26 @@ uint8_t Mapper7::mapPRGView(uint16_t cpuAddress) const {
         uint32_t mappedAddress = (PRG_ROM_CHUNK_SIZE << 1) * currentBank + (cpuAddress & MASK<32 * KB>());
         return prg[mappedAddress];
     }
-    else if (canAccessPrgRam(cpuAddress)) {
-        return getPrgRam(cpuAddress);
+    else {
+        return prgRam.tryRead(cpuAddress).value_or(0);
     }
-
-    return 0;
 }
 
 void Mapper7::mapPRGWrite(uint16_t cpuAddress, uint8_t value) {
     if (PRG_RANGE.contains(cpuAddress)) {
         bankSelect = value;
     }
-    else if (canAccessPrgRam(cpuAddress)) {
-        setPrgRam(cpuAddress, value);
+    else {
+        prgRam.tryWrite(cpuAddress, value);
     }
 }
 
 uint8_t Mapper7::mapCHRView(uint16_t ppuAddress) const {
-    if (CHR_RANGE.contains(ppuAddress)) {
-        return chr[ppuAddress];
-    }
-
-    return 0;
+    return readChrRomOrRam(ppuAddress, chr, chrRam);
 }
 
 void Mapper7::mapCHRWrite(uint16_t ppuAddress, uint8_t value) {
-    if (CHR_RANGE.contains(ppuAddress) && hasChrRam()) {
-        chr[ppuAddress] = value;
-    }
-}
-
-bool Mapper7::hasChrRam() const {
-    // If chrChunks == 0, we assume we have CHR RAM
-    return config.chrChunks == 0;
+    chrRam.tryWrite(ppuAddress, value);
 }
 
 Mapper::MirrorMode Mapper7::getMirrorMode() const {
@@ -57,16 +47,16 @@ Mapper::MirrorMode Mapper7::getMirrorMode() const {
 
 void Mapper7::serialize(Serializer& s) const {
     s.serializeUInt8(bankSelect);
-    s.serializeVector(prgRam, s.uInt8Func);
-    if (hasChrRam()) {
-        s.serializeVector(chr, s.uInt8Func);
+    s.serializeVector(prgRam.data, s.uInt8Func);
+    if (chrRam.isEnabled) {
+        s.serializeVector(chrRam.data, s.uInt8Func);
     }
 }
 
 void Mapper7::deserialize(Deserializer& d) {
     d.deserializeUInt8(bankSelect);
-    d.deserializeVector(prgRam, d.uInt8Func);
-    if (hasChrRam()) {
-        d.deserializeVector(chr, d.uInt8Func);
+    d.deserializeVector(prgRam.data, d.uInt8Func);
+    if (chrRam.isEnabled) {
+        d.deserializeVector(chrRam.data, d.uInt8Func);
     }
 }

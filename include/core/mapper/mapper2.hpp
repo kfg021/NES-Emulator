@@ -27,7 +27,8 @@ private:
     static constexpr MemoryRange BANK_SELECT_RANGE = PRG_RANGE;
     uint8_t currentBank;
 
-    bool hasChrRam() const;
+    PrgRam prgRam;
+    ChrRam chrRam;
 };
 
 #endif // MAPPER2_HPP

@@ -2,14 +2,11 @@
 
 #include "util/util.hpp"
 
-static Mapper::Config editConfigMapper1(Mapper::Config config) {
-    // Mapper 1 has PRG RAM by default
-    config.hasBatteryBackedPrgRam = true;
-    return config;
-}
-
 Mapper1::Mapper1(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr) :
-    Mapper(editConfigMapper1(config), prg, chr) {
+    Mapper(config, prg, chr),
+    prgRam(true), // Mapper 1 has PRG RAM by default
+    chrRam(config.chrChunks == 0) {
+
     reset();
 }
 
@@ -55,11 +52,12 @@ uint8_t Mapper1::mapPRGView(uint16_t cpuAddress) const {
 
         return prg[mappedAddress];
     }
-    else if (canAccessPrgRam(cpuAddress) && !prgBank.prgRamDisable) {
-        return getPrgRam(cpuAddress);
+    else if (!prgBank.prgRamDisable) {
+        return prgRam.tryRead(cpuAddress).value_or(0);
     }
-
-    return 0;
+    else {
+        return 0;
+    }
 }
 
 void Mapper1::mapPRGWrite(uint16_t cpuAddress, uint8_t value) {
@@ -81,8 +79,8 @@ void Mapper1::mapPRGWrite(uint16_t cpuAddress, uint8_t value) {
             }
         }
     }
-    else if (canAccessPrgRam(cpuAddress) && !prgBank.prgRamDisable) {
-        setPrgRam(cpuAddress, value);
+    else if (!prgBank.prgRamDisable) {
+        prgRam.tryWrite(cpuAddress, value);
     }
 }
 
@@ -114,16 +112,14 @@ uint8_t Mapper1::mapCHRView(uint16_t ppuAddress) const {
             mappedAddress = (4 * KB) * chrBank1 + (ppuAddress & MASK<4 * KB>());
         }
 
-        return chr[mappedAddress];
+        return readChrRomOrRam(mappedAddress, chr, chrRam);
     }
 
     return 0;
 }
 
 void Mapper1::mapCHRWrite(uint16_t ppuAddress, uint8_t value) {
-    if (CHR_RANGE.contains(ppuAddress) && hasChrRam()) {
-        chr[ppuAddress] = value;
-    }
+    chrRam.tryWrite(ppuAddress, value);
 }
 
 Mapper::MirrorMode Mapper1::getMirrorMode() const {
@@ -169,20 +165,15 @@ void Mapper1::PRGBank::setFromUInt8(uint8_t data) {
     prgRamDisable = (data >> 4) & 0x1;
 }
 
-bool Mapper1::hasChrRam() const {
-    // If chrChunks == 0, we assume we have CHR RAM
-    return config.chrChunks == 0;
-}
-
 void Mapper1::serialize(Serializer& s) const {
     s.serializeUInt8(shiftRegister);
     s.serializeUInt8(control.toUInt8());
     s.serializeUInt8(chrBank0);
     s.serializeUInt8(chrBank1);
     s.serializeUInt8(prgBank.toUInt8());
-    s.serializeVector(prgRam, s.uInt8Func);
-    if (hasChrRam()) {
-        s.serializeVector(chr, s.uInt8Func);
+    s.serializeVector(prgRam.data, s.uInt8Func);
+    if (chrRam.isEnabled) {
+        s.serializeVector(chrRam.data, s.uInt8Func);
     }
 }
 
@@ -200,8 +191,8 @@ void Mapper1::deserialize(Deserializer& d) {
     d.deserializeUInt8(prgBankTemp);
     prgBank.setFromUInt8(prgBankTemp);
 
-    d.deserializeVector(prgRam, d.uInt8Func);
-    if (hasChrRam()) {
-        d.deserializeVector(chr, d.uInt8Func);
+    d.deserializeVector(prgRam.data, d.uInt8Func);
+    if (chrRam.isEnabled) {
+        d.deserializeVector(chrRam.data, d.uInt8Func);
     }
 }

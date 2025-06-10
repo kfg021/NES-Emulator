@@ -14,10 +14,6 @@
 // However, since the Mapper constructor is only called once per ROM, it is not super critical
 Mapper::Mapper(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr)
     : config(config), prg(prg), chr(chr) {
-
-    if (config.hasBatteryBackedPrgRam) {
-        prgRam = std::vector<uint8_t>(PRG_RAM_RANGE.size(), 0);
-    }
 }
 
 std::unique_ptr<Mapper> Mapper::createMapper(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr) {
@@ -42,18 +38,15 @@ uint8_t Mapper::mapCHRRead(uint16_t ppuAddress) {
     return mapCHRView(ppuAddress);
 }
 
-bool Mapper::canAccessPrgRam(uint16_t address) const {
-    return config.hasBatteryBackedPrgRam && PRG_RAM_RANGE.contains(address);
-}
-
-uint8_t Mapper::getPrgRam(uint16_t address) const {
-    return prgRam[address & 0x1FFF];
-}
-
-void Mapper::setPrgRam(uint16_t address, uint8_t value) {
-    prgRam[address & 0x1FFF] = value;
-}
-
 Mapper::MirrorMode Mapper::getMirrorMode() const {
     return config.initialMirrorMode;
+}
+
+uint8_t Mapper::readChrRomOrRam(uint32_t mappedAddress, const std::vector<uint8_t>& chr, const ChrRam& chrRam) {
+    if (CHR_RANGE.contains(mappedAddress)) {
+        return chrRam.isEnabled ? chrRam.tryRead(static_cast<uint16_t>(mappedAddress)).value() : chr[mappedAddress];
+    }
+    else {
+        return 0;
+    }
 }

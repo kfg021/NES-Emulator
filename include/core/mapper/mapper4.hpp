@@ -64,6 +64,8 @@ private:
     std::array<uint8_t, 2> prgSwitchableBankSelect;
     std::array<uint8_t, 6> chrSwitchableBankSelect;
 
+    PrgRam prgRam;
+
     bool canReadFromPRGRam() const;
     bool canWriteToPRGRam() const;
 };

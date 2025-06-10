@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <vector>
 
 class Mapper {
@@ -58,18 +59,53 @@ public:
     virtual void serialize(Serializer& s) const = 0;
     virtual void deserialize(Deserializer& d) = 0;
 
-protected:
-    static constexpr MemoryRange PRG_RAM_RANGE{ 0x6000, 0x7FFF };
-    std::vector<uint8_t> prgRam;
-    bool canAccessPrgRam(uint16_t address) const;
-    uint8_t getPrgRam(uint16_t address) const;
-    void setPrgRam(uint16_t address, uint8_t value);
+private:
+    template<uint16_t rangeStart, uint16_t rangeEnd>
+    struct Ram8KB {
+        Ram8KB(bool enable) : isEnabled(enable) {
+            if (enable) {
+                data.resize(8 * KB);
+            }
+        }
 
-    std::vector<uint8_t> prg;
-    std::vector<uint8_t> chr;
+        std::optional<uint8_t> tryRead(uint16_t address) const {
+            if (isEnabled && range.contains(address)) {
+                return data[address & MASK<8 * KB>()];
+            }
+            return std::nullopt;
+        }
+
+        bool tryWrite(uint16_t address, uint8_t value) {
+            if (isEnabled && range.contains(address)) {
+                data[address & MASK<8 * KB>()] = value;
+                return true;
+            }
+            return false;
+        }
+
+        const bool isEnabled;
+        std::vector<uint8_t> data;
+
+        static constexpr MemoryRange range{ rangeStart, rangeEnd };
+        static_assert(range.size() == 8 * KB, "Memory must be 8KB");
+        static_assert((range.lo & MASK<8 * KB>()) == 0, "Start of range must be aligned");
+    };
+
+    static constexpr MemoryRange PRG_RAM_RANGE{ 0x6000, 0x7FFF };
+
+protected:
+    const std::vector<uint8_t> prg;
+    const std::vector<uint8_t> chr;
 
     static constexpr MemoryRange PRG_RANGE{ 0x8000, 0xFFFF };
     static constexpr MemoryRange CHR_RANGE{ 0x0000, 0x1FFF };
+
+    // Many mappers also include 8KB of PRG and/or CHR RAM depending on the configuration
+    using PrgRam = Ram8KB<PRG_RAM_RANGE.lo, PRG_RAM_RANGE.hi>;
+    using ChrRam = Ram8KB<CHR_RANGE.lo, CHR_RANGE.hi>;
+
+    // Helper function to choose whether to read from CHR ROM or RAM
+    static uint8_t readChrRomOrRam(uint32_t mappedAddress, const std::vector<uint8_t>& chr, const ChrRam& chrRam);
 };
 
 #endif // MAPPER_HPP

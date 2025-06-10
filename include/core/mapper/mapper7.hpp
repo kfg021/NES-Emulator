@@ -23,7 +23,8 @@ public:
 
 private:
     uint8_t bankSelect;
-    bool hasChrRam() const;
+    PrgRam prgRam;
+    ChrRam chrRam;
 };
 
 #endif // MAPPER7_HPP

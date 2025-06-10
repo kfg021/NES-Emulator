@@ -1,9 +1,6 @@
 #include "core/mapper/mapper4.hpp"
 
 static Mapper::Config editConfigMapper4(Mapper::Config config) {
-    // Mapper 4 has PRG RAM by default
-    config.hasBatteryBackedPrgRam = true;
-
     if (config.alternativeNametableLayout) {
         config.initialMirrorMode = Mapper::MirrorMode::FOUR_SCREEN;
     }
@@ -11,8 +8,10 @@ static Mapper::Config editConfigMapper4(Mapper::Config config) {
     return config;
 }
 
-Mapper4::Mapper4(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr)
-    : Mapper(editConfigMapper4(config), prg, chr) {
+Mapper4::Mapper4(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr) :
+    Mapper(editConfigMapper4(config), prg, chr),
+    prgRam(true) { // Mapper 4 has PRG RAM by default
+
     reset();
 }
 
@@ -72,11 +71,12 @@ uint8_t Mapper4::mapPRGView(uint16_t cpuAddress) const {
         }
         return prg[mappedAddress];
     }
-    else if (canAccessPrgRam(cpuAddress) && canReadFromPRGRam()) {
-        return getPrgRam(cpuAddress);
+    else if (canReadFromPRGRam()) {
+        return prgRam.tryRead(cpuAddress).value_or(0);
     }
-
-    return 0;
+    else {
+        return 0;
+    }
 }
 
 void Mapper4::mapPRGWrite(uint16_t cpuAddress, uint8_t value) {
@@ -121,8 +121,8 @@ void Mapper4::mapPRGWrite(uint16_t cpuAddress, uint8_t value) {
             irqEnabled = true;
         }
     }
-    else if (canAccessPrgRam(cpuAddress) && canWriteToPRGRam()) {
-        setPrgRam(cpuAddress, value);
+    else if (canWriteToPRGRam()) {
+        prgRam.tryWrite(cpuAddress, value);
     }
 }
 
@@ -201,7 +201,7 @@ void Mapper4::serialize(Serializer& s) const {
     s.serializeBool(irqRequest);
     s.serializeArray(prgSwitchableBankSelect, s.uInt8Func);
     s.serializeArray(chrSwitchableBankSelect, s.uInt8Func);
-    s.serializeVector(prgRam, s.uInt8Func);
+    s.serializeVector(prgRam.data, s.uInt8Func);
     s.serializeVector(customNametable, s.uInt8Func);
 }
 
@@ -217,6 +217,6 @@ void Mapper4::deserialize(Deserializer& d) {
     d.deserializeBool(irqRequest);
     d.deserializeArray(prgSwitchableBankSelect, d.uInt8Func);
     d.deserializeArray(chrSwitchableBankSelect, d.uInt8Func);
-    d.deserializeVector(prgRam, d.uInt8Func);
+    d.deserializeVector(prgRam.data, d.uInt8Func);
     d.deserializeVector(customNametable, d.uInt8Func);
 }

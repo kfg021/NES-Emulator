@@ -20,7 +20,8 @@ public:
     void deserialize(Deserializer& d) override;
 
 private:
-    bool hasChrRam() const;
+    PrgRam prgRam;
+    ChrRam chrRam;
 };
 
 #endif // MAPPER0_HPP

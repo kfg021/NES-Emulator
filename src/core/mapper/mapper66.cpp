@@ -2,8 +2,9 @@
 
 #include "core/cartridge.hpp"
 
-Mapper66::Mapper66(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr)
-    : Mapper(config, prg, chr) {
+Mapper66::Mapper66(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr) :
+    Mapper(config, prg, chr),
+    prgRam(config.hasBatteryBackedPrgRam) {
 
     reset();
 }
@@ -18,11 +19,9 @@ uint8_t Mapper66::mapPRGView(uint16_t cpuAddress) const {
         uint32_t mappedAddress = (PRG_ROM_CHUNK_SIZE << 1) * currentPRGBank + (cpuAddress & MASK<32 * KB>());
         return prg[mappedAddress];
     }
-    else if (canAccessPrgRam(cpuAddress)) {
-        return getPrgRam(cpuAddress);
+    else {
+        return prgRam.tryRead(cpuAddress).value_or(0);
     }
-
-    return 0;
 }
 
 void Mapper66::mapPRGWrite(uint16_t cpuAddress, uint8_t value) {
@@ -30,8 +29,8 @@ void Mapper66::mapPRGWrite(uint16_t cpuAddress, uint8_t value) {
         currentCHRBank = value & 0x3;
         currentPRGBank = (value >> 4) & 0x3;
     }
-    else if (canAccessPrgRam(cpuAddress)) {
-        setPrgRam(cpuAddress, value);
+    else {
+        prgRam.tryWrite(cpuAddress, value);
     }
 }
 
@@ -51,10 +50,10 @@ void Mapper66::mapCHRWrite(uint16_t /*ppuAddress*/, uint8_t /*value*/) {
 void Mapper66::serialize(Serializer& s) const {
     s.serializeUInt8(currentPRGBank);
     s.serializeUInt8(currentCHRBank);
-    s.serializeVector(prgRam, s.uInt8Func);
+    s.serializeVector(prgRam.data, s.uInt8Func);
 }
 void Mapper66::deserialize(Deserializer& d) {
     d.deserializeUInt8(currentPRGBank);
     d.deserializeUInt8(currentCHRBank);
-    d.deserializeVector(prgRam, d.uInt8Func);
+    d.deserializeVector(prgRam.data, d.uInt8Func);
 }

@@ -1,7 +1,9 @@
 #include "core/mapper/mapper9.hpp"
 
-Mapper9::Mapper9(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr)
-    : Mapper(config, prg, chr) {
+Mapper9::Mapper9(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr) :
+    Mapper(config, prg, chr),
+    prgRam(config.hasBatteryBackedPrgRam) {
+
     reset();
 }
 
@@ -28,11 +30,9 @@ uint8_t Mapper9::mapPRGView(uint16_t cpuAddress) const {
         }
         return prg[mappedAddress];
     }
-    else if (canAccessPrgRam(cpuAddress)) {
-        return getPrgRam(cpuAddress);
+    else {
+        return prgRam.tryRead(cpuAddress).value_or(0);
     }
-
-    return 0;
 }
 
 void Mapper9::mapPRGWrite(uint16_t cpuAddress, uint8_t value) {
@@ -54,8 +54,8 @@ void Mapper9::mapPRGWrite(uint16_t cpuAddress, uint8_t value) {
     else if (MIRRORING.contains(cpuAddress)) {
         mirroring = value & 0x1;
     }
-    else if (canAccessPrgRam(cpuAddress)) {
-        setPrgRam(cpuAddress, value);
+    else {
+        prgRam.tryWrite(cpuAddress, value);
     }
 }
 
@@ -118,7 +118,7 @@ void Mapper9::serialize(Serializer& s) const {
     s.serializeArray(chrBank1Select, s.uInt8Func);
     s.serializeArray(chrBank2Select, s.uInt8Func);
     s.serializeBool(mirroring);
-    s.serializeVector(prgRam, s.uInt8Func);
+    s.serializeVector(prgRam.data, s.uInt8Func);
 }
 
 void Mapper9::deserialize(Deserializer& d) {
@@ -128,5 +128,5 @@ void Mapper9::deserialize(Deserializer& d) {
     d.deserializeArray(chrBank1Select, d.uInt8Func);
     d.deserializeArray(chrBank2Select, d.uInt8Func);
     d.deserializeBool(mirroring);
-    d.deserializeVector(prgRam, d.uInt8Func);
+    d.deserializeVector(prgRam.data, d.uInt8Func);
 }
