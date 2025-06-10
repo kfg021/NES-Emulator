@@ -1,15 +1,7 @@
 #include "core/mapper/mapper4.hpp"
 
-static Mapper::Config editConfigMapper4(Mapper::Config config) {
-    if (config.alternativeNametableLayout) {
-        config.initialMirrorMode = Mapper::MirrorMode::FOUR_SCREEN;
-    }
-
-    return config;
-}
-
 Mapper4::Mapper4(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr) :
-    Mapper(editConfigMapper4(config), prg, chr),
+    Mapper(config, prg, chr),
     prgRam(true) { // Mapper 4 has PRG RAM by default
 
     reset();
@@ -171,11 +163,11 @@ void Mapper4::mapCHRWrite(uint16_t ppuAddress, uint8_t value) {
 }
 
 Mapper::MirrorMode Mapper4::getMirrorMode() const {
-    if (!config.alternativeNametableLayout) {
-        return mirroring ? MirrorMode::HORIZONTAL : MirrorMode::VERTICAL;
+    if (config.alternativeNametableLayout) {
+        return MirrorMode::FOUR_SCREEN;
     }
     else {
-        return config.initialMirrorMode;
+        return mirroring ? MirrorMode::HORIZONTAL : MirrorMode::VERTICAL;
     }
 }
 
