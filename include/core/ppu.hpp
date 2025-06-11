@@ -128,19 +128,15 @@ private:
     // |+-------- Emphasize green (red on PAL/Dendy)
     // +--------- Emphasize blue
     struct Mask {
-        bool greyscale : 1;
-        bool showBackgroundLeft : 1;
-        bool showSpritesLeft : 1;
-        bool showBackground : 1;
-        bool showSprites : 1;
-        bool emphRed : 1;
-        bool emphGreen : 1;
-        bool emphBlue : 1;
-
-        Mask() = default;
-        Mask(uint8_t data);
-        uint8_t toUInt8() const;
-        void setFromUInt8(uint8_t data);
+        uint8_t data;
+        BitField<0, 1> greyscale{ data };
+        BitField<1, 1> showBackgroundLeft{ data };
+        BitField<2, 1> showSpritesLeft{ data };
+        BitField<3, 1> showBackground{ data };
+        BitField<4, 1> showSprites{ data };
+        BitField<5, 1> emphRed{ data };
+        BitField<6, 1> emphGreen{ data };
+        BitField<7, 1> emphBlue{ data };
     };
 
     // Status ($2002) < read
