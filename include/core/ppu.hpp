@@ -180,17 +180,12 @@ private:
     // +++----------------- fine Y scroll
     // Note that while the v register has 15 bits, the PPU memory space is only 14 bits wide. The highest bit is unused for access through $2007.
     struct InternalRegister {
-        uint8_t coarseX : 5;
-        uint8_t coarseY : 5;
-        bool nametableX : 1;
-        bool nametableY : 1;
-        uint8_t fineY : 3;
-        bool unused : 1;
-
-        InternalRegister() = default;
-        InternalRegister(uint16_t data);
-        uint16_t toUInt16() const;
-        void setFromUInt16(uint16_t data);
+        uint16_t data;
+        BitField<0, 5, uint16_t>  coarseX{ data };
+        BitField<5, 5, uint16_t>  coarseY{ data };
+        BitField<10, 1, uint16_t> nametableX{ data };
+        BitField<11, 1, uint16_t> nametableY{ data };
+        BitField<12, 3, uint16_t> fineY{ data };
     };
 
     struct OAMEntry {

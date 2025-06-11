@@ -23,8 +23,8 @@ void PPU::resetPPU() {
     status.data = 0;
 
     ppuBusData = 0;
-    vramAddress = 0;
-    temporaryVramAddress = 0;
+    vramAddress.data = 0;
+    temporaryVramAddress.data = 0;
     addressLatch = 0;
     palleteRam = {};
 
@@ -87,8 +87,8 @@ uint8_t PPU::view(uint8_t ppuRegister) const {
         uint8_t data = ppuBusData;
 
         // Pallete addresses get returned immediately
-        if (PALLETE_RAM_RANGE.contains(vramAddress.toUInt16() & 0x3FFF)) {
-            data = ppuView(vramAddress.toUInt16() & 0x3FFF);
+        if (PALLETE_RAM_RANGE.contains(vramAddress.data & 0x3FFF)) {
+            data = ppuView(vramAddress.data & 0x3FFF);
         }
         return data;
     }
@@ -110,17 +110,17 @@ uint8_t PPU::read(uint8_t ppuRegister) {
     else if (ppuRegister == static_cast<int>(Register::PPUDATA)) {
         uint8_t data = ppuBusData;
 
-        ppuBusData = ppuRead(vramAddress.toUInt16() & 0x3FFF);
+        ppuBusData = ppuRead(vramAddress.data & 0x3FFF);
 
         // Open bus is the bottom 5 bits of the bus
         status.openBus = ppuBusData & 0x1F;
 
         // Pallete addresses get returned immediately
-        if (PALLETE_RAM_RANGE.contains(vramAddress.toUInt16() & 0x3FFF)) {
+        if (PALLETE_RAM_RANGE.contains(vramAddress.data & 0x3FFF)) {
             data = ppuBusData;
         }
 
-        vramAddress = vramAddress.toUInt16() + (control.vramAddressIncrement ? 32 : 1);
+        vramAddress.data += (control.vramAddressIncrement ? 32 : 1);
 
         return data;
     }
@@ -168,21 +168,21 @@ void PPU::write(uint8_t ppuRegister, uint8_t value) {
     }
     else if (ppuRegister == static_cast<int>(Register::PPUADDR)) {
         if (addressLatch == 0) {
-            temporaryVramAddress = temporaryVramAddress.toUInt16() & 0x00FF;
-            temporaryVramAddress = temporaryVramAddress.toUInt16() | (value << 8);
+            temporaryVramAddress.data &= 0x00FF;
+            temporaryVramAddress.data |= (value << 8);
         }
         else {
-            temporaryVramAddress = temporaryVramAddress.toUInt16() & 0xFF00;
-            temporaryVramAddress = temporaryVramAddress.toUInt16() | value;
+            temporaryVramAddress.data &= 0xFF00;
+            temporaryVramAddress.data |= value;
 
             vramAddress = temporaryVramAddress;
         }
         addressLatch ^= 1;
     }
     else if (ppuRegister == static_cast<int>(Register::PPUDATA)) {
-        ppuWrite(vramAddress.toUInt16() & 0x3FFF, value);
+        ppuWrite(vramAddress.data & 0x3FFF, value);
 
-        vramAddress = vramAddress.toUInt16() + (control.vramAddressIncrement ? 32 : 1);
+        vramAddress.data += (control.vramAddressIncrement ? 32 : 1);
     }
 }
 
@@ -502,7 +502,7 @@ void PPU::doStandardFetchCycle() {
 }
 
 void PPU::fetchNameTableByte() {
-    nextNameTableByte = ppuRead(0x2000 + (vramAddress.toUInt16() & 0x0FFF));
+    nextNameTableByte = ppuRead(0x2000 + (vramAddress.data & 0x0FFF));
 }
 
 void PPU::fetchAttributeTableByte() {
@@ -713,7 +713,7 @@ void PPU::incrementCycle() {
 
 // The code for this function is based on pseudocode from https://www.nesdev.org/wiki/PPU_scrolling
 void PPU::incrementCoarseX() {
-    uint16_t v = vramAddress.toUInt16();
+    uint16_t& v = vramAddress.data;
 
     if ((v & 0x001F) == 31) { // if coarse X == 31
         v &= ~0x001F; // coarse X = 0
@@ -722,13 +722,11 @@ void PPU::incrementCoarseX() {
     else {
         v += 1; // increment coarse X
     }
-
-    vramAddress.setFromUInt16(v);
 }
 
 // The code for this function is based on pseudocode from https://www.nesdev.org/wiki/PPU_scrolling
 void PPU::incrementY() {
-    uint16_t v = vramAddress.toUInt16();
+    uint16_t& v = vramAddress.data;
 
     if ((v & 0x7000) != 0x7000) { // if fine Y < 7
         v += 0x1000; // increment fine Y
@@ -748,8 +746,6 @@ void PPU::incrementY() {
         }
         v = (v & ~0x03E0) | (y << 5); // put coarse Y back into v
     }
-
-    vramAddress.setFromUInt16(v);
 }
 
 void PPU::fillCurrentScanlineSprites() {
@@ -830,30 +826,6 @@ std::array<uint32_t, 0x20> PPU::getPalleteRamColors() const {
 }
 
 // Helper struct function definitions
-PPU::InternalRegister::InternalRegister(uint16_t data) {
-    setFromUInt16(data);
-}
-
-uint16_t PPU::InternalRegister::toUInt16() const {
-    uint16_t data =
-        coarseX |
-        (coarseY << 5) |
-        (nametableX << 10) |
-        (nametableY << 11) |
-        (fineY << 12) |
-        (unused << 15);
-    return data;
-}
-
-void PPU::InternalRegister::setFromUInt16(uint16_t data) {
-    coarseX = data & 0x1F;
-    coarseY = (data >> 5) & 0x1F;
-    nametableX = (data >> 10) & 0x1;
-    nametableY = (data >> 11) & 0x1;
-    fineY = (data >> 12) & 0x7;
-    unused = (data >> 15) & 0x1;
-}
-
 PPU::OAMEntry::OAMEntry(uint32_t data) {
     setFromUInt32(data);
 }
@@ -889,8 +861,8 @@ void PPU::serialize(Serializer& s) const {
     s.serializeUInt8(mask.data);
     s.serializeUInt8(status.data);
     s.serializeBool(addressLatch);
-    s.serializeUInt16(temporaryVramAddress.toUInt16());
-    s.serializeUInt16(vramAddress.toUInt16());
+    s.serializeUInt16(temporaryVramAddress.data);
+    s.serializeUInt16(vramAddress.data);
     s.serializeUInt8(fineX);
     s.serializeUInt8(ppuBusData);
     s.serializeArray(palleteRam, s.uInt8Func);
@@ -929,17 +901,9 @@ void PPU::deserialize(Deserializer& d) {
     d.deserializeUInt8(control.data);
     d.deserializeUInt8(mask.data);
     d.deserializeUInt8(status.data);
-
     d.deserializeBool(addressLatch);
-
-    uint16_t temporaryVramAddressTemp;
-    d.deserializeUInt16(temporaryVramAddressTemp);
-    temporaryVramAddress.setFromUInt16(temporaryVramAddressTemp);
-
-    uint16_t vramAddressTemp;
-    d.deserializeUInt16(vramAddressTemp);
-    vramAddress.setFromUInt16(vramAddressTemp);
-
+    d.deserializeUInt16(temporaryVramAddress.data);
+    d.deserializeUInt16(vramAddress.data);
     d.deserializeUInt8(fineX);
     d.deserializeUInt8(ppuBusData);
     d.deserializeArray(palleteRam, d.uInt8Func);
