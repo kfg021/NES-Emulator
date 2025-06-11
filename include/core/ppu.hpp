@@ -164,15 +164,11 @@ private:
     //         line); cleared after reading $2002 and at dot 1 of the
     //         pre-render line.
     struct Status {
-        uint8_t openBus : 5;
-        bool spriteOverflow : 1;
-        bool sprite0Hit : 1;
-        bool vBlankStarted : 1;
-
-        Status() = default;
-        Status(uint8_t data);
-        uint8_t toUInt8() const;
-        void setFromUInt8(uint8_t data);
+        uint8_t data;
+        BitField<0, 5> openBus{ data };
+        BitField<5, 1> spriteOverflow{ data };
+        BitField<6, 1> sprite0Hit{ data };
+        BitField<7, 1> vBlankStarted{ data };
     };
 
     // https://www.nesdev.org/wiki/PPU_scrolling

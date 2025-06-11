@@ -20,7 +20,7 @@ PPU::PPU(Cartridge& cartridge) : cartridge(cartridge) {
 void PPU::resetPPU() {
     control.data = 0;
     mask.data = 0;
-    status = 0;
+    status.data = 0;
 
     ppuBusData = 0;
     vramAddress = 0;
@@ -78,7 +78,7 @@ bool PPU::irqRequested() const {
 
 uint8_t PPU::view(uint8_t ppuRegister) const {
     if (ppuRegister == static_cast<int>(Register::PPUSTATUS)) {
-        return status.toUInt8();
+        return status.data;
     }
     else if (ppuRegister == static_cast<int>(Register::OAMDATA)) {
         return oamBuffer[oamAddress];
@@ -99,7 +99,7 @@ uint8_t PPU::view(uint8_t ppuRegister) const {
 
 uint8_t PPU::read(uint8_t ppuRegister) {
     if (ppuRegister == static_cast<int>(Register::PPUSTATUS)) {
-        uint8_t data = status.toUInt8();
+        uint8_t data = status.data;
         status.vBlankStarted = 0;
         addressLatch = 0;
         return data;
@@ -830,26 +830,6 @@ std::array<uint32_t, 0x20> PPU::getPalleteRamColors() const {
 }
 
 // Helper struct function definitions
-PPU::Status::Status(uint8_t data) {
-    setFromUInt8(data);
-}
-
-uint8_t PPU::Status::toUInt8() const {
-    uint8_t data =
-        openBus |
-        (spriteOverflow << 5) |
-        (sprite0Hit << 6) |
-        (vBlankStarted << 7);
-    return data;
-}
-
-void PPU::Status::setFromUInt8(uint8_t data) {
-    openBus = data & 0x1F;
-    spriteOverflow = (data >> 5) & 0x1;
-    sprite0Hit = (data >> 6) & 0x1;
-    vBlankStarted = (data >> 7) & 0x1;
-}
-
 PPU::InternalRegister::InternalRegister(uint16_t data) {
     setFromUInt16(data);
 }
@@ -907,7 +887,7 @@ void PPU::OAMEntry::setFromUInt32(uint32_t data) {
 void PPU::serialize(Serializer& s) const {
     s.serializeUInt8(control.data);
     s.serializeUInt8(mask.data);
-    s.serializeUInt8(status.toUInt8());
+    s.serializeUInt8(status.data);
     s.serializeBool(addressLatch);
     s.serializeUInt16(temporaryVramAddress.toUInt16());
     s.serializeUInt16(vramAddress.toUInt16());
@@ -948,10 +928,7 @@ void PPU::serialize(Serializer& s) const {
 void PPU::deserialize(Deserializer& d) {
     d.deserializeUInt8(control.data);
     d.deserializeUInt8(mask.data);
-
-    uint8_t statusTemp;
-    d.deserializeUInt8(statusTemp);
-    status.setFromUInt8(statusTemp);
+    d.deserializeUInt8(status.data);
 
     d.deserializeBool(addressLatch);
 
