@@ -20,7 +20,7 @@ void CPU::resetCPU() {
     x = 0;
     y = 0;
     sp = 0;
-    sr = 0;
+    sr.data = 0;
     sr.unused = 1;
     shouldAdvancePC = false;
 
@@ -129,7 +129,7 @@ uint8_t CPU::getY() const {
     return y;
 }
 uint8_t CPU::getSR() const {
-    return sr.toUInt8();
+    return sr.data;
 }
 uint8_t CPU::getSP() const {
     return sp;
@@ -494,7 +494,7 @@ void CPU::pushFlagsToStack(bool breakFlagValue) {
     StatusRegister srTemp = sr;
     srTemp.break_ = breakFlagValue;
     srTemp.unused = 1;
-    push8BitDataToStack(srTemp.toUInt8());
+    push8BitDataToStack(srTemp.data);
 }
 
 // Helper function for addressing modes
@@ -646,7 +646,8 @@ void CPU::ADC(const AddressingMode::ReturnType& operand) {
     sr.carry = fullSum > 0xFF;
 
     // Set the overflow flag only when the two addends have the same sign, and result has a different sign
-    sr.overflow = ~(a ^ data) & (a ^ static_cast<uint8_t>(fullSum)) & 0x80;
+    uint8_t overflowCondition = ~(a ^ data) & (a ^ static_cast<uint8_t>(fullSum));
+    sr.overflow = (overflowCondition >> 7) & 1;
 
     setNZFlags(static_cast<uint8_t>(fullSum));
 
@@ -1153,7 +1154,7 @@ void CPU::PLA(const AddressingMode::ReturnType& /*operand*/) {
 //  N	Z	C	I	D	V
 //  from stack
 void CPU::PLP(const AddressingMode::ReturnType& /*operand*/) {
-    sr = pop8BitDataFromStack();
+    sr.data = pop8BitDataFromStack();
     sr.break_ = 0;
     sr.unused = 1;
 }
@@ -1217,7 +1218,7 @@ void CPU::ROR(const AddressingMode::ReturnType& operand) {
 //  N	Z	C	I	D	V
 //  from stack
 void CPU::RTI(const AddressingMode::ReturnType& /*operand*/) {
-    sr = pop8BitDataFromStack();
+    sr.data = pop8BitDataFromStack();
     sr.break_ = 0;
     sr.unused = 1;
     pc = pop16BitDataFromStack();
@@ -1247,7 +1248,8 @@ void CPU::SBC(const AddressingMode::ReturnType& operand) {
     sr.carry = fullSum > 0xFF;
 
     // Set the overflow flag only when the two addends have the same sign, and result has a different sign
-    sr.overflow = ~(a ^ data) & (a ^ static_cast<uint8_t>(fullSum)) & 0x80;
+    uint8_t overflowCondition = ~(a ^ data) & (a ^ static_cast<uint8_t>(fullSum));
+    sr.overflow = (overflowCondition >> 7) & 1;
 
     setNZFlags(static_cast<uint8_t>(fullSum));
 
@@ -1376,34 +1378,6 @@ void CPU::UNI(const AddressingMode::ReturnType& /*operand*/) {
     // TODO: Handle illegal opcodes
 }
 
-CPU::StatusRegister::StatusRegister(uint8_t data) {
-    setFromUInt8(data);
-}
-
-uint8_t CPU::StatusRegister::toUInt8() const {
-    uint8_t data =
-        carry |
-        (zero << 1) |
-        (interrupt << 2) |
-        (decimal << 3) |
-        (break_ << 4) |
-        (unused << 5) |
-        (overflow << 6) |
-        (negative << 7);
-    return data;
-}
-
-void CPU::StatusRegister::setFromUInt8(uint8_t data) {
-    carry = data & 0x1;
-    zero = (data >> 1) & 0x1;
-    interrupt = (data >> 2) & 0x1;
-    decimal = (data >> 3) & 0x1;
-    break_ = (data >> 4) & 0x1;
-    unused = (data >> 5) & 0x1;
-    overflow = (data >> 6) & 0x1;
-    negative = (data >> 7) & 0x1;
-}
-
 // Addressing mode string function definitions
 std::string CPU::strACC(uint16_t /*address*/) const {
     return "A";
@@ -1463,7 +1437,7 @@ void CPU::serialize(Serializer& s) const {
     s.serializeUInt8(a);
     s.serializeUInt8(x);
     s.serializeUInt8(y);
-    s.serializeUInt8(sr.toUInt8());
+    s.serializeUInt8(sr.data);
     s.serializeUInt8(sp);
     s.serializeUInt8(remainingCycles);
     s.serializeBool(shouldAdvancePC);
@@ -1474,11 +1448,7 @@ void CPU::deserialize(Deserializer& d) {
     d.deserializeUInt8(a);
     d.deserializeUInt8(x);
     d.deserializeUInt8(y);
-
-    uint8_t srTemp;
-    d.deserializeUInt8(srTemp);
-    sr.setFromUInt8(srTemp);
-
+    d.deserializeUInt8(sr.data);
     d.deserializeUInt8(sp);
     d.deserializeUInt8(remainingCycles);
     d.deserializeBool(shouldAdvancePC);

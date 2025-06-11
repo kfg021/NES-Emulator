@@ -2,6 +2,7 @@
 #define CPU_HPP
 
 #include "util/serializer.hpp"
+#include "util/util.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -93,19 +94,15 @@ private:
     // |+-------- Overflow
     // +--------- Negative
     struct StatusRegister {
-        bool carry : 1;
-        bool zero : 1;
-        bool interrupt : 1;
-        bool decimal : 1; // Unimplemented - not used on the NES
-        bool break_ : 1;
-        bool unused : 1;
-        bool overflow : 1;
-        bool negative : 1;
-
-        StatusRegister() = default;
-        StatusRegister(uint8_t data);
-        uint8_t toUInt8() const;
-        void setFromUInt8(uint8_t data);
+        uint8_t data;
+        BitField<0, 1> carry{ data };
+        BitField<1, 1> zero{ data };
+        BitField<2, 1> interrupt{ data };
+        BitField<3, 1> decimal{ data }; // Unimplemented - not used on the NES
+        BitField<4, 1> break_{ data };
+        BitField<5, 1> unused{ data };
+        BitField<6, 1> overflow{ data };
+        BitField<7, 1> negative{ data };
     };
 
     // CPU state variables
