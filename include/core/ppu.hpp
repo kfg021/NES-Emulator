@@ -99,19 +99,15 @@ private:
     // +--------- Generate an NMI at the start of the
     //         vertical blanking interval (0: off; 1: on)
     struct Control {
-        bool nametableX : 1;
-        bool nametableY : 1;
-        bool vramAddressIncrement : 1;
-        bool spritePatternTable : 1;
-        bool backgroundPatternTable : 1;
-        bool spriteSize : 1;
-        bool ppuSelect : 1;
-        bool nmiEnabled : 1;
-
-        Control() = default;
-        Control(uint8_t data);
-        uint8_t toUInt8() const;
-        void setFromUInt8(uint8_t data);
+        uint8_t data;
+        BitField<0, 1> nametableX{ data };
+        BitField<1, 1> nametableY{ data };
+        BitField<2, 1> vramAddressIncrement{ data };
+        BitField<3, 1> spritePatternTable{ data };
+        BitField<4, 1> backgroundPatternTable{ data };
+        BitField<5, 1> spriteSize{ data };
+        BitField<6, 1> ppuSelect{ data };
+        BitField<7, 1> nmiEnabled{ data };
     };
 
     // Mask ($2001) > write

@@ -18,7 +18,7 @@ PPU::PPU(Cartridge& cartridge) : cartridge(cartridge) {
 }
 
 void PPU::resetPPU() {
-    control = 0;
+    control.data = 0;
     mask = 0;
     status = 0;
 
@@ -133,7 +133,7 @@ void PPU::write(uint8_t ppuRegister, uint8_t value) {
     if (ppuRegister == static_cast<int>(Register::PPUCTRL)) {
         bool oldNmiFlag = control.nmiEnabled;
 
-        control.setFromUInt8(value);
+        control.data = value;
 
         bool newNmiFlag = control.nmiEnabled;
 
@@ -830,36 +830,6 @@ std::array<uint32_t, 0x20> PPU::getPalleteRamColors() const {
 }
 
 // Helper struct function definitions
-PPU::Control::Control(uint8_t data) {
-    setFromUInt8(data);
-}
-
-uint8_t PPU::Control::toUInt8() const {
-    uint8_t data =
-        static_cast<uint8_t>(nametableX) |
-        (nametableY << 1) |
-        (vramAddressIncrement << 2) |
-        (spritePatternTable << 3) |
-        (backgroundPatternTable << 4) |
-        (spriteSize << 5) |
-        (ppuSelect << 6) |
-        (nmiEnabled << 7);
-
-    return data;
-}
-
-void PPU::Control::setFromUInt8(uint8_t data) {
-    nametableX = data & 0x1;
-    nametableY = (data >> 1) & 0x1;
-    vramAddressIncrement = (data >> 2) & 0x1;
-    spritePatternTable = (data >> 3) & 0x1;
-    backgroundPatternTable = (data >> 4) & 0x1;
-    spriteSize = (data >> 5) & 0x1;
-    ppuSelect = (data >> 6) & 0x1;
-    nmiEnabled = (data >> 7) & 0x1;
-}
-
-
 PPU::Mask::Mask(uint8_t value) {
     setFromUInt8(value);
 }
@@ -964,7 +934,7 @@ void PPU::OAMEntry::setFromUInt32(uint32_t data) {
 }
 
 void PPU::serialize(Serializer& s) const {
-    s.serializeUInt8(control.toUInt8());
+    s.serializeUInt8(control.data);
     s.serializeUInt8(mask.toUInt8());
     s.serializeUInt8(status.toUInt8());
     s.serializeBool(addressLatch);
@@ -1005,9 +975,7 @@ void PPU::serialize(Serializer& s) const {
 }
 
 void PPU::deserialize(Deserializer& d) {
-    uint8_t controlTemp;
-    d.deserializeUInt8(controlTemp);
-    control.setFromUInt8(controlTemp);
+    d.deserializeUInt8(control.data);
 
     uint8_t maskTemp;
     d.deserializeUInt8(maskTemp);
