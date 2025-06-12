@@ -180,19 +180,24 @@ private:
         Internal i;
     };
 
-    const std::array<uint8_t, 4> DUTY_CYCLES = {
-        0b00000001,
-        0b00000011,
-        0b00001111,
-        0b11111100
+    struct Status {
+        uint8_t data;
+
+        BitField<0, 1> enablePulse1{ data };
+        BitField<1, 1> enablePulse2{ data };
+        BitField<2, 1> enableTriangle{ data };
+        BitField<3, 1> enableNoise{ data };
+        BitField<4, 1> enableDmc{ data };
+        // Bit 5 is unused
+        BitField<6, 1> frameInterrupt{ data };
+        BitField<7, 1> dmcInterrupt{ data };
     };
 
     std::array<Pulse, 2> pulses;
     Triangle triangle;
     Noise noise;
     DMC dmc;
-
-    uint8_t status;
+    Status status;
 
     bool frameSequenceMode;
     bool interruptInhibitFlag;
@@ -202,6 +207,13 @@ private:
     uint64_t totalCycles;
 
     Bus& bus;
+
+    const std::array<uint8_t, 4> DUTY_CYCLES = {
+        0b00000001,
+        0b00000011,
+        0b00001111,
+        0b11111100
+    };
 
     static constexpr std::array<int, 5> STEP_SEQUENCE = { 7457, 14913, 22371, 29829, 37281 };
     static constexpr int FOUR_STEP_SEQUENCE_LENGTH = 29830;
@@ -229,6 +241,8 @@ private:
     void halfClock();
 
     void restartDmcSample();
+
+    bool getPulseStatus(bool pulseNum) const;
 };
 
 #endif // APU_HPP

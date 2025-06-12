@@ -26,7 +26,8 @@ void APU::resetAPU() {
     dmc.i.silenceFlag = true;
     dmc.i.bitsRemaining = 8;
 
-    status = 0;
+    status.data = 0;
+
     frameCounter = 0;
     totalCycles = 0;
 
@@ -64,8 +65,7 @@ void APU::write(uint16_t addr, uint8_t value) {
 
                 pulse.i.timerCounter = pulse.timer;
 
-                bool pulseStatus = (status >> static_cast<int>(pulseNum)) & 1;
-                if (pulseStatus) {
+                if (getPulseStatus(pulseNum)) {
                     pulse.i.lengthCounter = LENGTH_COUNTER_TABLE[pulse.lengthCounterLoad];
                 }
 
@@ -93,8 +93,7 @@ void APU::write(uint16_t addr, uint8_t value) {
 
                 triangle.i.timerCounter = triangle.timer;
 
-                bool triangleStatus = (status >> 2) & 1;
-                if (triangleStatus) {
+                if (status.enableTriangle) {
                     triangle.i.lengthCounter = LENGTH_COUNTER_TABLE[triangle.lengthCounterLoad];
                 }
                 triangle.i.linearCounterReloadFlag = true;
@@ -121,8 +120,7 @@ void APU::write(uint16_t addr, uint8_t value) {
 
             default: // 0x400F
                 noise.lengthCounterLoad = (value >> 3) & 0x1F;
-                bool noiseStatus = (status >> 3) & 1;
-                if (noiseStatus) {
+                if (status.enableNoise) {
                     noise.i.lengthCounter = LENGTH_COUNTER_TABLE[noise.lengthCounterLoad];
                 }
                 noise.i.envelopeStartFlag = true;
@@ -157,40 +155,17 @@ void APU::write(uint16_t addr, uint8_t value) {
 }
 
 uint8_t APU::viewStatus() const {
-    uint8_t tempStatus = 0;
+    Status tempStatus{ status.data };
 
-    for (int i = 0; i < 2; i++) {
-        bool pulseStatus = (status >> i) & 1;
-        if (pulseStatus && pulses[i].i.lengthCounter > 0) {
-            tempStatus |= (1 << i);
-        }
-    }
+    tempStatus.enablePulse1 &= pulses[0].i.lengthCounter > 0;
+    tempStatus.enablePulse2 &= pulses[1].i.lengthCounter > 0;
+    tempStatus.enableTriangle &= triangle.i.lengthCounter > 0 && triangle.i.linearCounter > 0;
+    tempStatus.enableNoise &= noise.i.lengthCounter > 0;
+    tempStatus.enableDmc &= dmc.i.bytesRemaining > 0;
+    tempStatus.frameInterrupt |= frameInterruptFlag;
+    tempStatus.dmcInterrupt |= dmc.i.irqFlag;
 
-    bool triangleStatus = (status >> 2) & 1;
-    if (triangleStatus && triangle.i.lengthCounter > 0 && triangle.i.linearCounter > 0) {
-        tempStatus |= (1 << 2);
-    }
-
-    bool noiseStatus = (status >> 3) & 1;
-    if (noiseStatus && noise.i.lengthCounter > 0) {
-        tempStatus |= (1 << 3);
-    }
-
-    bool dmcStatus = (status >> 4) & 1;
-    if (dmcStatus && dmc.i.bytesRemaining > 0) {
-        tempStatus |= (1 << 4);
-    }
-
-    if (frameInterruptFlag) {
-        tempStatus |= (1 << 6);
-    }
-
-    // DMC interrupt flag
-    if (dmc.i.irqFlag) {
-        tempStatus |= (1 << 7);
-    }
-
-    return tempStatus;
+    return tempStatus.data;
 }
 
 uint8_t APU::readStatus() {
@@ -200,23 +175,19 @@ uint8_t APU::readStatus() {
 }
 
 void APU::writeStatus(uint8_t value) {
-    if (!((value >> 0) & 1)) pulses[0].i.lengthCounter = 0;
-    if (!((value >> 1) & 1)) pulses[1].i.lengthCounter = 0;
+    status.data = value;
 
-    // Triangle channel
-    if (!((value >> 2) & 1)) {
+    if (!status.enablePulse1) pulses[0].i.lengthCounter = 0;
+    if (!status.enablePulse2) pulses[1].i.lengthCounter = 0;
+
+    if (!status.enableTriangle) {
         triangle.i.lengthCounter = 0;
         triangle.i.outputValue = 0;
     }
 
-    // Noise channel
-    if (!((value >> 3) & 1)) {
-        noise.i.lengthCounter = 0;
-    }
+    if (!status.enableNoise) noise.i.lengthCounter = 0;
 
-    // DMC channel
-    bool dmcStatus = (value >> 4) & 1;
-    if (!dmcStatus) {
+    if (!status.enableDmc) {
         dmc.i.bytesRemaining = 0;
     }
     else if (dmc.i.bytesRemaining == 0) {
@@ -225,8 +196,6 @@ void APU::writeStatus(uint8_t value) {
 
         restartDmcSample();
     }
-
-    status = value;
 }
 
 void APU::writeFrameCounter(uint8_t value) {
@@ -314,8 +283,7 @@ void APU::executeHalfCycle() {
     if (totalCycles & 1) {
         // Clock pulse timers
         for (int i = 0; i < 2; i++) {
-            bool pulseStatus = (status >> i) & 1;
-            if (pulseStatus) {
+            if (getPulseStatus(i)) {
                 Pulse& pulse = pulses[i];
 
                 if (pulse.i.timerCounter == 0) {
@@ -330,8 +298,7 @@ void APU::executeHalfCycle() {
         }
 
         // Clock noise timer
-        bool noiseStatus = (status >> 3) & 1;
-        if (noiseStatus) {
+        if (status.enableNoise) {
             if (noise.i.timerCounter == 0) {
                 noise.i.timerCounter = NOISE_PERIOD_TABLE[noise.noisePeriod];
 
@@ -349,9 +316,8 @@ void APU::executeHalfCycle() {
     }
 
     // Clock triangle timer
-    bool triangleStatus = (status >> 2) & 1;
     uint16_t triangleTimerPeriod = triangle.timer;
-    if (triangleStatus && triangleTimerPeriod >= 2) {
+    if (status.enableTriangle && triangleTimerPeriod >= 2) {
         if (triangle.i.lengthCounter > 0 && triangle.i.linearCounter > 0) {
             if (triangle.i.timerCounter == 0) {
                 triangle.i.timerCounter = triangleTimerPeriod;
@@ -365,8 +331,7 @@ void APU::executeHalfCycle() {
     }
 
     // Clock DMC reader
-    bool dmcStatus = (status >> 4) & 1;
-    if (dmcStatus) {
+    if (status.enableDmc) {
         if (dmc.i.timerCounter == 0) {
             dmc.i.timerCounter = DMC_RATE_TABLE[dmc.frequency];
 
@@ -496,19 +461,16 @@ void APU::halfClock() {
     {
         // Pulse
         for (int i = 0; i < 2; i++) {
-            bool pulseStatus = (status >> i) & 1;
-            if (pulseStatus && pulses[i].i.lengthCounter && !pulses[i].envelopeLoopOrLengthCounterHalt) pulses[i].i.lengthCounter--;
+            if (getPulseStatus(i) && pulses[i].i.lengthCounter && !pulses[i].envelopeLoopOrLengthCounterHalt) pulses[i].i.lengthCounter--;
         }
 
         // Triangle
-        bool triangleStatus = (status >> 2) & 1;
-        if (triangleStatus && triangle.i.lengthCounter > 0 && !triangle.lengthCounterHaltOrLinearCounterControl) {
+        if (status.enableTriangle && triangle.i.lengthCounter > 0 && !triangle.lengthCounterHaltOrLinearCounterControl) {
             triangle.i.lengthCounter--;
         }
 
         // Noise
-        bool noiseStatus = (status >> 3) & 1;
-        if (noiseStatus && noise.i.lengthCounter > 0 && !noise.envelopeLoopOrLengthCounterHalt) {
+        if (status.enableNoise && noise.i.lengthCounter > 0 && !noise.envelopeLoopOrLengthCounterHalt) {
             noise.i.lengthCounter--;
         }
     }
@@ -606,9 +568,7 @@ float APU::getAudioSample() const {
     std::array<uint8_t, 2> pulseOutputs = {};
     for (int i = 0; i < 2; i++) {
         const Pulse& pulse = pulses[i];
-        bool pulseStatus = (status >> i) & 1;
-
-        if (pulseStatus && pulse.i.lengthCounter > 0 && pulse.i.timerCounter >= 9 && !pulse.i.sweepMutesChannel) {
+        if (getPulseStatus(i) && pulse.i.lengthCounter > 0 && pulse.i.timerCounter >= 9 && !pulse.i.sweepMutesChannel) {
             uint8_t dutyCycle = DUTY_CYCLES[pulse.duty];
             bool dutyOutput = (dutyCycle >> pulse.i.dutyCycleIndex) & 1;
 
@@ -624,9 +584,8 @@ float APU::getAudioSample() const {
 
     // Get noise output
     uint8_t noiseOutput = 0;
-    bool noiseStatus = (status >> 3) & 1;
     bool shiftRegisterBitSet = noise.i.shiftRegister & 1;
-    if (noiseStatus && noise.i.lengthCounter > 0 && !shiftRegisterBitSet) {
+    if (status.enableNoise && noise.i.lengthCounter > 0 && !shiftRegisterBitSet) {
         uint8_t volume = noise.constantVolume ? noise.volumeOrEnvelope : noise.i.envelope;
         noiseOutput = volume;
     }
@@ -658,6 +617,10 @@ void APU::restartDmcSample() {
 
     // Request the first sample of the new loop
     bus.requestDmcDma(dmc.i.currentAddress);
+}
+
+bool APU::getPulseStatus(bool pulseNum) const {
+    return !pulseNum ? status.enablePulse1 : status.enablePulse2;
 }
 
 void APU::serialize(Serializer& s) const {
@@ -721,7 +684,7 @@ void APU::serialize(Serializer& s) const {
     serializeNoise(s, noise);
     serializeDMC(s, dmc);
 
-    s.serializeUInt8(status);
+    s.serializeUInt8(status.data);
     s.serializeBool(frameSequenceMode);
     s.serializeBool(interruptInhibitFlag);
     s.serializeBool(frameInterruptFlag);
@@ -790,7 +753,7 @@ void APU::deserialize(Deserializer& d) {
     deserializeNoise(d, noise);
     deserializeDMC(d, dmc);
 
-    d.deserializeUInt8(status);
+    d.deserializeUInt8(status.data);
     d.deserializeBool(frameSequenceMode);
     d.deserializeBool(interruptInhibitFlag);
     d.deserializeBool(frameInterruptFlag);
