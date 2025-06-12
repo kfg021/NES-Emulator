@@ -59,14 +59,10 @@ private:
     // |                         3: fix last bank at $C000 and switch 16 KB bank at $8000)
     // +----- CHR ROM bank mode (0: switch 8 KB at a time; 1: switch two separate 4 KB banks)
     struct Control {
-        uint8_t mirroring : 2;
-        uint8_t prgRomMode : 2;
-        bool chrRomMode : 1;
-
-        Control() = default;
-        Control(uint8_t data);
-        uint8_t toUInt8() const;
-        void setFromUInt8(uint8_t data);
+        uint8_t data;
+        BitField<0, 2> mirroring{ data };
+        BitField<2, 2> prgRomMode{ data };
+        BitField<4, 1> chrRomMode{ data };
     };
     Control control;
 
@@ -82,13 +78,9 @@ private:
     //     MMC1A: Bit 3 bypasses fixed bank logic in 16K mode (0: fixed bank affects A17-A14;
     //     1: fixed bank affects A16-A14 and bit 3 directly controls A17)
     struct PRGBank {
-        uint8_t prgRomSelect : 4;
-        bool prgRamDisable : 1;
-
-        PRGBank() = default;
-        PRGBank(uint8_t data);
-        uint8_t toUInt8() const;
-        void setFromUInt8(uint8_t data);
+        uint8_t data;
+        BitField<0, 4> prgRomSelect{ data };
+        BitField<4, 1> prgRamDisable{ data };
     };
     PRGBank prgBank;
 

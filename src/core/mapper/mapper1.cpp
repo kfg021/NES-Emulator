@@ -13,13 +13,14 @@ Mapper1::Mapper1(const Config& config, const std::vector<uint8_t>& prg, const st
 void Mapper1::reset() {
     shiftRegister = SHIFT_REGISTER_RESET;
 
-    control = 0;
-    control.prgRomMode = 0x3;
     control.mirroring = (config.initialMirrorMode == MirrorMode::HORIZONTAL) ? 0x3 : 0x2;
+    control.prgRomMode = 0x3;
+    control.chrRomMode = 0;
 
     chrBank0 = 0;
     chrBank1 = 0;
-    prgBank = 0;
+
+    prgBank.data = 0;
 
     if (!config.hasBatteryBackedPrgRam) {
         prgRam.reset();
@@ -90,7 +91,7 @@ void Mapper1::mapPRGWrite(uint16_t cpuAddress, uint8_t value) {
 
 void Mapper1::internalRegisterWrite(uint16_t address, uint8_t value) {
     if (CONTROL_REGISTER.contains(address)) {
-        control = value;
+        control.data = value;
     }
     else if (CHR_REGISTER_0.contains(address)) {
         chrBank0 = value;
@@ -99,7 +100,7 @@ void Mapper1::internalRegisterWrite(uint16_t address, uint8_t value) {
         chrBank1 = value;
     }
     else if (PRG_REGISTER.contains(address)) {
-        prgBank = value;
+        prgBank.data = value;
     }
 }
 
@@ -135,46 +136,12 @@ Mapper::MirrorMode Mapper1::getMirrorMode() const {
     }
 }
 
-Mapper1::Control::Control(uint8_t data) {
-    setFromUInt8(data);
-}
-
-uint8_t Mapper1::Control::toUInt8() const {
-    uint8_t data =
-        mirroring |
-        (prgRomMode << 2) |
-        (chrRomMode << 4);
-    return data;
-}
-
-void Mapper1::Control::setFromUInt8(uint8_t data) {
-    mirroring = data & 0x3;
-    prgRomMode = (data >> 2) & 0x3;
-    chrRomMode = (data >> 4) & 0x1;
-}
-
-Mapper1::PRGBank::PRGBank(uint8_t data) {
-    setFromUInt8(data);
-}
-
-uint8_t Mapper1::PRGBank::toUInt8() const {
-    uint8_t data =
-        prgRomSelect |
-        (prgRamDisable << 4);
-    return data;
-}
-
-void Mapper1::PRGBank::setFromUInt8(uint8_t data) {
-    prgRomSelect = data & 0xF;
-    prgRamDisable = (data >> 4) & 0x1;
-}
-
 void Mapper1::serialize(Serializer& s) const {
     s.serializeUInt8(shiftRegister);
-    s.serializeUInt8(control.toUInt8());
+    s.serializeUInt8(control.data);
     s.serializeUInt8(chrBank0);
     s.serializeUInt8(chrBank1);
-    s.serializeUInt8(prgBank.toUInt8());
+    s.serializeUInt8(prgBank.data);
     s.serializeVector(prgRam.data, s.uInt8Func);
     if (chrRam.isEnabled) {
         s.serializeVector(chrRam.data, s.uInt8Func);
@@ -183,18 +150,10 @@ void Mapper1::serialize(Serializer& s) const {
 
 void Mapper1::deserialize(Deserializer& d) {
     d.deserializeUInt8(shiftRegister);
-
-    uint8_t controlTemp;
-    d.deserializeUInt8(controlTemp);
-    control.setFromUInt8(controlTemp);
-
+    d.deserializeUInt8(control.data);
     d.deserializeUInt8(chrBank0);
     d.deserializeUInt8(chrBank1);
-
-    uint8_t prgBankTemp;
-    d.deserializeUInt8(prgBankTemp);
-    prgBank.setFromUInt8(prgBankTemp);
-
+    d.deserializeUInt8(prgBank.data);
     d.deserializeVector(prgRam.data, d.uInt8Func);
     if (chrRam.isEnabled) {
         d.deserializeVector(chrRam.data, d.uInt8Func);
