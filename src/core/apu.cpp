@@ -7,11 +7,13 @@ APU::APU(Bus& bus) : bus(bus) {
 }
 
 void APU::resetAPU() {
-    for(int i = 0; i < 2; i++){
+    for (int i = 0; i < 2; i++) {
         pulses[i].data = 0;
         pulses[i].i = {};
     }
-    triangle = {};
+
+    triangle.data = 0;
+    triangle.i = {};
 
     noise = {};
     noise.shiftRegister = 1; // Shift register is 1 on power-up
@@ -46,6 +48,7 @@ void APU::write(uint16_t addr, uint8_t value) {
 
             case 1: // 0x4001 / 0x4005
                 pulse.reg4001 = value;
+
                 pulse.i.sweepReloadFlag = true;
 
                 if (!pulse.sweepUnitEnabled || !pulse.sweepUnitShift) {
@@ -60,8 +63,7 @@ void APU::write(uint16_t addr, uint8_t value) {
             default: // 0x4003 / 0x4007
                 pulse.reg4003 = value;
 
-                uint16_t timerReload = pulse.timer;
-                pulse.i.timerCounter = timerReload;
+                pulse.i.timerCounter = pulse.timer;
 
                 bool pulseStatus = (status >> static_cast<int>(pulseNum)) & 1;
                 if (pulseStatus) {
@@ -76,8 +78,7 @@ void APU::write(uint16_t addr, uint8_t value) {
     else if (TRIANGLE_RANGE.contains(addr)) {
         switch (addr & 0x3) {
             case 0: // 0x4008
-                triangle.linearCounterLoad = value & 0x7F;
-                triangle.lengthCounterHaltOrLinearCounterControl = (value >> 7) & 1;
+                triangle.reg4008 = value;
                 break;
 
             case 1: // 0x4009
@@ -85,20 +86,19 @@ void APU::write(uint16_t addr, uint8_t value) {
                 break;
 
             case 2: // 0x400A
-                triangle.timerLow = value;
+                triangle.reg400A = value;
                 break;
 
             default: // 0x400B
-                triangle.timerHigh = value & 0x7;
-                uint16_t timerReload = (static_cast<uint16_t>(triangle.timerHigh) << 8) | triangle.timerLow;
-                triangle.timerCounter = timerReload;
+                triangle.reg400B = value;
 
-                triangle.lengthCounterLoad = (value >> 3) & 0x1F;
+                triangle.i.timerCounter = triangle.timer;
+
                 bool triangleStatus = (status >> 2) & 1;
                 if (triangleStatus) {
-                    triangle.lengthCounter = LENGTH_COUNTER_TABLE[triangle.lengthCounterLoad];
+                    triangle.i.lengthCounter = LENGTH_COUNTER_TABLE[triangle.lengthCounterLoad];
                 }
-                triangle.linearCounterReloadFlag = true;
+                triangle.i.linearCounterReloadFlag = true;
                 break;
         }
     }
@@ -171,7 +171,7 @@ uint8_t APU::viewStatus() const {
     }
 
     bool triangleStatus = (status >> 2) & 1;
-    if (triangleStatus && triangle.lengthCounter > 0 && triangle.linearCounter > 0) {
+    if (triangleStatus && triangle.i.lengthCounter > 0 && triangle.i.linearCounter > 0) {
         tempStatus |= (1 << 2);
     }
 
@@ -209,8 +209,8 @@ void APU::writeStatus(uint8_t value) {
 
     // Triangle channel
     if (!((value >> 2) & 1)) {
-        triangle.lengthCounter = 0;
-        triangle.outputValue = 0;
+        triangle.i.lengthCounter = 0;
+        triangle.i.outputValue = 0;
     }
 
     // Noise channel
@@ -354,16 +354,16 @@ void APU::executeHalfCycle() {
 
     // Clock triangle timer
     bool triangleStatus = (status >> 2) & 1;
-    uint16_t triangleTimerPeriod = (static_cast<uint16_t>(triangle.timerHigh) << 8) | triangle.timerLow;
+    uint16_t triangleTimerPeriod = triangle.timer;
     if (triangleStatus && triangleTimerPeriod >= 2) {
-        if (triangle.lengthCounter > 0 && triangle.linearCounter > 0) {
-            if (triangle.timerCounter == 0) {
-                triangle.timerCounter = triangleTimerPeriod;
-                triangle.sequenceIndex = (triangle.sequenceIndex + 1) & 0x1F;
-                triangle.outputValue = TRIANGLE_SEQUENCE[triangle.sequenceIndex];
+        if (triangle.i.lengthCounter > 0 && triangle.i.linearCounter > 0) {
+            if (triangle.i.timerCounter == 0) {
+                triangle.i.timerCounter = triangleTimerPeriod;
+                triangle.i.sequenceIndex = (triangle.i.sequenceIndex + 1) & 0x1F;
+                triangle.i.outputValue = TRIANGLE_SEQUENCE[triangle.i.sequenceIndex];
             }
             else {
-                triangle.timerCounter--;
+                triangle.i.timerCounter--;
             }
         }
     }
@@ -482,15 +482,15 @@ void APU::quarterClock() {
 
     // Clock triangle linear counter
     {
-        if (triangle.linearCounterReloadFlag) {
-            triangle.linearCounter = triangle.linearCounterLoad;
+        if (triangle.i.linearCounterReloadFlag) {
+            triangle.i.linearCounter = triangle.linearCounterLoad;
         }
-        else if (triangle.linearCounter > 0) {
-            triangle.linearCounter--;
+        else if (triangle.i.linearCounter > 0) {
+            triangle.i.linearCounter--;
         }
 
         if (!triangle.lengthCounterHaltOrLinearCounterControl) {
-            triangle.linearCounterReloadFlag = false;
+            triangle.i.linearCounterReloadFlag = false;
         }
     }
 }
@@ -506,8 +506,8 @@ void APU::halfClock() {
 
         // Triangle
         bool triangleStatus = (status >> 2) & 1;
-        if (triangleStatus && triangle.lengthCounter > 0 && !triangle.lengthCounterHaltOrLinearCounterControl) {
-            triangle.lengthCounter--;
+        if (triangleStatus && triangle.i.lengthCounter > 0 && !triangle.lengthCounterHaltOrLinearCounterControl) {
+            triangle.i.lengthCounter--;
         }
 
         // Noise
@@ -624,7 +624,7 @@ float APU::getAudioSample() const {
     }
 
     // Get triangle outputs
-    uint8_t triangleOutput = triangle.outputValue;
+    uint8_t triangleOutput = triangle.i.outputValue;
 
     // Get noise output
     uint8_t noiseOutput = 0;
@@ -681,33 +681,15 @@ void APU::serialize(Serializer& s) const {
     };
 
     auto serializeTriangle = [](Serializer& s, const Triangle& triangle) -> void {
-        auto triangleToUInt32 = [](const Triangle& triangle) -> uint32_t {
-            uint32_t data =
-                // 0x4008
-                (static_cast<uint32_t>(triangle.linearCounterLoad)) |
-                (triangle.lengthCounterHaltOrLinearCounterControl << 7) |
-
-                // 0x4009 - Unused
-
-                // 0x400A
-                (triangle.timerLow << 16) |
-
-                // 0x400B
-                (triangle.timerHigh << 24) |
-                (triangle.lengthCounterLoad << (24 + 3));
-
-            return data;
-        };
-
-        s.serializeUInt32(triangleToUInt32(triangle));
+        s.serializeUInt32(triangle.data);
 
         // Internal state
-        s.serializeUInt16(triangle.timerCounter);
-        s.serializeUInt8(triangle.linearCounter);
-        s.serializeBool(triangle.linearCounterReloadFlag);
-        s.serializeUInt8(triangle.sequenceIndex);
-        s.serializeUInt8(triangle.lengthCounter);
-        s.serializeUInt8(triangle.outputValue);
+        s.serializeUInt16(triangle.i.timerCounter);
+        s.serializeUInt8(triangle.i.linearCounter);
+        s.serializeBool(triangle.i.linearCounterReloadFlag);
+        s.serializeUInt8(triangle.i.sequenceIndex);
+        s.serializeUInt8(triangle.i.lengthCounter);
+        s.serializeUInt8(triangle.i.outputValue);
     };
 
     auto serializeNoise = [](Serializer& s, const Noise& noise) -> void {
@@ -806,32 +788,15 @@ void APU::deserialize(Deserializer& d) {
     };
 
     auto deserializeTriangle = [](Deserializer& d, Triangle& triangle) -> void {
-        auto setTriangleFromUInt32 = [](Triangle& triangle, uint32_t data) -> void {
-            // 0x4008
-            triangle.linearCounterLoad = data & 0x7F;
-            triangle.lengthCounterHaltOrLinearCounterControl = (data >> 7) & 0x1;
-
-            // 0x4009 - Unused
-
-            // 0x400A
-            triangle.timerLow = (data >> 16) & 0xFF;
-
-            // 0x400B
-            triangle.timerHigh = (data >> 24) & 0x7;
-            triangle.lengthCounterLoad = (data >> (24 + 3)) & 0x1F;
-        };
-
-        uint32_t triangleTemp;
-        d.deserializeUInt32(triangleTemp);
-        setTriangleFromUInt32(triangle, triangleTemp);
+        d.deserializeUInt32(triangle.data);
 
         // Internal state
-        d.deserializeUInt16(triangle.timerCounter);
-        d.deserializeUInt8(triangle.linearCounter);
-        d.deserializeBool(triangle.linearCounterReloadFlag);
-        d.deserializeUInt8(triangle.sequenceIndex);
-        d.deserializeUInt8(triangle.lengthCounter);
-        d.deserializeUInt8(triangle.outputValue);
+        d.deserializeUInt16(triangle.i.timerCounter);
+        d.deserializeUInt8(triangle.i.linearCounter);
+        d.deserializeBool(triangle.i.linearCounterReloadFlag);
+        d.deserializeUInt8(triangle.i.sequenceIndex);
+        d.deserializeUInt8(triangle.i.lengthCounter);
+        d.deserializeUInt8(triangle.i.outputValue);
     };
 
     auto deserializeNoise = [](Deserializer& d, Noise& noise) -> void {

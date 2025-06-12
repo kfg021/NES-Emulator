@@ -62,9 +62,8 @@ private:
         BitField<15, 1, uint32_t> sweepUnitEnabled{ data };
 
         // 0x4002 / 0x4006
-        BitField<16, 11, uint32_t> timer{ data }; // Use one combined timer instead of timer low/high
-
         // 0x4003 / 0x4007
+        BitField<16, 11, uint32_t> timer{ data }; // Use one combined timer instead of timer low/high
         BitField<27, 5, uint32_t> lengthCounterLoad{ data };
 
         struct Internal {
@@ -83,24 +82,31 @@ private:
     };
 
     struct Triangle {
+        uint32_t data;
+        BitField<0, 8, uint32_t>  reg4008{ data };
+        BitField<16, 8, uint32_t> reg400A{ data };
+        BitField<24, 8, uint32_t> reg400B{ data };
+
         // 0x4008
-        uint8_t linearCounterLoad : 7;
-        bool lengthCounterHaltOrLinearCounterControl : 1;
+        BitField<0, 7, uint32_t> linearCounterLoad{ data };
+        BitField<7, 1, uint32_t> lengthCounterHaltOrLinearCounterControl{ data };
 
         // 0x400A
-        uint8_t timerLow;
-
         // 0x400B
-        uint8_t timerHigh : 3;
-        uint8_t lengthCounterLoad : 5;
+        BitField<16, 11, uint32_t> timer{ data }; // Use one combined timer instead of timer low/high
+        BitField<27, 5, uint32_t>  lengthCounterLoad{ data };
 
         // Internal state
-        uint16_t timerCounter;
-        uint8_t linearCounter;
-        bool linearCounterReloadFlag;
-        uint8_t sequenceIndex;
-        uint8_t lengthCounter;
-        uint8_t outputValue;
+        struct Internal {
+            uint16_t timerCounter;
+            uint8_t linearCounter;
+            bool linearCounterReloadFlag;
+            uint8_t sequenceIndex;
+            uint8_t lengthCounter;
+            uint8_t outputValue;
+        };
+
+        Internal i;
     };
 
     struct Noise {
