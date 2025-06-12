@@ -3,11 +3,6 @@
 #include "core/bus.hpp"
 #include "util/util.hpp"
 
-#include <fstream>
-#include <sstream>
-
-#include <iostream>
-
 const std::array<CPU::Opcode, CPU::MAX_NUM_OPCODES> CPU::lookup = CPU::initLookup();
 
 CPU::CPU(Bus& bus) : bus(bus) {
