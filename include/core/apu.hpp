@@ -43,35 +43,43 @@ private:
     static constexpr MemoryRange DMC_RANGE{ 0x4010, 0x4013 };
 
     struct Pulse {
-        // 0x4000 / 0x4004
-        uint8_t volumeOrEnvelopeRate : 4;
-        bool constantVolume : 1;
-        bool envelopeLoopOrLengthCounterHalt : 1;
-        uint8_t duty : 2;
+        uint32_t data;
+        BitField<0, 8, uint32_t>  reg4000{ data };
+        BitField<8, 8, uint32_t>  reg4001{ data };
+        BitField<16, 8, uint32_t> reg4002{ data };
+        BitField<24, 8, uint32_t> reg4003{ data };
 
-        // 0x4001 / 0x4005
-        uint8_t sweepUnitShift : 3;
-        bool sweepUnitNegate : 1;
-        uint8_t sweepUnitPeriod : 3;
-        bool sweepUnitEnabled : 1;
+        // 0x4000 / 0x4004
+        BitField<0, 4, uint32_t> volumeOrEnvelopeRate{ data };
+        BitField<4, 1, uint32_t> constantVolume{ data };
+        BitField<5, 1, uint32_t> envelopeLoopOrLengthCounterHalt{ data };
+        BitField<6, 2, uint32_t> duty{ data };
+
+        // 0x4001 / 0x4005  
+        BitField<8, 3, uint32_t> sweepUnitShift{ data };
+        BitField<11, 1, uint32_t> sweepUnitNegate{ data };
+        BitField<12, 3, uint32_t> sweepUnitPeriod{ data };
+        BitField<15, 1, uint32_t> sweepUnitEnabled{ data };
 
         // 0x4002 / 0x4006
-        uint8_t timerLow;
+        BitField<16, 11, uint32_t> timer{ data }; // Use one combined timer instead of timer low/high
 
         // 0x4003 / 0x4007
-        uint8_t timerHigh : 3;
-        uint8_t lengthCounterLoad : 5;
+        BitField<27, 5, uint32_t> lengthCounterLoad{ data };
 
-        // Internal state
-        uint16_t timerCounter;
-        uint8_t dutyCycleIndex;
-        uint8_t lengthCounter;
-        bool envelopeStartFlag;
-        uint8_t envelope;
-        uint8_t envelopeDividerCounter;
-        uint8_t sweepDividerCounter;
-        bool sweepMutesChannel;
-        bool sweepReloadFlag;
+        struct Internal {
+            uint16_t timerCounter;
+            uint8_t dutyCycleIndex;
+            uint8_t lengthCounter;
+            bool envelopeStartFlag;
+            uint8_t envelope;
+            uint8_t envelopeDividerCounter;
+            uint8_t sweepDividerCounter;
+            bool sweepMutesChannel;
+            bool sweepReloadFlag;
+        };
+
+        Internal i;
     };
 
     struct Triangle {

@@ -7,8 +7,10 @@ APU::APU(Bus& bus) : bus(bus) {
 }
 
 void APU::resetAPU() {
-    pulses[0] = {};
-    pulses[1] = {};
+    for(int i = 0; i < 2; i++){
+        pulses[i].data = 0;
+        pulses[i].i = {};
+    }
     triangle = {};
 
     noise = {};
@@ -39,41 +41,35 @@ void APU::write(uint16_t addr, uint8_t value) {
 
         switch (addr & 0x3) {
             case 0: // 0x4000 / 0x4004
-                pulse.volumeOrEnvelopeRate = value & 0xF;
-                pulse.constantVolume = (value >> 4) & 0x1;
-                pulse.envelopeLoopOrLengthCounterHalt = (value >> 5) & 0x1;
-                pulse.duty = (value >> 6) & 0x3;
+                pulse.reg4000 = value;
                 break;
 
             case 1: // 0x4001 / 0x4005
-                pulse.sweepUnitShift = value & 0x7;
-                pulse.sweepUnitNegate = (value >> 3) & 0x1;
-                pulse.sweepUnitPeriod = (value >> 4) & 0x7;
-                pulse.sweepUnitEnabled = (value >> 7) & 0x1;
-                pulse.sweepReloadFlag = true;
+                pulse.reg4001 = value;
+                pulse.i.sweepReloadFlag = true;
 
                 if (!pulse.sweepUnitEnabled || !pulse.sweepUnitShift) {
-                    pulse.sweepMutesChannel = false;
+                    pulse.i.sweepMutesChannel = false;
                 }
                 break;
 
             case 2: // 0x4002 / 0x4006
-                pulse.timerLow = value;
+                pulse.reg4002 = value;
                 break;
 
             default: // 0x4003 / 0x4007
-                pulse.timerHigh = value & 0x7;
-                uint16_t timerReload = (static_cast<uint16_t>(pulse.timerHigh) << 8) | pulse.timerLow;
-                pulse.timerCounter = timerReload;
+                pulse.reg4003 = value;
 
-                pulse.lengthCounterLoad = (value >> 3) & 0x1F;
+                uint16_t timerReload = pulse.timer;
+                pulse.i.timerCounter = timerReload;
+
                 bool pulseStatus = (status >> static_cast<int>(pulseNum)) & 1;
                 if (pulseStatus) {
-                    pulse.lengthCounter = LENGTH_COUNTER_TABLE[pulse.lengthCounterLoad];
+                    pulse.i.lengthCounter = LENGTH_COUNTER_TABLE[pulse.lengthCounterLoad];
                 }
 
-                pulse.envelopeStartFlag = true;
-                pulse.dutyCycleIndex = 0;
+                pulse.i.envelopeStartFlag = true;
+                pulse.i.dutyCycleIndex = 0;
                 break;
         }
     }
@@ -169,7 +165,7 @@ uint8_t APU::viewStatus() const {
 
     for (int i = 0; i < 2; i++) {
         bool pulseStatus = (status >> i) & 1;
-        if (pulseStatus && pulses[i].lengthCounter > 0) {
+        if (pulseStatus && pulses[i].i.lengthCounter > 0) {
             tempStatus |= (1 << i);
         }
     }
@@ -208,8 +204,8 @@ uint8_t APU::readStatus() {
 }
 
 void APU::writeStatus(uint8_t value) {
-    if (!((value >> 0) & 1)) pulses[0].lengthCounter = 0;
-    if (!((value >> 1) & 1)) pulses[1].lengthCounter = 0;
+    if (!((value >> 0) & 1)) pulses[0].i.lengthCounter = 0;
+    if (!((value >> 1) & 1)) pulses[1].i.lengthCounter = 0;
 
     // Triangle channel
     if (!((value >> 2) & 1)) {
@@ -326,13 +322,13 @@ void APU::executeHalfCycle() {
             if (pulseStatus) {
                 Pulse& pulse = pulses[i];
 
-                if (pulse.timerCounter == 0) {
-                    uint16_t timerReload = (static_cast<uint16_t>(pulse.timerHigh) << 8) | pulse.timerLow;
-                    pulse.timerCounter = timerReload;
-                    pulse.dutyCycleIndex = (pulse.dutyCycleIndex + 1) & 0x7;
+                if (pulse.i.timerCounter == 0) {
+                    uint16_t timerReload = pulse.timer;
+                    pulse.i.timerCounter = timerReload;
+                    pulse.i.dutyCycleIndex = (pulse.i.dutyCycleIndex + 1) & 0x7;
                 }
                 else {
-                    pulse.timerCounter--;
+                    pulse.i.timerCounter--;
                 }
             }
         }
@@ -439,22 +435,22 @@ void APU::quarterClock() {
     {
         for (int i = 0; i < 2; ++i) {
             Pulse& pulse = pulses[i];
-            if (pulse.envelopeStartFlag) {
-                pulse.envelopeStartFlag = false;
-                pulse.envelope = 0xF;
-                pulse.envelopeDividerCounter = pulse.volumeOrEnvelopeRate;
+            if (pulse.i.envelopeStartFlag) {
+                pulse.i.envelopeStartFlag = false;
+                pulse.i.envelope = 0xF;
+                pulse.i.envelopeDividerCounter = pulse.volumeOrEnvelopeRate;
             }
             else {
-                if (pulse.envelopeDividerCounter > 0) {
-                    pulse.envelopeDividerCounter--;
+                if (pulse.i.envelopeDividerCounter > 0) {
+                    pulse.i.envelopeDividerCounter--;
                 }
                 else {
-                    pulse.envelopeDividerCounter = pulse.volumeOrEnvelopeRate;
-                    if (pulse.envelope) {
-                        pulse.envelope--;
+                    pulse.i.envelopeDividerCounter = pulse.volumeOrEnvelopeRate;
+                    if (pulse.i.envelope) {
+                        pulse.i.envelope--;
                     }
                     else if (pulse.envelopeLoopOrLengthCounterHalt) {
-                        pulse.envelope = 0xF;
+                        pulse.i.envelope = 0xF;
                     }
                 }
             }
@@ -505,7 +501,7 @@ void APU::halfClock() {
         // Pulse
         for (int i = 0; i < 2; i++) {
             bool pulseStatus = (status >> i) & 1;
-            if (pulseStatus && pulses[i].lengthCounter && !pulses[i].envelopeLoopOrLengthCounterHalt) pulses[i].lengthCounter--;
+            if (pulseStatus && pulses[i].i.lengthCounter && !pulses[i].envelopeLoopOrLengthCounterHalt) pulses[i].i.lengthCounter--;
         }
 
         // Triangle
@@ -527,24 +523,24 @@ void APU::halfClock() {
             Pulse& pulse = pulses[i];
             bool sweepClockedThisTick = false;
 
-            if (pulse.sweepReloadFlag) {
-                pulse.sweepDividerCounter = pulse.sweepUnitPeriod + 1;
+            if (pulse.i.sweepReloadFlag) {
+                pulse.i.sweepDividerCounter = pulse.sweepUnitPeriod + 1;
                 sweepClockedThisTick = true;
-                pulse.sweepReloadFlag = false;
+                pulse.i.sweepReloadFlag = false;
             }
 
-            if (pulse.sweepDividerCounter) {
-                pulse.sweepDividerCounter--;
+            if (pulse.i.sweepDividerCounter) {
+                pulse.i.sweepDividerCounter--;
             }
 
-            if (!pulse.sweepDividerCounter) {
+            if (!pulse.i.sweepDividerCounter) {
                 sweepClockedThisTick = true;
-                pulse.sweepDividerCounter = pulse.sweepUnitPeriod + 1;
+                pulse.i.sweepDividerCounter = pulse.sweepUnitPeriod + 1;
             }
 
             if (sweepClockedThisTick) {
-                if (pulse.sweepUnitEnabled && pulse.sweepUnitShift > 0 && pulse.lengthCounter > 0) {
-                    uint16_t currentPeriod = (static_cast<uint16_t>(pulse.timerHigh) << 8) | pulse.timerLow;
+                if (pulse.sweepUnitEnabled && pulse.sweepUnitShift > 0 && pulse.i.lengthCounter > 0) {
+                    uint16_t currentPeriod = pulse.timer;
                     uint16_t changeAmount = currentPeriod >> pulse.sweepUnitShift;
                     uint16_t targetPeriod;
 
@@ -561,12 +557,11 @@ void APU::halfClock() {
                     }
 
                     if (currentPeriod < 8 || targetPeriod > 0x7FF) {
-                        pulse.sweepMutesChannel = true;
+                        pulse.i.sweepMutesChannel = true;
                     }
                     else {
-                        pulse.sweepMutesChannel = false;
-                        pulse.timerLow = targetPeriod & 0xFF;
-                        pulse.timerHigh = (targetPeriod >> 8) & 0x07;
+                        pulse.i.sweepMutesChannel = false;
+                        pulse.timer = targetPeriod;
                     }
                 }
             }
@@ -617,12 +612,12 @@ float APU::getAudioSample() const {
         const Pulse& pulse = pulses[i];
         bool pulseStatus = (status >> i) & 1;
 
-        if (pulseStatus && pulse.lengthCounter > 0 && pulse.timerCounter >= 9 && !pulse.sweepMutesChannel) {
+        if (pulseStatus && pulse.i.lengthCounter > 0 && pulse.i.timerCounter >= 9 && !pulse.i.sweepMutesChannel) {
             uint8_t dutyCycle = DUTY_CYCLES[pulse.duty];
-            bool dutyOutput = (dutyCycle >> pulse.dutyCycleIndex) & 1;
+            bool dutyOutput = (dutyCycle >> pulse.i.dutyCycleIndex) & 1;
 
             if (dutyOutput) {
-                uint8_t volume = pulse.constantVolume ? pulse.volumeOrEnvelopeRate : pulse.envelope;
+                uint8_t volume = pulse.constantVolume ? pulse.volumeOrEnvelopeRate : pulse.i.envelope;
                 pulseOutputs[i] = volume;
             }
         }
@@ -671,42 +666,18 @@ void APU::restartDmcSample() {
 
 void APU::serialize(Serializer& s) const {
     auto serializePulse = [](Serializer& s, const Pulse& pulse) -> void {
-        auto pulseToUInt32 = [](const Pulse& pulse) -> uint32_t {
-            uint32_t data =
-                // 0x4000 / 0x4004
-                static_cast<uint32_t>(pulse.volumeOrEnvelopeRate) |
-                (pulse.constantVolume << 4) |
-                (pulse.envelopeLoopOrLengthCounterHalt << 5) |
-                (pulse.duty << 6) |
-
-                // 0x4001 / 0x4005
-                (pulse.sweepUnitShift << 8) |
-                (pulse.sweepUnitNegate << (8 + 3)) |
-                (pulse.sweepUnitPeriod << (8 + 4)) |
-                (pulse.sweepUnitEnabled << (8 + 7)) |
-
-                // 0x4002 / 0x4006
-                (pulse.timerLow << 16) |
-
-                // 0x4003 / 0x4007
-                (pulse.timerHigh << 24) |
-                (pulse.lengthCounterLoad << (24 + 3));
-
-            return data;
-        };
-
-        s.serializeUInt32(pulseToUInt32(pulse));
+        s.serializeUInt32(pulse.data);
 
         // Internal state
-        s.serializeUInt16(pulse.timerCounter);
-        s.serializeUInt8(pulse.dutyCycleIndex);
-        s.serializeUInt8(pulse.lengthCounter);
-        s.serializeBool(pulse.envelopeStartFlag);
-        s.serializeUInt8(pulse.envelope);
-        s.serializeUInt8(pulse.envelopeDividerCounter);
-        s.serializeUInt8(pulse.sweepDividerCounter);
-        s.serializeBool(pulse.sweepMutesChannel);
-        s.serializeBool(pulse.sweepReloadFlag);
+        s.serializeUInt16(pulse.i.timerCounter);
+        s.serializeUInt8(pulse.i.dutyCycleIndex);
+        s.serializeUInt8(pulse.i.lengthCounter);
+        s.serializeBool(pulse.i.envelopeStartFlag);
+        s.serializeUInt8(pulse.i.envelope);
+        s.serializeUInt8(pulse.i.envelopeDividerCounter);
+        s.serializeUInt8(pulse.i.sweepDividerCounter);
+        s.serializeBool(pulse.i.sweepMutesChannel);
+        s.serializeBool(pulse.i.sweepReloadFlag);
     };
 
     auto serializeTriangle = [](Serializer& s, const Triangle& triangle) -> void {
@@ -820,41 +791,18 @@ void APU::serialize(Serializer& s) const {
 
 void APU::deserialize(Deserializer& d) {
     auto deserializePulse = [](Deserializer& d, Pulse& pulse) -> void {
-        auto setPulseFromUInt32 = [](Pulse& pulse, uint32_t data) -> void {
-            // 0x4000 / 0x4004
-            pulse.volumeOrEnvelopeRate = data & 0xF;
-            pulse.constantVolume = (data >> 4) & 0x1;
-            pulse.envelopeLoopOrLengthCounterHalt = (data >> 5) & 0x1;
-            pulse.duty = (data >> 6) & 0x3;
-
-            // 0x4001 / 0x4005
-            pulse.sweepUnitShift = (data >> 8) & 0x7;
-            pulse.sweepUnitNegate = (data >> (8 + 3)) & 0x1;
-            pulse.sweepUnitPeriod = (data >> (8 + 4)) & 0x7;
-            pulse.sweepUnitEnabled = (data >> (8 + 7)) & 0x1;
-
-            // 0x4002 / 0x4006
-            pulse.timerLow = (data >> 16) & 0xFF;
-
-            // 0x4003 / 0x4007
-            pulse.timerHigh = (data >> 24) & 0x7;
-            pulse.lengthCounterLoad = (data >> (24 + 3)) & 0x1F;
-        };
-
-        uint32_t pulseTemp;
-        d.deserializeUInt32(pulseTemp);
-        setPulseFromUInt32(pulse, pulseTemp);
+        d.deserializeUInt32(pulse.data);
 
         // Internal state
-        d.deserializeUInt16(pulse.timerCounter);
-        d.deserializeUInt8(pulse.dutyCycleIndex);
-        d.deserializeUInt8(pulse.lengthCounter);
-        d.deserializeBool(pulse.envelopeStartFlag);
-        d.deserializeUInt8(pulse.envelope);
-        d.deserializeUInt8(pulse.envelopeDividerCounter);
-        d.deserializeUInt8(pulse.sweepDividerCounter);
-        d.deserializeBool(pulse.sweepMutesChannel);
-        d.deserializeBool(pulse.sweepReloadFlag);
+        d.deserializeUInt16(pulse.i.timerCounter);
+        d.deserializeUInt8(pulse.i.dutyCycleIndex);
+        d.deserializeUInt8(pulse.i.lengthCounter);
+        d.deserializeBool(pulse.i.envelopeStartFlag);
+        d.deserializeUInt8(pulse.i.envelope);
+        d.deserializeUInt8(pulse.i.envelopeDividerCounter);
+        d.deserializeUInt8(pulse.i.sweepDividerCounter);
+        d.deserializeBool(pulse.i.sweepMutesChannel);
+        d.deserializeBool(pulse.i.sweepReloadFlag);
     };
 
     auto deserializeTriangle = [](Deserializer& d, Triangle& triangle) -> void {
