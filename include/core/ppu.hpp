@@ -99,7 +99,7 @@ private:
     // +--------- Generate an NMI at the start of the
     //         vertical blanking interval (0: off; 1: on)
     struct Control {
-        uint8_t data;
+        uint8_t data = 0;
         BitField<0, 1> nametableX{ data };
         BitField<1, 1> nametableY{ data };
         BitField<2, 1> vramAddressIncrement{ data };
@@ -188,19 +188,6 @@ private:
         BitField<12, 3, uint16_t> fineY{ data };
     };
 
-    struct OAMEntry {
-        uint8_t y;
-        uint8_t tileIndex;
-        uint8_t attributes;
-        uint8_t x;
-
-        OAMEntry() = default;
-        OAMEntry(uint32_t data);
-        OAMEntry(const OAMBuffer& oamBuffer, uint8_t bufferIndex);
-        uint32_t toUInt32() const;
-        void setFromUInt32(uint32_t data);
-    };
-
     Control control;
     Mask mask;
     Status status;
@@ -275,6 +262,13 @@ private:
     void incrementCycle();
     void incrementCoarseX();
     void incrementY();
+
+    struct OAMEntry {
+        uint8_t y;
+        uint8_t tileIndex;
+        uint8_t attributes;
+        uint8_t x;
+    };
 
     struct SpriteData {
         OAMEntry oam;

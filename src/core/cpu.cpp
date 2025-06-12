@@ -491,7 +491,7 @@ uint16_t CPU::pop16BitDataFromStack() {
 }
 
 void CPU::pushFlagsToStack(bool breakFlagValue) {
-    StatusRegister srTemp = sr;
+    StatusRegister srTemp{ sr.data };
     srTemp.break_ = breakFlagValue;
     srTemp.unused = 1;
     push8BitDataToStack(srTemp.data);
@@ -827,7 +827,7 @@ void CPU::BPL(const AddressingMode::ReturnType& operand) {
 void CPU::BRK(const AddressingMode::ReturnType& /*operand*/) {
     push16BitDataToStack(pc + 2);
     pushFlagsToStack(1);
-    
+
     sr.interrupt = 1;
 
     pc = read16BitData(IRQ_BRK_VECTOR);

@@ -175,7 +175,7 @@ void PPU::write(uint8_t ppuRegister, uint8_t value) {
             temporaryVramAddress.data &= 0xFF00;
             temporaryVramAddress.data |= value;
 
-            vramAddress = temporaryVramAddress;
+            vramAddress.data = temporaryVramAddress.data;
         }
         addressLatch ^= 1;
     }
@@ -395,9 +395,9 @@ void PPU::preRenderScanline() {
     }
     else if (cycle >= 280 && cycle <= 304) {
         if (isRenderingEnabled()) {
-            vramAddress.fineY = temporaryVramAddress.fineY;
-            vramAddress.nametableY = temporaryVramAddress.nametableY;
-            vramAddress.coarseY = temporaryVramAddress.coarseY;
+            vramAddress.fineY = static_cast<uint16_t>(temporaryVramAddress.fineY);
+            vramAddress.nametableY = static_cast<uint16_t>(temporaryVramAddress.nametableY);
+            vramAddress.coarseY = static_cast<uint16_t>(temporaryVramAddress.coarseY);
         }
     }
 
@@ -455,8 +455,8 @@ void PPU::doRenderingPipeline() {
             }
 
             if (isRenderingEnabled()) {
-                vramAddress.coarseX = temporaryVramAddress.coarseX;
-                vramAddress.nametableX = temporaryVramAddress.nametableX;
+                vramAddress.coarseX = static_cast<uint16_t>(temporaryVramAddress.coarseX);
+                vramAddress.nametableX = static_cast<uint16_t>(temporaryVramAddress.nametableX);
             }
         }
 
@@ -752,7 +752,14 @@ void PPU::fillCurrentScanlineSprites() {
     currentScanlineSprites.clear();
     sprite0OnCurrentScanline = false;
     for (int i = 0; i < OAM_SPRITES; i++) {
-        OAMEntry sprite(oamBuffer, i);
+        uint8_t index = i << 2;
+        OAMEntry sprite = { 
+            oamBuffer[index], 
+            oamBuffer[index + 1], 
+            oamBuffer[index + 2], 
+            oamBuffer[index + 3] 
+        };
+
         uint8_t spriteHeight = control.spriteSize ? 16 : 8;
 
         // NES sprite renders are delayed by one scanline, so they will end up one scanline below where it is specified in OAM
@@ -825,37 +832,6 @@ std::array<uint32_t, 0x20> PPU::getPalleteRamColors() const {
     return result;
 }
 
-// Helper struct function definitions
-PPU::OAMEntry::OAMEntry(uint32_t data) {
-    setFromUInt32(data);
-}
-
-PPU::OAMEntry::OAMEntry(const OAMBuffer& oamBuffer, uint8_t spriteNum) : OAMEntry(0) {
-    if (spriteNum < OAM_SPRITES) {
-        uint8_t index = spriteNum << 2;
-        y = oamBuffer[index];
-        tileIndex = oamBuffer[index + 1];
-        attributes = oamBuffer[index + 2];
-        x = oamBuffer[index + 3];
-    }
-}
-
-uint32_t PPU::OAMEntry::toUInt32() const {
-    uint32_t data =
-        y |
-        (tileIndex << 8) |
-        (attributes << 16) |
-        (x << 24);
-    return data;
-}
-
-void PPU::OAMEntry::setFromUInt32(uint32_t data) {
-    y = data & 0xFF;
-    tileIndex = (data >> 8) & 0xFF;
-    attributes = (data >> 16) & 0xFF;
-    x = (data >> 24) & 0xFF;
-}
-
 void PPU::serialize(Serializer& s) const {
     s.serializeUInt8(control.data);
     s.serializeUInt8(mask.data);
@@ -886,7 +862,12 @@ void PPU::serialize(Serializer& s) const {
 
     if (s.version.minor >= 1) {
         std::function<void(const SpriteData&)> spriteDataFunc = [&](const SpriteData& spriteData) -> void {
-            s.serializeUInt32(spriteData.oam.toUInt32());
+            uint32_t oam = 
+                spriteData.oam.y | 
+                (spriteData.oam.tileIndex << 8) | 
+                (spriteData.oam.attributes << 16) |
+                (spriteData.oam.x << 24);
+            s.serializeUInt32(oam); // TODO: In future version make each field a seperate entry
             s.serializeUInt8(spriteData.patternTableLo);
             s.serializeUInt8(spriteData.patternTableHi);
         };
@@ -928,8 +909,11 @@ void PPU::deserialize(Deserializer& d) {
     if (d.version.minor >= 1) {
         std::function<void(SpriteData&)> spriteDataFunc = [&](SpriteData& spriteData) -> void {
             uint32_t oamTemp;
-            d.deserializeUInt32(oamTemp);
-            spriteData.oam.setFromUInt32(oamTemp);
+            d.deserializeUInt32(oamTemp); // TODO: In future version make each field a seperate entry
+            spriteData.oam.y = oamTemp & 0xFF;
+            spriteData.oam.tileIndex = (oamTemp >> 8) & 0xFF;
+            spriteData.oam.attributes = (oamTemp >> 16) & 0xFF;
+            spriteData.oam.x = (oamTemp >> 24) & 0xFF;
 
             d.deserializeUInt8(spriteData.patternTableLo);
             d.deserializeUInt8(spriteData.patternTableHi);

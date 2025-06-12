@@ -22,11 +22,16 @@ class BitField {
 
 public:
     BitField(T& data) : data(data) {}
+    ~BitField() = default;
+
+    BitField(const BitField&) = delete;
+    BitField& operator=(const BitField&) = delete;
+    BitField(BitField&&) = delete;
+    BitField& operator=(BitField&&) = delete;
 
     operator T() const { return get(); }
 
     BitField& operator=(T rhs) { set(rhs); return *this; }
-    BitField& operator=(const BitField& rhs) { set(static_cast<T>(rhs)); return *this; }
 
     BitField& operator+=(T rhs) { set(get() + rhs); return *this; }
     BitField& operator-=(T rhs) { set(get() - rhs); return *this; }
