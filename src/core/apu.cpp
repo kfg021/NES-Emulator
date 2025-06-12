@@ -15,8 +15,9 @@ void APU::resetAPU() {
     triangle.data = 0;
     triangle.i = {};
 
-    noise = {};
-    noise.shiftRegister = 1; // Shift register is 1 on power-up
+    noise.data = 0;
+    noise.i = {};
+    noise.i.shiftRegister = 1; // Shift register is 1 on power-up
 
     dmc = {};
     dmc.currentAddress = 0xC000;
@@ -117,16 +118,16 @@ void APU::write(uint16_t addr, uint8_t value) {
             case 2: // 0x400E
                 noise.noisePeriod = value & 0xF;
                 noise.loopNoise = (value >> 7) & 0x1;
-                noise.timerCounter = NOISE_PERIOD_TABLE[noise.noisePeriod];
+                noise.i.timerCounter = NOISE_PERIOD_TABLE[noise.noisePeriod];
                 break;
 
             default: // 0x400F
                 noise.lengthCounterLoad = (value >> 3) & 0x1F;
                 bool noiseStatus = (status >> 3) & 1;
                 if (noiseStatus) {
-                    noise.lengthCounter = LENGTH_COUNTER_TABLE[noise.lengthCounterLoad];
+                    noise.i.lengthCounter = LENGTH_COUNTER_TABLE[noise.lengthCounterLoad];
                 }
-                noise.envelopeStartFlag = true;
+                noise.i.envelopeStartFlag = true;
                 break;
         }
     }
@@ -176,7 +177,7 @@ uint8_t APU::viewStatus() const {
     }
 
     bool noiseStatus = (status >> 3) & 1;
-    if (noiseStatus && noise.lengthCounter > 0) {
+    if (noiseStatus && noise.i.lengthCounter > 0) {
         tempStatus |= (1 << 3);
     }
 
@@ -215,7 +216,7 @@ void APU::writeStatus(uint8_t value) {
 
     // Noise channel
     if (!((value >> 3) & 1)) {
-        noise.lengthCounter = 0;
+        noise.i.lengthCounter = 0;
     }
 
     // DMC channel
@@ -336,18 +337,18 @@ void APU::executeHalfCycle() {
         // Clock noise timer
         bool noiseStatus = (status >> 3) & 1;
         if (noiseStatus) {
-            if (noise.timerCounter == 0) {
-                noise.timerCounter = NOISE_PERIOD_TABLE[noise.noisePeriod];
+            if (noise.i.timerCounter == 0) {
+                noise.i.timerCounter = NOISE_PERIOD_TABLE[noise.noisePeriod];
 
                 // Clock LFSR
                 uint8_t shift = noise.loopNoise ? 6 : 1;
-                uint8_t feedback = (noise.shiftRegister & 1) ^ ((noise.shiftRegister >> shift) & 1);
+                uint8_t feedback = (noise.i.shiftRegister & 1) ^ ((noise.i.shiftRegister >> shift) & 1);
 
-                noise.shiftRegister >>= 1;
-                noise.shiftRegister |= (feedback << 14);
+                noise.i.shiftRegister >>= 1;
+                noise.i.shiftRegister |= (feedback << 14);
             }
             else {
-                noise.timerCounter--;
+                noise.i.timerCounter--;
             }
         }
     }
@@ -459,22 +460,22 @@ void APU::quarterClock() {
 
     // Clock noise envelope
     {
-        if (noise.envelopeStartFlag) {
-            noise.envelopeStartFlag = false;
-            noise.envelope = 0xF;
-            noise.envelopeDividerCounter = noise.volumeOrEnvelope;
+        if (noise.i.envelopeStartFlag) {
+            noise.i.envelopeStartFlag = false;
+            noise.i.envelope = 0xF;
+            noise.i.envelopeDividerCounter = noise.volumeOrEnvelope;
         }
         else {
-            if (noise.envelopeDividerCounter > 0) {
-                noise.envelopeDividerCounter--;
+            if (noise.i.envelopeDividerCounter > 0) {
+                noise.i.envelopeDividerCounter--;
             }
             else {
-                noise.envelopeDividerCounter = noise.volumeOrEnvelope;
-                if (noise.envelope) {
-                    noise.envelope--;
+                noise.i.envelopeDividerCounter = noise.volumeOrEnvelope;
+                if (noise.i.envelope) {
+                    noise.i.envelope--;
                 }
                 else if (noise.envelopeLoopOrLengthCounterHalt) {
-                    noise.envelope = 0xF;
+                    noise.i.envelope = 0xF;
                 }
             }
         }
@@ -512,8 +513,8 @@ void APU::halfClock() {
 
         // Noise
         bool noiseStatus = (status >> 3) & 1;
-        if (noiseStatus && noise.lengthCounter > 0 && !noise.envelopeLoopOrLengthCounterHalt) {
-            noise.lengthCounter--;
+        if (noiseStatus && noise.i.lengthCounter > 0 && !noise.envelopeLoopOrLengthCounterHalt) {
+            noise.i.lengthCounter--;
         }
     }
 
@@ -629,9 +630,9 @@ float APU::getAudioSample() const {
     // Get noise output
     uint8_t noiseOutput = 0;
     bool noiseStatus = (status >> 3) & 1;
-    bool shiftRegisterBitSet = noise.shiftRegister & 1;
-    if (noiseStatus && noise.lengthCounter > 0 && !shiftRegisterBitSet) {
-        uint8_t volume = noise.constantVolume ? noise.volumeOrEnvelope : noise.envelope;
+    bool shiftRegisterBitSet = noise.i.shiftRegister & 1;
+    if (noiseStatus && noise.i.lengthCounter > 0 && !shiftRegisterBitSet) {
+        uint8_t volume = noise.constantVolume ? noise.volumeOrEnvelope : noise.i.envelope;
         noiseOutput = volume;
     }
 
@@ -693,34 +694,15 @@ void APU::serialize(Serializer& s) const {
     };
 
     auto serializeNoise = [](Serializer& s, const Noise& noise) -> void {
-        auto noiseToUInt16 = [](const Noise& noise) -> uint16_t {
-            uint16_t data =
-                // 0x400C
-                static_cast<uint16_t>(noise.volumeOrEnvelope) |
-                (noise.constantVolume << 4) |
-                (noise.envelopeLoopOrLengthCounterHalt << 5) |
-
-                // 0x400D - Unused
-
-                // 0x400E
-                (noise.noisePeriod << 6) |
-                (noise.loopNoise << 10) |
-
-                // 0x400F
-                (noise.lengthCounterLoad << 11);
-
-            return data;
-        };
-
-        s.serializeUInt16(noiseToUInt16(noise));
+        s.serializeUInt16(noise.data);
 
         // Internal state
-        s.serializeUInt16(noise.timerCounter);
-        s.serializeUInt8(noise.lengthCounter);
-        s.serializeBool(noise.envelopeStartFlag);
-        s.serializeUInt8(noise.envelope);
-        s.serializeUInt8(noise.envelopeDividerCounter);
-        s.serializeUInt16(noise.shiftRegister);
+        s.serializeUInt16(noise.i.timerCounter);
+        s.serializeUInt8(noise.i.lengthCounter);
+        s.serializeBool(noise.i.envelopeStartFlag);
+        s.serializeUInt8(noise.i.envelope);
+        s.serializeUInt8(noise.i.envelopeDividerCounter);
+        s.serializeUInt16(noise.i.shiftRegister);
     };
 
     auto serializeDMC = [](Serializer& s, const DMC& dmc) -> void {
@@ -800,33 +782,15 @@ void APU::deserialize(Deserializer& d) {
     };
 
     auto deserializeNoise = [](Deserializer& d, Noise& noise) -> void {
-        auto setNoiseFromUInt16 = [](Noise& noise, uint16_t data) -> void {
-            // 0x400C
-            noise.volumeOrEnvelope = data & 0xF;
-            noise.constantVolume = (data >> 4) & 0x1;
-            noise.envelopeLoopOrLengthCounterHalt = (data >> 5) & 0x1;
-
-            // 0x400D - Unused
-
-            // 0x400E
-            noise.noisePeriod = (data >> 6) & 0xF;
-            noise.loopNoise = (data >> 10) & 0x1;
-
-            // 0x400F
-            noise.lengthCounterLoad = (data >> 11) & 0x1F;
-        };
-
-        uint16_t noiseTemp;
-        d.deserializeUInt16(noiseTemp);
-        setNoiseFromUInt16(noise, noiseTemp);
+        d.deserializeUInt16(noise.data);
 
         // Internal state
-        d.deserializeUInt16(noise.timerCounter);
-        d.deserializeUInt8(noise.lengthCounter);
-        d.deserializeBool(noise.envelopeStartFlag);
-        d.deserializeUInt8(noise.envelope);
-        d.deserializeUInt8(noise.envelopeDividerCounter);
-        d.deserializeUInt16(noise.shiftRegister);
+        d.deserializeUInt16(noise.i.timerCounter);
+        d.deserializeUInt8(noise.i.lengthCounter);
+        d.deserializeBool(noise.i.envelopeStartFlag);
+        d.deserializeUInt8(noise.i.envelope);
+        d.deserializeUInt8(noise.i.envelopeDividerCounter);
+        d.deserializeUInt16(noise.i.shiftRegister);
     };
 
     auto deserializeDMC = [](Deserializer& d, DMC& dmc) -> void {

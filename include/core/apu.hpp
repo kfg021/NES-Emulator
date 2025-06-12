@@ -110,25 +110,30 @@ private:
     };
 
     struct Noise {
+        uint16_t data; // Pack all noise info into 16 bits
+
         // 0x400C
-        uint8_t volumeOrEnvelope : 4;
-        bool constantVolume : 1;
-        bool envelopeLoopOrLengthCounterHalt : 1;
+        BitField<0, 4, uint16_t> volumeOrEnvelope{ data };
+        BitField<4, 1, uint16_t> constantVolume{ data };
+        BitField<5, 1, uint16_t> envelopeLoopOrLengthCounterHalt{ data };
 
         // 0x400E
-        uint8_t noisePeriod : 4;
-        bool loopNoise : 1;
+        BitField<6, 4, uint16_t> noisePeriod{ data };
+        BitField<10, 1, uint16_t> loopNoise{ data };
 
         // 0x400F
-        uint8_t lengthCounterLoad : 5;
+        BitField<11, 5, uint16_t> lengthCounterLoad{ data };
 
-        // Internal state
-        uint16_t timerCounter;
-        uint8_t lengthCounter;
-        bool envelopeStartFlag;
-        uint8_t envelope;
-        uint8_t envelopeDividerCounter;
-        uint16_t shiftRegister;
+        struct Internal {
+            uint16_t timerCounter;
+            uint8_t lengthCounter;
+            bool envelopeStartFlag;
+            uint8_t envelope;
+            uint8_t envelopeDividerCounter;
+            uint16_t shiftRegister;
+        };
+
+        Internal i;
     };
 
     struct DMC {
