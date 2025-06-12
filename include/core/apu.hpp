@@ -91,6 +91,9 @@ private:
         BitField<0, 7, uint32_t> linearCounterLoad{ data };
         BitField<7, 1, uint32_t> lengthCounterHaltOrLinearCounterControl{ data };
 
+        // 0x4009
+        // Unused
+
         // 0x400A
         // 0x400B
         BitField<16, 11, uint32_t> timer{ data }; // Use one combined timer instead of timer low/high
@@ -117,6 +120,9 @@ private:
         BitField<4, 1, uint16_t> constantVolume{ data };
         BitField<5, 1, uint16_t> envelopeLoopOrLengthCounterHalt{ data };
 
+        // 0x400D
+        // Unused
+
         // 0x400E
         BitField<6, 4, uint16_t> noisePeriod{ data };
         BitField<10, 1, uint16_t> loopNoise{ data };
@@ -137,30 +143,41 @@ private:
     };
 
     struct DMC {
+        uint32_t data;
+        BitField<0, 8, uint32_t>  reg4010{ data };
+        BitField<8, 8, uint32_t>  reg4011{ data };
+        BitField<16, 8, uint32_t> reg4012{ data };
+        BitField<24, 8, uint32_t> reg4013{ data };
+
         // 0x4010
-        uint8_t frequency : 4;
-        bool loopSample : 1;
-        bool irqEnable : 1;
+        BitField<0, 4, uint32_t> frequency{ data };
+        // Bits 4-5 are unused
+        BitField<6, 1, uint32_t> loopSample{ data };
+        BitField<7, 1, uint32_t> irqEnable{ data };
 
         // 0x4011
-        uint8_t outputLevel : 7;
+        BitField<8, 7, uint32_t> outputLevel{ data };
+        // Bit 15 is unused
 
         // 0x4012
-        uint8_t sampleAddress;
+        BitField<16, 8, uint32_t> sampleAddress{ data };
 
         // 0x4013
-        uint8_t sampleLength;
+        BitField<24, 8, uint32_t> sampleLength{ data };
 
-        // Internal state
-        uint16_t currentAddress;
-        uint16_t bytesRemaining;
-        uint16_t timerCounter;
-        uint8_t sampleBuffer;
-        bool sampleBufferEmpty;
-        uint8_t shiftRegister;
-        uint8_t bitsRemaining;
-        bool silenceFlag;
-        bool irqFlag;
+        struct Internal {
+            uint16_t currentAddress;
+            uint16_t bytesRemaining;
+            uint16_t timerCounter;
+            uint8_t sampleBuffer;
+            bool sampleBufferEmpty;
+            uint8_t shiftRegister;
+            uint8_t bitsRemaining;
+            bool silenceFlag;
+            bool irqFlag;
+        };
+
+        Internal i;
     };
 
     const std::array<uint8_t, 4> DUTY_CYCLES = {

@@ -17,16 +17,14 @@ void APU::resetAPU() {
 
     noise.data = 0;
     noise.i = {};
-    noise.i.shiftRegister = 1; // Shift register is 1 on power-up
+    noise.i.shiftRegister = 1;
 
-    dmc = {};
-    dmc.currentAddress = 0xC000;
-    dmc.bytesRemaining = 0;
-    dmc.sampleBufferEmpty = true;
-    dmc.silenceFlag = true;
-    dmc.bitsRemaining = 8;
-    dmc.irqFlag = false;
-    dmc.shiftRegister = 0;
+    dmc.data = 0;
+    dmc.i = {};
+    dmc.i.currentAddress = 0xC000;
+    dmc.i.sampleBufferEmpty = true;
+    dmc.i.silenceFlag = true;
+    dmc.i.bitsRemaining = 8;
 
     status = 0;
     frameCounter = 0;
@@ -134,28 +132,25 @@ void APU::write(uint16_t addr, uint8_t value) {
     else if (DMC_RANGE.contains(addr)) {
         switch (addr & 0x3) {
             case 0: // 0x4010
-                dmc.frequency = value & 0xF;
-                dmc.loopSample = (value >> 6) & 0x1;
-                dmc.irqEnable = (value >> 7) & 0x1;
+                dmc.reg4010 = value;
 
                 if (!dmc.irqEnable) {
-                    dmc.irqFlag = false;
+                    dmc.i.irqFlag = false;
                 }
 
-                dmc.timerCounter = DMC_RATE_TABLE[dmc.frequency];
+                dmc.i.timerCounter = DMC_RATE_TABLE[dmc.frequency];
                 break;
 
             case 1: // 0x4011
-                // Direct load to output level - bit 7 is ignored on NTSC
-                dmc.outputLevel = value & 0x7F;
+                dmc.reg4011 = value;
                 break;
 
             case 2: // 0x4012
-                dmc.sampleAddress = value;
+                dmc.reg4012 = value;
                 break;
 
             case 3: // 0x4013
-                dmc.sampleLength = value;
+                dmc.reg4013 = value;
                 break;
         }
     }
@@ -182,7 +177,7 @@ uint8_t APU::viewStatus() const {
     }
 
     bool dmcStatus = (status >> 4) & 1;
-    if (dmcStatus && dmc.bytesRemaining > 0) {
+    if (dmcStatus && dmc.i.bytesRemaining > 0) {
         tempStatus |= (1 << 4);
     }
 
@@ -191,7 +186,7 @@ uint8_t APU::viewStatus() const {
     }
 
     // DMC interrupt flag
-    if (dmc.irqFlag) {
+    if (dmc.i.irqFlag) {
         tempStatus |= (1 << 7);
     }
 
@@ -200,7 +195,7 @@ uint8_t APU::viewStatus() const {
 
 uint8_t APU::readStatus() {
     frameInterruptFlag = false;
-    dmc.irqFlag = false;
+    dmc.i.irqFlag = false;
     return viewStatus();
 }
 
@@ -222,11 +217,11 @@ void APU::writeStatus(uint8_t value) {
     // DMC channel
     bool dmcStatus = (value >> 4) & 1;
     if (!dmcStatus) {
-        dmc.bytesRemaining = 0;
+        dmc.i.bytesRemaining = 0;
     }
-    else if (dmc.bytesRemaining == 0) {
+    else if (dmc.i.bytesRemaining == 0) {
         // Silent until first sample is loaded
-        dmc.silenceFlag = true;
+        dmc.i.silenceFlag = true;
 
         restartDmcSample();
     }
@@ -372,12 +367,12 @@ void APU::executeHalfCycle() {
     // Clock DMC reader
     bool dmcStatus = (status >> 4) & 1;
     if (dmcStatus) {
-        if (dmc.timerCounter == 0) {
-            dmc.timerCounter = DMC_RATE_TABLE[dmc.frequency];
+        if (dmc.i.timerCounter == 0) {
+            dmc.i.timerCounter = DMC_RATE_TABLE[dmc.frequency];
 
-            if (!dmc.silenceFlag) {
-                bool shiftBit = dmc.shiftRegister & 1;
-                dmc.shiftRegister >>= 1;
+            if (!dmc.i.silenceFlag) {
+                bool shiftBit = dmc.i.shiftRegister & 1;
+                dmc.i.shiftRegister >>= 1;
 
                 // Update output level
                 if (shiftBit) {
@@ -391,31 +386,31 @@ void APU::executeHalfCycle() {
                     }
                 }
 
-                dmc.bitsRemaining--;
-                if (dmc.bitsRemaining == 0) {
-                    dmc.bitsRemaining = 8;
+                dmc.i.bitsRemaining--;
+                if (dmc.i.bitsRemaining == 0) {
+                    dmc.i.bitsRemaining = 8;
 
-                    if (dmc.sampleBufferEmpty) {
-                        dmc.silenceFlag = true;
+                    if (dmc.i.sampleBufferEmpty) {
+                        dmc.i.silenceFlag = true;
                     }
                     else {
-                        dmc.silenceFlag = false;
-                        dmc.shiftRegister = dmc.sampleBuffer;
-                        dmc.sampleBufferEmpty = true;
+                        dmc.i.silenceFlag = false;
+                        dmc.i.shiftRegister = dmc.i.sampleBuffer;
+                        dmc.i.sampleBufferEmpty = true;
 
                         // Reset bits counter when loading new sample
-                        dmc.bitsRemaining = 8;
+                        dmc.i.bitsRemaining = 8;
 
                         // Try to reload sample buffer via DMA
-                        if (dmc.bytesRemaining) {
-                            bus.requestDmcDma(dmc.currentAddress);
+                        if (dmc.i.bytesRemaining) {
+                            bus.requestDmcDma(dmc.i.currentAddress);
                         }
-                        else if (dmc.bytesRemaining == 0) {
+                        else if (dmc.i.bytesRemaining == 0) {
                             if (dmc.loopSample) {
                                 restartDmcSample();
                             }
                             else if (dmc.irqEnable) {
-                                dmc.irqFlag = true;
+                                dmc.i.irqFlag = true;
                             }
                         }
                     }
@@ -423,7 +418,7 @@ void APU::executeHalfCycle() {
             }
         }
         else {
-            dmc.timerCounter--;
+            dmc.i.timerCounter--;
         }
     }
 
@@ -571,7 +566,7 @@ void APU::halfClock() {
 }
 
 bool APU::irqRequested() const {
-    return frameInterruptFlag || dmc.irqFlag;
+    return frameInterruptFlag || dmc.i.irqFlag;
 }
 
 float APU::getAudioSample() const {
@@ -643,26 +638,26 @@ float APU::getAudioSample() const {
 }
 
 void APU::receiveDMCSample(uint8_t sample) {
-    dmc.sampleBuffer = sample;
-    dmc.sampleBufferEmpty = false;
-    dmc.silenceFlag = false;
+    dmc.i.sampleBuffer = sample;
+    dmc.i.sampleBufferEmpty = false;
+    dmc.i.silenceFlag = false;
 
-    if (dmc.currentAddress == 0xFFFF) {
-        dmc.currentAddress = 0x8000;
+    if (dmc.i.currentAddress == 0xFFFF) {
+        dmc.i.currentAddress = 0x8000;
     }
     else {
-        dmc.currentAddress++;
+        dmc.i.currentAddress++;
     }
 
-    dmc.bytesRemaining--;
+    dmc.i.bytesRemaining--;
 }
 
 void APU::restartDmcSample() {
-    dmc.currentAddress = 0xC000 | (static_cast<uint16_t>(dmc.sampleAddress) << 6);
-    dmc.bytesRemaining = (static_cast<uint16_t>(dmc.sampleLength) << 4) + 1;
+    dmc.i.currentAddress = 0xC000 | (dmc.sampleAddress << 6);
+    dmc.i.bytesRemaining = (dmc.sampleLength << 4) + 1;
 
     // Request the first sample of the new loop
-    bus.requestDmcDma(dmc.currentAddress);
+    bus.requestDmcDma(dmc.i.currentAddress);
 }
 
 void APU::serialize(Serializer& s) const {
@@ -706,37 +701,18 @@ void APU::serialize(Serializer& s) const {
     };
 
     auto serializeDMC = [](Serializer& s, const DMC& dmc) -> void {
-        auto dmcToUInt32 = [](const DMC& dmc) -> uint32_t {
-            uint32_t data =
-                // 0x4010
-                static_cast<uint32_t>(dmc.frequency) |
-                (dmc.loopSample << 6) |
-                (dmc.irqEnable << 7) |
-
-                // 0x4011
-                (dmc.outputLevel << 8) |
-
-                // 0x4012
-                (dmc.sampleAddress << 16) |
-
-                // 0x4013
-                (dmc.sampleLength << 24);
-
-            return data;
-        };
-
-        s.serializeUInt32(dmcToUInt32(dmc));
+        s.serializeUInt32(dmc.data);
 
         // Internal state
-        s.serializeUInt16(dmc.currentAddress);
-        s.serializeUInt16(dmc.bytesRemaining);
-        s.serializeUInt16(dmc.timerCounter);
-        s.serializeUInt8(dmc.sampleBuffer);
-        s.serializeBool(dmc.sampleBufferEmpty);
-        s.serializeUInt8(dmc.shiftRegister);
-        s.serializeUInt8(dmc.bitsRemaining);
-        s.serializeBool(dmc.silenceFlag);
-        s.serializeBool(dmc.irqFlag);
+        s.serializeUInt16(dmc.i.currentAddress);
+        s.serializeUInt16(dmc.i.bytesRemaining);
+        s.serializeUInt16(dmc.i.timerCounter);
+        s.serializeUInt8(dmc.i.sampleBuffer);
+        s.serializeBool(dmc.i.sampleBufferEmpty);
+        s.serializeUInt8(dmc.i.shiftRegister);
+        s.serializeUInt8(dmc.i.bitsRemaining);
+        s.serializeBool(dmc.i.silenceFlag);
+        s.serializeBool(dmc.i.irqFlag);
     };
 
     serializePulse(s, pulses[0]);
@@ -794,36 +770,18 @@ void APU::deserialize(Deserializer& d) {
     };
 
     auto deserializeDMC = [](Deserializer& d, DMC& dmc) -> void {
-        auto setDMCFromUInt32 = [](DMC& dmc, uint32_t data) -> void {
-            // 0x4010
-            dmc.frequency = data & 0xF;
-            dmc.loopSample = (data >> 6) & 0x1;
-            dmc.irqEnable = (data >> 7) & 0x1;
-
-            // 0x4011
-            dmc.outputLevel = (data >> 8) & 0x7F;
-
-            // 0x4012
-            dmc.sampleAddress = (data >> 16) & 0xFF;
-
-            // 0x4013
-            dmc.sampleLength = (data >> 24) & 0xFF;
-        };
-
-        uint32_t dmcTemp;
-        d.deserializeUInt32(dmcTemp);
-        setDMCFromUInt32(dmc, dmcTemp);
+        d.deserializeUInt32(dmc.data);
 
         // Internal state
-        d.deserializeUInt16(dmc.currentAddress);
-        d.deserializeUInt16(dmc.bytesRemaining);
-        d.deserializeUInt16(dmc.timerCounter);
-        d.deserializeUInt8(dmc.sampleBuffer);
-        d.deserializeBool(dmc.sampleBufferEmpty);
-        d.deserializeUInt8(dmc.shiftRegister);
-        d.deserializeUInt8(dmc.bitsRemaining);
-        d.deserializeBool(dmc.silenceFlag);
-        d.deserializeBool(dmc.irqFlag);
+        d.deserializeUInt16(dmc.i.currentAddress);
+        d.deserializeUInt16(dmc.i.bytesRemaining);
+        d.deserializeUInt16(dmc.i.timerCounter);
+        d.deserializeUInt8(dmc.i.sampleBuffer);
+        d.deserializeBool(dmc.i.sampleBufferEmpty);
+        d.deserializeUInt8(dmc.i.shiftRegister);
+        d.deserializeUInt8(dmc.i.bitsRemaining);
+        d.deserializeBool(dmc.i.silenceFlag);
+        d.deserializeBool(dmc.i.irqFlag);
     };
 
     deserializePulse(d, pulses[0]);
