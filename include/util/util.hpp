@@ -18,7 +18,7 @@ template <uint8_t Offset, uint8_t Size, typename T = uint8_t>
 class BitField {
     static_assert(std::is_unsigned<T>::value, "BitField type must be unsigned");
     static_assert(Size > 0, "BitField size must be positive");
-    static_assert(Offset + Size <= 8 * sizeof(T), "Bit subset must be fit within BitField type");
+    static_assert(Offset + Size <= 8 * sizeof(T), "Bit subset must fit within BitField type");
 
 public:
     BitField(T& data) : data(data) {}
