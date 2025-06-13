@@ -43,10 +43,10 @@ Mapper::MirrorMode Mapper::getMirrorMode() const {
 }
 
 uint8_t Mapper::readChrRomOrRam(uint32_t mappedAddress, const std::vector<uint8_t>& chr, const ChrRam& chrRam) {
-    if (CHR_RANGE.contains(mappedAddress)) {
-        return chrRam.isEnabled ? chrRam.tryRead(static_cast<uint16_t>(mappedAddress)).value() : chr[mappedAddress];
+    if (chrRam.isEnabled) {
+        return chrRam.tryRead(static_cast<uint16_t>(mappedAddress)).value_or(0);
     }
     else {
-        return 0;
+        return chr[mappedAddress];
     }
 }
