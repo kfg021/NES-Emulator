@@ -221,7 +221,8 @@ private:
     };
 
     std::array<uint8_t, 0x20> palleteRam;
-    uint8_t getPalleteRamIndex(uint16_t address, bool read) const;
+    uint8_t getPalleteRamIndexRead(uint16_t address) const;
+    uint8_t getPalleteRamIndexWrite(uint16_t address) const;
 
     using NameTable = std::array<uint8_t, 2 * KB>;
     NameTable nameTable;
@@ -292,6 +293,7 @@ private:
     uint8_t oamAddress;
 
     uint16_t getPalleteRamAddress(uint8_t backgroundTable, uint8_t patternTable) const;
+    uint8_t getPalleteRamData(uint16_t address) const;
 
     bool nmiRequest;
     bool irqRequest;

@@ -178,24 +178,36 @@ void PPU::write(uint8_t ppuRegister, uint8_t value) {
     }
 }
 
-uint8_t PPU::getPalleteRamIndex(uint16_t address, bool read) const {
+
+// Address mirroring to handle background tiles
+// When we are reading from the pallete ram, we consider every 4th tile to be equivalent to the background pixel
+// But, it turns out that these pallete ram indices can actually be set (setting them just has no effect)
+uint8_t PPU::getPalleteRamIndexRead(uint16_t address) const {
     address &= 0x1F;
 
-    // Address mirroring to handle background tiles
-    // When we are reading from the pallete ram, we consider every 4th tile to be equivalent to the background pixel
-    // But, it turns out that these pallete ram indices can actually be set (setting them just has no effect)
-    if (read) {
-        if ((address & 0x3) == 0) {
-            address = 0;
-        }
-    }
-    else {
-        if (address == 0x10 || address == 0x14 || address == 0x18 || address == 0x1C) {
-            address &= 0x0F;
-        }
+    if ((address & 0x3) == 0) {
+        address = 0;
     }
 
     return address;
+}
+
+uint8_t PPU::getPalleteRamIndexWrite(uint16_t address) const {
+    address &= 0x1F;
+
+    if (address == 0x10 || address == 0x14 || address == 0x18 || address == 0x1C) {
+        address &= 0x0F;
+    }
+
+    return address;
+}
+
+uint8_t PPU::getPalleteRamData(uint16_t address) const {
+    uint8_t data = palleteRam[getPalleteRamIndexRead(address)] & 0x3F;
+    if (mask.greyscale) {
+        data &= 0x30;
+    }
+    return data;
 }
 
 uint16_t PPU::getNameTableIndex(uint16_t address) const {
@@ -256,11 +268,7 @@ uint8_t PPU::ppuView(uint16_t address) const {
         }
     }
     else if (PALLETE_RAM_RANGE.contains(address)) {
-        uint8_t data = palleteRam[getPalleteRamIndex(address, true)] & 0x3F;
-        if (mask.greyscale) {
-            data &= 0x30;
-        }
-        return data;
+       return getPalleteRamData(address);
     }
     else {
         return 0;
@@ -281,11 +289,7 @@ uint8_t PPU::ppuRead(uint16_t address) {
         }
     }
     else if (PALLETE_RAM_RANGE.contains(address)) {
-        uint8_t data = palleteRam[getPalleteRamIndex(address, true)] & 0x3F;
-        if (mask.greyscale) {
-            data &= 0x30;
-        }
-        return data;
+        return getPalleteRamData(address);
     }
     else {
         return 0;
@@ -306,7 +310,7 @@ void PPU::ppuWrite(uint16_t address, uint8_t value) {
         }
     }
     else if (PALLETE_RAM_RANGE.contains(address)) {
-        palleteRam[getPalleteRamIndex(address, false)] = value;
+        palleteRam[getPalleteRamIndexWrite(address)] = value;
     }
 }
 
@@ -550,7 +554,7 @@ void PPU::drawPixel() {
         }
     }
     uint16_t backgroundAddr = getPalleteRamAddress(backgroundPatternTable, backgroundAttributeTable);
-    uint8_t backgroundColorIndex = ppuRead(backgroundAddr) & 0x3F;
+    uint8_t backgroundColorIndex = getPalleteRamData(backgroundAddr);
 
     // Get color from sprites
     uint8_t spritePatternTable = 0;
@@ -596,7 +600,7 @@ void PPU::drawPixel() {
         }
     }
     uint16_t spriteAddr = getPalleteRamAddress(spritePatternTable, spriteAttributeTable);
-    uint8_t spriteColorIndex = ppuRead(spriteAddr) & 0x3F;
+    uint8_t spriteColorIndex = getPalleteRamData(spriteAddr);
 
     // Now combine the background color, sprite color, and priority to get the final color
     uint8_t finalColorIndex;
@@ -817,7 +821,7 @@ uint16_t PPU::getPalleteRamAddress(uint8_t patternTable, uint8_t attributeTable)
 std::array<uint32_t, 0x20> PPU::getPalleteRamColors() const {
     std::array<uint32_t, 0x20> result;
     for (int i = 0; i < 0x20; i++) {
-        uint8_t index = getPalleteRamIndex(i, true);
+        uint8_t index = getPalleteRamIndexRead(i);
         result[i] = SCREEN_COLORS[palleteRam[index] & 0x3F];
     }
     return result;
