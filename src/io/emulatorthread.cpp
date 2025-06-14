@@ -224,12 +224,10 @@ void EmulatorThread::runCycles() {
 		}
 	}
 	else {
-		if (localKeyInput.paused) {
-			for (int i = 0; i < numSteps; i++) {
-				while (loopCondition()) {
-					bool isNewInstruction = executeCycle(true, false);
-					if (isNewInstruction) break;
-				}
+		for (int i = 0; i < numSteps; i++) {
+			while (loopCondition()) {
+				bool isNewInstruction = executeCycle(true, false);
+				if (isNewInstruction) break;
 			}
 		}
 	}
