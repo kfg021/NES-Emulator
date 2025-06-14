@@ -638,27 +638,23 @@ void PPU::drawPixel() {
         // attenuated absolute = absolute * 0.816328
         uint8_t colorColumn = finalColorIndex & 0xF;
         if (colorColumn != 0xE && colorColumn != 0xF) {
+            BitField<16, 8, uint32_t> red{ finalColor };
+            BitField<8, 8, uint32_t>  green{ finalColor };
+            BitField<0, 8, uint32_t>  blue{ finalColor };
+
             static constexpr float ATTENUATION = 0.816328f;
-
-            uint8_t red = (finalColor >> 16) & 0xFF;
-            uint8_t green = (finalColor >> 8) & 0xFF;
-            uint8_t blue = finalColor & 0xFF;
-
             if (mask.emphRed) {
-                green *= ATTENUATION;
-                blue *= ATTENUATION;
+                green = green * ATTENUATION;
+                blue = blue * ATTENUATION;
             }
             if (mask.emphGreen) {
-                red *= ATTENUATION;
-                blue *= ATTENUATION;
+                red = red * ATTENUATION;
+                blue = blue * ATTENUATION;
             }
             if (mask.emphBlue) {
-                red *= ATTENUATION;
-                green *= ATTENUATION;
+                red = red * ATTENUATION;
+                green = green * ATTENUATION;
             }
-
-            finalColor &= 0xFF000000;
-            finalColor |= (red << 16) | (green << 8) | blue;
         }
     }
 
@@ -753,11 +749,11 @@ void PPU::fillCurrentScanlineSprites() {
     sprite0OnCurrentScanline = false;
     for (int i = 0; i < OAM_SPRITES; i++) {
         uint8_t index = i << 2;
-        OAMEntry sprite = { 
-            oamBuffer[index], 
-            oamBuffer[index + 1], 
-            oamBuffer[index + 2], 
-            oamBuffer[index + 3] 
+        OAMEntry sprite = {
+            oamBuffer[index],
+            oamBuffer[index + 1],
+            oamBuffer[index + 2],
+            oamBuffer[index + 3]
         };
 
         uint8_t spriteHeight = control.spriteSize ? 16 : 8;
@@ -862,9 +858,9 @@ void PPU::serialize(Serializer& s) const {
 
     if (s.version.minor >= 1) {
         std::function<void(const SpriteData&)> spriteDataFunc = [&](const SpriteData& spriteData) -> void {
-            uint32_t oam = 
-                spriteData.oam.y | 
-                (spriteData.oam.tileIndex << 8) | 
+            uint32_t oam =
+                spriteData.oam.y |
+                (spriteData.oam.tileIndex << 8) |
                 (spriteData.oam.attributes << 16) |
                 (spriteData.oam.x << 24);
             s.serializeUInt32(oam); // TODO: In future version make each field a seperate entry
