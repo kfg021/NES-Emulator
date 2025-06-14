@@ -143,10 +143,6 @@ Cartridge::Status Cartridge::loadINESFile(const std::string& filePath) {
     return { Code::SUCCESS, "" };
 }
 
-Mapper::MirrorMode Cartridge::getMirrorMode() const {
-    return mapper->getMirrorMode();
-}
-
 Cartridge::Status Cartridge::getStatus() const {
     return status;
 }

@@ -178,7 +178,6 @@ void PPU::write(uint8_t ppuRegister, uint8_t value) {
     }
 }
 
-
 // Address mirroring to handle background tiles
 // When we are reading from the pallete ram, we consider every 4th tile to be equivalent to the background pixel
 // But, it turns out that these pallete ram indices can actually be set (setting them just has no effect)
@@ -211,51 +210,38 @@ uint8_t PPU::viewPalleteRam(uint16_t address) const {
 }
 
 uint16_t PPU::getNameTableIndex(uint16_t address) const {
-    // Nametable address is 12 bits
-    address &= 0xFFF;
+    Mapper::MirrorMode mirrorMode = cartridge.mapper->getMirrorMode();
 
-    static constexpr MemoryRange NAMETABLE_QUAD_1{ 0x000, 0x3FF };
-    static constexpr MemoryRange NAMETABLE_QUAD_2{ 0x400, 0x7FF };
-    static constexpr MemoryRange NAMETABLE_QUAD_3{ 0x800, 0xBFF };
-    // static constexpr MemoryRange NAMETABLE_QUAD_4{ 0xC00, 0xFFF };
+    // Nametable mirroring maps each of the four quadrants of the address space [0x000 - 0xFFF] to either nametable A or nametable B
+    uint8_t quadrant = (address >> 10) & 0x3;
+
+    bool isNameTableB;
+    switch (mirrorMode) {
+        case Mapper::MirrorMode::HORIZONTAL:
+            isNameTableB = (quadrant >> 1) & 1;
+            break;
+        case Mapper::MirrorMode::VERTICAL:
+            isNameTableB = quadrant & 1;
+            break;
+        case Mapper::MirrorMode::ONE_SCREEN_LOWER_BANK:
+            isNameTableB = false;
+            break;
+        default: /*Mapper::MirrorMode::ONE_SCREEN_UPPER_BANK:*/
+            isNameTableB = true;
+    }
 
     // Bits 10 and 11 determine the nametable, and we can modify them to map any address onto a specific nametable.
     // Setting {bit10, bit11} = {0, 0} maps to nametable A
     // Setting {bit10, bit11} = {0, 1} maps to nametable B
-    auto mapToNameTableA = [](uint16_t address) {
-        return address & 0x3FF;
-    };
-    auto mapToNameTableB = [](uint16_t address) {
-        return (address & 0x3FF) | 0x400;
-    };
+    // Thus, ANDing the address with 0x3FF maps to nametable A, and ANDing the address with 0x3FF and then ORing with 0x400 maps to nametable B.
+    address &= 0x3FF;
+    if (isNameTableB) address |= 0x400;
 
-    Mapper::MirrorMode mirrorMode = cartridge.getMirrorMode();
-    if (mirrorMode == Mapper::MirrorMode::HORIZONTAL) {
-        if (NAMETABLE_QUAD_1.contains(address) || NAMETABLE_QUAD_2.contains(address)) {
-            return mapToNameTableA(address);
-        }
-        else { // if (NAMETABLE_QUAD_3.contains(address) || NAMETABLE_QUAD_4.contains(address)) {
-            return mapToNameTableB(address);
-        }
-    }
-    else if (mirrorMode == Mapper::MirrorMode::VERTICAL) {
-        if (NAMETABLE_QUAD_1.contains(address) || NAMETABLE_QUAD_3.contains(address)) {
-            return mapToNameTableA(address);
-        }
-        else { // if (NAMETABLE_QUAD_2.contains(address) || NAMETABLE_QUAD_4.contains(address)) {
-            return mapToNameTableB(address);
-        }
-    }
-    else if (mirrorMode == Mapper::MirrorMode::ONE_SCREEN_LOWER_BANK) {
-        return mapToNameTableA(address);
-    }
-    else { // if (mirrorMode == Mapper::MirrorMode::ONE_SCREEN_UPPER_BANK) {
-        return mapToNameTableB(address);
-    }
+    return address;
 }
 
 uint8_t PPU::viewNameTable(uint16_t address) const {
-    if (cartridge.getMirrorMode() != Mapper::MirrorMode::FOUR_SCREEN) {
+    if (cartridge.mapper->getMirrorMode() != Mapper::MirrorMode::FOUR_SCREEN) {
         return nameTable[getNameTableIndex(address)];
     }
     else {
@@ -265,7 +251,7 @@ uint8_t PPU::viewNameTable(uint16_t address) const {
 }
 
 uint8_t PPU::readNameTable(uint16_t address) {
-    if (cartridge.getMirrorMode() != Mapper::MirrorMode::FOUR_SCREEN) {
+    if (cartridge.mapper->getMirrorMode() != Mapper::MirrorMode::FOUR_SCREEN) {
         return nameTable[getNameTableIndex(address)];
     }
     else {
@@ -309,7 +295,7 @@ void PPU::ppuWrite(uint16_t address, uint8_t value) {
         cartridge.mapper->mapCHRWrite(address, value);
     }
     else if (NAMETABLE_RANGE.contains(address)) {
-        if (cartridge.getMirrorMode() != Mapper::MirrorMode::FOUR_SCREEN) {
+        if (cartridge.mapper->getMirrorMode() != Mapper::MirrorMode::FOUR_SCREEN) {
             nameTable[getNameTableIndex(address)] = value;
         }
         else {

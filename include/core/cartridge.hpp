@@ -14,8 +14,6 @@ class Cartridge {
 public:
     Cartridge(const std::string& filePath);
 
-    Mapper::MirrorMode getMirrorMode() const;
-
     enum class Code {
         SUCCESS,
         INCORRECT_EXTENSION,
