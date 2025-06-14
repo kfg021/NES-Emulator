@@ -69,112 +69,128 @@ bool PPU::irqRequested() const {
 }
 
 uint8_t PPU::view(uint8_t ppuRegister) const {
-    if (ppuRegister == static_cast<int>(Register::PPUSTATUS)) {
-        return status.data;
-    }
-    else if (ppuRegister == static_cast<int>(Register::OAMDATA)) {
-        return oamBuffer[oamAddress];
-    }
-    else if (ppuRegister == static_cast<int>(Register::PPUDATA)) {
-        uint8_t data = ppuBusData;
+    switch (static_cast<Register>(ppuRegister)) {
+        case Register::PPUSTATUS:
+            return status.data;
 
-        // Pallete addresses get returned immediately
-        if (PALLETE_RAM_RANGE.contains(vramAddress.data & 0x3FFF)) {
-            data = ppuView(vramAddress.data & 0x3FFF);
+        case Register::OAMDATA:
+            return oamBuffer[oamAddress];
+
+        case Register::PPUDATA: {
+            uint8_t data = ppuBusData;
+
+            // Pallete addresses get returned immediately
+            if (PALLETE_RAM_RANGE.contains(vramAddress.data & 0x3FFF)) {
+                data = ppuView(vramAddress.data & 0x3FFF);
+            }
+            return data;
         }
-        return data;
-    }
-    else {
-        return 0;
+
+        default:
+            return 0;
     }
 }
 
 uint8_t PPU::read(uint8_t ppuRegister) {
-    if (ppuRegister == static_cast<int>(Register::PPUSTATUS)) {
-        uint8_t data = status.data;
-        status.vBlankStarted = 0;
-        addressLatch = 0;
-        return data;
-    }
-    else if (ppuRegister == static_cast<int>(Register::OAMDATA)) {
-        return oamBuffer[oamAddress];
-    }
-    else if (ppuRegister == static_cast<int>(Register::PPUDATA)) {
-        uint8_t data = ppuBusData;
-
-        ppuBusData = ppuRead(vramAddress.data & 0x3FFF);
-
-        // Open bus is the bottom 5 bits of the bus
-        status.openBus = ppuBusData & 0x1F;
-
-        // Pallete addresses get returned immediately
-        if (PALLETE_RAM_RANGE.contains(vramAddress.data & 0x3FFF)) {
-            data = ppuBusData;
+    switch (static_cast<Register>(ppuRegister)) {
+        case Register::PPUSTATUS: {
+            uint8_t data = status.data;
+            status.vBlankStarted = 0;
+            addressLatch = 0;
+            return data;
         }
 
-        vramAddress.data += (control.vramAddressIncrement ? 32 : 1);
+        case Register::OAMDATA:
+            return oamBuffer[oamAddress];
 
-        return data;
-    }
-    else {
-        return 0;
+        case Register::PPUDATA: {
+            uint8_t data = ppuBusData;
+
+            ppuBusData = ppuRead(vramAddress.data & 0x3FFF);
+
+            // Open bus is the bottom 5 bits of the bus
+            status.openBus = ppuBusData & 0x1F;
+
+            // Pallete addresses get returned immediately
+            if (PALLETE_RAM_RANGE.contains(vramAddress.data & 0x3FFF)) {
+                data = ppuBusData;
+            }
+
+            vramAddress.data += (control.vramAddressIncrement ? 32 : 1);
+
+            return data;
+        }
+
+        default:
+            return 0;
     }
 }
 
 void PPU::write(uint8_t ppuRegister, uint8_t value) {
-    if (ppuRegister == static_cast<int>(Register::PPUCTRL)) {
-        bool oldNmiFlag = control.nmiEnabled;
+    switch (static_cast<Register>(ppuRegister)) {
+        case Register::PPUCTRL: {
+            bool oldNmiFlag = control.nmiEnabled;
 
-        control.data = value;
+            control.data = value;
 
-        bool newNmiFlag = control.nmiEnabled;
+            bool newNmiFlag = control.nmiEnabled;
 
-        // From (https://www.nesdev.org/wiki/PPU_registers#PPUCTRL): 
-        // If the PPU is currently in vertical blank, and the PPUSTATUS ($2002) vblank flag is still set (1), changing the NMI flag in bit 7 of $2000 from 0 to 1 will immediately generate an NMI. 
-        if (status.vBlankStarted && !oldNmiFlag && newNmiFlag) {
-            nmiDelayCounter = NMI_DELAY_TIME;
+            // From (https://www.nesdev.org/wiki/PPU_registers#PPUCTRL): 
+            // If the PPU is currently in vertical blank, and the PPUSTATUS ($2002) vblank flag is still set (1), changing the NMI flag in bit 7 of $2000 from 0 to 1 will immediately generate an NMI. 
+            if (status.vBlankStarted && !oldNmiFlag && newNmiFlag) {
+                nmiDelayCounter = NMI_DELAY_TIME;
+            }
+
+            temporaryVramAddress.nametableX = control.nametableX;
+            temporaryVramAddress.nametableY = control.nametableY;
+            break;
         }
 
-        temporaryVramAddress.nametableX = control.nametableX;
-        temporaryVramAddress.nametableY = control.nametableY;
-    }
-    else if (ppuRegister == static_cast<int>(Register::PPUMASK)) {
-        mask.data = value;
-    }
-    else if (ppuRegister == static_cast<int>(Register::OAMADDR)) {
-        oamAddress = value;
-    }
-    else if (ppuRegister == static_cast<int>(Register::OAMDATA)) {
-        oamBuffer[oamAddress] = value;
-    }
-    else if (ppuRegister == static_cast<int>(Register::PPUSCROLL)) {
-        if (addressLatch == 0) {
-            fineX = value & 0x7;
-            temporaryVramAddress.coarseX = value >> 3;
-        }
-        else {
-            temporaryVramAddress.fineY = value & 0x7;
-            temporaryVramAddress.coarseY = value >> 3;
-        }
-        addressLatch ^= 1;
-    }
-    else if (ppuRegister == static_cast<int>(Register::PPUADDR)) {
-        if (addressLatch == 0) {
-            temporaryVramAddress.data &= 0x00FF;
-            temporaryVramAddress.data |= (value << 8);
-        }
-        else {
-            temporaryVramAddress.data &= 0xFF00;
-            temporaryVramAddress.data |= value;
+        case Register::PPUMASK:
+            mask.data = value;
+            break;
 
-            vramAddress.data = temporaryVramAddress.data;
-        }
-        addressLatch ^= 1;
-    }
-    else if (ppuRegister == static_cast<int>(Register::PPUDATA)) {
-        ppuWrite(vramAddress.data & 0x3FFF, value);
+        case Register::OAMADDR:
+            oamAddress = value;
+            break;
 
-        vramAddress.data += (control.vramAddressIncrement ? 32 : 1);
+        case Register::OAMDATA:
+            oamBuffer[oamAddress] = value;
+            break;
+
+        case Register::PPUSCROLL:
+            if (addressLatch == 0) {
+                fineX = value & 0x7;
+                temporaryVramAddress.coarseX = value >> 3;
+            }
+            else {
+                temporaryVramAddress.fineY = value & 0x7;
+                temporaryVramAddress.coarseY = value >> 3;
+            }
+            addressLatch ^= 1;
+            break;
+
+        case Register::PPUADDR:
+            if (addressLatch == 0) {
+                temporaryVramAddress.data &= 0x00FF;
+                temporaryVramAddress.data |= (value << 8);
+            }
+            else {
+                temporaryVramAddress.data &= 0xFF00;
+                temporaryVramAddress.data |= value;
+
+                vramAddress.data = temporaryVramAddress.data;
+            }
+            addressLatch ^= 1;
+            break;
+
+        case Register::PPUDATA:
+            ppuWrite(vramAddress.data & 0x3FFF, value);
+            vramAddress.data += (control.vramAddressIncrement ? 32 : 1);
+            break;
+
+        default:
+            break;
     }
 }
 
