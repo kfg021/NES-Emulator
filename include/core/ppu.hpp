@@ -193,6 +193,8 @@ private:
     Status status;
 
     uint16_t getNameTableIndex(uint16_t address) const;
+    uint8_t viewNameTable(uint16_t address) const;
+    uint8_t readNameTable(uint16_t address);
 
     // Some registers require two instructions to write the data, 
     // and so we store a boolean to represent which byte of the data we are currently writing
@@ -293,7 +295,7 @@ private:
     uint8_t oamAddress;
 
     uint16_t getPalleteRamAddress(uint8_t backgroundTable, uint8_t patternTable) const;
-    uint8_t getPalleteRamData(uint16_t address) const;
+    uint8_t viewPalleteRam(uint16_t address) const;
 
     bool nmiRequest;
     bool irqRequest;

@@ -202,7 +202,7 @@ uint8_t PPU::getPalleteRamIndexWrite(uint16_t address) const {
     return address;
 }
 
-uint8_t PPU::getPalleteRamData(uint16_t address) const {
+uint8_t PPU::viewPalleteRam(uint16_t address) const {
     uint8_t data = palleteRam[getPalleteRamIndexRead(address)] & 0x3F;
     if (mask.greyscale) {
         data &= 0x30;
@@ -254,21 +254,35 @@ uint16_t PPU::getNameTableIndex(uint16_t address) const {
     }
 }
 
+uint8_t PPU::viewNameTable(uint16_t address) const {
+    if (cartridge.getMirrorMode() != Mapper::MirrorMode::FOUR_SCREEN) {
+        return nameTable[getNameTableIndex(address)];
+    }
+    else {
+        // Mapper handles nametables in 4 screen mode
+        return cartridge.mapper->mapCHRView(address);
+    }
+}
+
+uint8_t PPU::readNameTable(uint16_t address) {
+    if (cartridge.getMirrorMode() != Mapper::MirrorMode::FOUR_SCREEN) {
+        return nameTable[getNameTableIndex(address)];
+    }
+    else {
+        // Mapper handles nametables in 4 screen mode
+        return cartridge.mapper->mapCHRRead(address);
+    }
+}
+
 uint8_t PPU::ppuView(uint16_t address) const {
     if (PATTERN_TABLE_RANGE.contains(address)) {
         return cartridge.mapper->mapCHRView(address);
     }
     else if (NAMETABLE_RANGE.contains(address)) {
-        if (cartridge.getMirrorMode() != Mapper::MirrorMode::FOUR_SCREEN) {
-            return nameTable[getNameTableIndex(address)];
-        }
-        else {
-            // Mapper handles nametables in 4 screen mode
-            return cartridge.mapper->mapCHRView(address);
-        }
+        return viewNameTable(address);
     }
     else if (PALLETE_RAM_RANGE.contains(address)) {
-       return getPalleteRamData(address);
+        return viewPalleteRam(address);
     }
     else {
         return 0;
@@ -280,16 +294,10 @@ uint8_t PPU::ppuRead(uint16_t address) {
         return cartridge.mapper->mapCHRRead(address);
     }
     else if (NAMETABLE_RANGE.contains(address)) {
-        if (cartridge.getMirrorMode() != Mapper::MirrorMode::FOUR_SCREEN) {
-            return nameTable[getNameTableIndex(address)];
-        }
-        else {
-            // Mapper handles nametables in 4 screen mode
-            return cartridge.mapper->mapCHRRead(address);
-        }
+        return readNameTable(address);
     }
     else if (PALLETE_RAM_RANGE.contains(address)) {
-        return getPalleteRamData(address);
+        return viewPalleteRam(address);
     }
     else {
         return 0;
@@ -328,8 +336,8 @@ std::unique_ptr<PPU::PatternTables> PPU::getPatternTables(uint8_t backgroundPall
                 uint16_t tableOffset = PATTERN_TABLE_TILE_BYTES * (PATTERN_TABLE_NUM_TILES * tileRow + tileCol);
 
                 for (int spriteRow = 0; spriteRow < PATTERN_TABLE_TILE_SIZE; spriteRow++) {
-                    uint8_t loBits = ppuView(PATTERN_TABLE_TOTAL_BYTES * tableNumber + tableOffset + spriteRow);
-                    uint8_t hiBits = ppuView(PATTERN_TABLE_TOTAL_BYTES * tableNumber + tableOffset + spriteRow + 0x8);
+                    uint8_t loBits = cartridge.mapper->mapCHRView(PATTERN_TABLE_TOTAL_BYTES * tableNumber + tableOffset + spriteRow);
+                    uint8_t hiBits = cartridge.mapper->mapCHRView(PATTERN_TABLE_TOTAL_BYTES * tableNumber + tableOffset + spriteRow + 0x8);
 
                     for (int spriteCol = 0; spriteCol < PATTERN_TABLE_TILE_SIZE; spriteCol++) {
                         bool currentLoBit = (loBits >> spriteCol) & 1;
@@ -340,7 +348,7 @@ std::unique_ptr<PPU::PatternTables> PPU::getPatternTables(uint8_t backgroundPall
                         uint16_t pixelCol = PATTERN_TABLE_TILE_SIZE * tileCol + PATTERN_TABLE_TILE_SIZE - 1 - spriteCol;
 
                         uint16_t addr = getPalleteRamAddress(palleteIndex, palleteNumber);
-                        table[pixelRow][pixelCol] = SCREEN_COLORS[ppuView(addr) & 0x3F];
+                        table[pixelRow][pixelCol] = SCREEN_COLORS[viewPalleteRam(addr) & 0x3F];
                     }
                 }
             }
@@ -498,7 +506,7 @@ void PPU::doStandardFetchCycle() {
 }
 
 void PPU::fetchNameTableByte() {
-    nextNameTableByte = ppuRead(0x2000 + (vramAddress.data & 0x0FFF));
+    nextNameTableByte = readNameTable(0x2000 + (vramAddress.data & 0x0FFF));
 }
 
 void PPU::fetchAttributeTableByte() {
@@ -507,7 +515,7 @@ void PPU::fetchAttributeTableByte() {
         (vramAddress.nametableX << 10) |
         ((vramAddress.coarseY >> 2) << 3) |
         (vramAddress.coarseX >> 2);
-    uint8_t nextAttributeTableByte = ppuRead(0x23C0 + offset);
+    uint8_t nextAttributeTableByte = readNameTable(0x23C0 + offset);
 
     // Extract the correct 2 bit portion of the attribute table byte
     if (vramAddress.coarseY & 0x02) {
@@ -525,7 +533,7 @@ void PPU::fetchPatternTableByteLo() {
         (control.backgroundPatternTable << 12) |
         (nextNameTableByte << 4) |
         vramAddress.fineY;
-    nextPatternTableLo = ppuRead(address);
+    nextPatternTableLo = cartridge.mapper->mapCHRRead(address);
 }
 
 void PPU::fetchPatternTableByteHi() {
@@ -533,7 +541,7 @@ void PPU::fetchPatternTableByteHi() {
         (control.backgroundPatternTable << 12) |
         (nextNameTableByte << 4) |
         vramAddress.fineY;
-    nextPatternTableHi = ppuRead(address + 8);
+    nextPatternTableHi = cartridge.mapper->mapCHRRead(address + 8);
 }
 
 void PPU::drawPixel() {
@@ -554,7 +562,7 @@ void PPU::drawPixel() {
         }
     }
     uint16_t backgroundAddr = getPalleteRamAddress(backgroundPatternTable, backgroundAttributeTable);
-    uint8_t backgroundColorIndex = getPalleteRamData(backgroundAddr);
+    uint8_t backgroundColorIndex = viewPalleteRam(backgroundAddr);
 
     // Get color from sprites
     uint8_t spritePatternTable = 0;
@@ -600,7 +608,7 @@ void PPU::drawPixel() {
         }
     }
     uint16_t spriteAddr = getPalleteRamAddress(spritePatternTable, spriteAttributeTable);
-    uint8_t spriteColorIndex = getPalleteRamData(spriteAddr);
+    uint8_t spriteColorIndex = viewPalleteRam(spriteAddr);
 
     // Now combine the background color, sprite color, and priority to get the final color
     uint8_t finalColorIndex;
@@ -801,8 +809,8 @@ void PPU::fillCurrentScanlineSprites() {
                     }
                 }
 
-                uint8_t spritePatternTableLo = ppuRead(spritePatternTableAddr);
-                uint8_t spritePatternTableHi = ppuRead(spritePatternTableAddr + 8);
+                uint8_t spritePatternTableLo = cartridge.mapper->mapCHRRead(spritePatternTableAddr);
+                uint8_t spritePatternTableHi = cartridge.mapper->mapCHRRead(spritePatternTableAddr + 8);
 
                 currentScanlineSprites.push_back({ sprite, spritePatternTableLo, spritePatternTableHi });
 
