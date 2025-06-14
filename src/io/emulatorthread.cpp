@@ -246,8 +246,7 @@ std::array<QString, DebugWindowState::NUM_INSTS_TOTAL> EmulatorThread::getInsts(
 	// Last x PCs
 	int start = DebugWindowState::NUM_INSTS_ABOVE_AND_BELOW - static_cast<int>(recentPCsCopy.size());
 	for (int i = start; i < DebugWindowState::NUM_INSTS_ABOVE_AND_BELOW; i++) {
-		insts[i] = toString(recentPCsCopy.front());
-		recentPCsCopy.pop();
+		insts[i] = toString(recentPCsCopy.pop());
 	}
 
 	// Current PC and upcoming x PCs

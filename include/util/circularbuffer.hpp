@@ -20,10 +20,6 @@ public:
         return currentSize;
     }
 
-    T front() const {
-        return buffer[readPointer];
-    }
-
     void forcePush(const T& data) {
         // This evicts the oldest item in the buffer if there are too many entries
         if (currentSize == Capacity) {
