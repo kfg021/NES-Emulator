@@ -1,21 +1,16 @@
 #ifndef THREADSAFEAUDIOQUEUE_HPP
 #define THREADSAFEAUDIOQUEUE_HPP
 
-#include <array>
+#include "util/circularbuffer.hpp"
+
 #include <cstring>
 #include <mutex>
 #include <type_traits>
 
-template <typename T, size_t capacity, typename = typename std::enable_if<std::is_trivially_copyable<T>::value>::type>
+template <typename T, size_t Capacity, typename = typename std::enable_if<std::is_trivially_copyable<T>::value>::type>
 class ThreadSafeAudioQueue {
 public:
-    ThreadSafeAudioQueue() {
-        buffer = {};
-        readPointer = 0;
-        writePointer = 0;
-        currentSize = 0;
-    }
-
+    ThreadSafeAudioQueue() = default;
     ~ThreadSafeAudioQueue() = default;
 
     ThreadSafeAudioQueue(const ThreadSafeAudioQueue&) = delete;
@@ -25,26 +20,19 @@ public:
 
     size_t size() const {
         std::lock_guard<std::mutex> guard(mtx);
-        return currentSize;
+        return circBuffer.size();
     }
 
-    void push(const T& data) {
-        std::lock_guard<std::mutex> guard(mtx);
-
+    void forcePush(const T& data) {
         // This evicts the oldest item in the audio queue if there are too many samples.
         // It keeps the audio in sync with the video but sometimes leads to audio glitches if audio is ahead
-        if (currentSize == capacity) {
-            popInternal();
-        }
-
-        pushInternal(data);
+        std::lock_guard<std::mutex> guard(mtx);
+        circBuffer.forcePush(data);
     }
 
     void erase() {
         std::lock_guard<std::mutex> guard(mtx);
-        readPointer = 0;
-        writePointer = 0;
-        currentSize = 0;
+        circBuffer.erase();
     }
 
     size_t popManyIntoBuffer(char* outputBuffer, size_t maxSize) {
@@ -52,36 +40,20 @@ public:
         size_t numEntries = 0;
         {
             std::lock_guard<std::mutex> guard(mtx);
-            numEntries = std::min(currentSize, maxEntries);
+            numEntries = std::min(circBuffer.size(), maxEntries);
             for (size_t i = 0; i < numEntries; i++) {
                 size_t index = i * sizeof(T);
                 T* address = reinterpret_cast<T*>(&outputBuffer[index]);
-                std::memcpy(address, &buffer[readPointer], sizeof(T));
-                popInternal();
+                T output = circBuffer.pop();
+                std::memcpy(address, &output, sizeof(T));
             }
         }
         return numEntries * sizeof(T);
     }
 
 private:
-    std::array<T, capacity> buffer;
-    size_t readPointer;
-    size_t writePointer;
-    size_t currentSize;
+    CircularBuffer<T, Capacity> circBuffer;
     mutable std::mutex mtx;
-
-    void pushInternal(const T& data) {
-        buffer[writePointer] = data;
-        writePointer++;
-        currentSize++;
-        if (writePointer == capacity) writePointer = 0;
-    }
-
-    void popInternal() {
-        readPointer++;
-        currentSize--;
-        if (readPointer == capacity) readPointer = 0;
-    }
 };
 
 #endif // THREADSAFEAUDIOQUEUE_HPP

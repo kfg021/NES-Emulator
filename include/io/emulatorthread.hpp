@@ -62,7 +62,7 @@ private:
 	uint8_t lastLoadCount;
 
 	void runCycles();
-	std::queue<uint16_t> recentPCs;
+	CircularBuffer<uint16_t, DebugWindowState::NUM_INSTS_ABOVE_AND_BELOW> recentPCs;
 	std::array<QString, DebugWindowState::NUM_INSTS_TOTAL> getInsts() const;
 
 	ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>& audioSamples;

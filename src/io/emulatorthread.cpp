@@ -72,8 +72,7 @@ void EmulatorThread::run() {
 		if (numResets >= 1) { // Only perform a max of one reset each frame
 			bus.reset();
 
-			std::queue<uint16_t> empty;
-			std::swap(recentPCs, empty);
+			recentPCs.erase();
 
 			nextFrameTargetNs = framePacingTimer.nsecsElapsed() + TARGET_FRAME_NS;
 		}
@@ -86,8 +85,7 @@ void EmulatorThread::run() {
 			qDebug().noquote() << saveStatus.message;
 
 			if (saveStatus.code == SaveState::LoadStatus::Code::SUCCESS) {
-				std::queue<uint16_t> empty;
-				std::swap(recentPCs, empty);
+				recentPCs.erase();
 			}
 		}
 
@@ -192,7 +190,7 @@ void EmulatorThread::runCycles() {
 
 		if (audioEnabled) {
 			while (scaledAudioClock >= INSTRUCTIONS_PER_SECOND) {
-				audioSamples.push(bus.apu->getAudioSample());
+				audioSamples.forcePush(bus.apu->getAudioSample());
 				if (!soundReady) {
 					soundReady = true;
 					emit soundReadySignal();
@@ -208,10 +206,7 @@ void EmulatorThread::runCycles() {
 
 		if (nextPC != currentPC) {
 			if (debugEnabled) {
-				if (recentPCs.size() == DebugWindowState::NUM_INSTS_ABOVE_AND_BELOW) {
-					recentPCs.pop();
-				}
-				recentPCs.push(currentPC);
+				recentPCs.forcePush(currentPC);
 			}
 			return true;
 		}
@@ -242,7 +237,7 @@ void EmulatorThread::runCycles() {
 
 std::array<QString, DebugWindowState::NUM_INSTS_TOTAL> EmulatorThread::getInsts() const {
 	std::array<QString, DebugWindowState::NUM_INSTS_TOTAL> insts;
-	std::queue<uint16_t> recentPCsCopy = recentPCs;
+	auto recentPCsCopy = recentPCs;
 
 	auto toString = [&](uint16_t addr) {
 		std::string text = "$" + toHexString16(addr) + ": " + bus.cpu->toString(addr);

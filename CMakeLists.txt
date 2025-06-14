@@ -35,6 +35,7 @@ set(HEADERS
     include/io/savestate.hpp
     include/io/threadsafeaudioqueue.hpp
     include/io/qtserializer.hpp
+    include/util/circularbuffer.hpp
     include/util/serializer.hpp
     include/util/util.hpp
 )
