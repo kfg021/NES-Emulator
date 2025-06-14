@@ -39,6 +39,7 @@ EmulatorThread::EmulatorThread(
 	lastStepCount = 0;
 	lastSaveCount = 0;
 	lastLoadCount = 0;
+	debugWindowOpenLastFrame = false;
 
 	qRegisterMetaType<DebugWindowState>("DebugWindowState");
 }
@@ -104,6 +105,10 @@ void EmulatorThread::run() {
 		bool muted = localKeyInput.muted || localKeyInput.paused;
 		if (muted) scaledAudioClock = 0;
 
+		// Check if the debug window was opened this frame so it can update even if the game is paused
+		bool debugWindowOpenedThisFrame = localKeyInput.debugWindowEnabled && !debugWindowOpenLastFrame;
+		debugWindowOpenLastFrame = localKeyInput.debugWindowEnabled;
+
 		// Check steps
 		uint8_t numSteps = localKeyInput.stepCount - lastStepCount;
 		lastStepCount = localKeyInput.stepCount;
@@ -123,7 +128,7 @@ void EmulatorThread::run() {
 		}
 		else {
 			shouldOutputGameFrame = false;
-			shouldOutputDebugFrame = false;
+			shouldOutputDebugFrame = debugWindowOpenedThisFrame;
 		}
 
 		if (!isRunning.load()) break;

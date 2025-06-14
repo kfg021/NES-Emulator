@@ -60,6 +60,7 @@ private:
 	uint8_t lastStepCount;
 	uint8_t lastSaveCount;
 	uint8_t lastLoadCount;
+	bool debugWindowOpenLastFrame;
 
 	bool executeCycle(bool debugEnabled, bool audioEnabled);
 	void runUntilFrameReady();
