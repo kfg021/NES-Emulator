@@ -214,7 +214,7 @@ void EmulatorThread::runCycles() {
 	};
 
 	auto loopCondition = [&]() -> bool {
-		static constexpr int UPPER_LIMIT_CYCLES = EXPECTED_CPU_CYCLES_PER_FRAME * 2;
+		static constexpr int UPPER_LIMIT_CYCLES = EXPECTED_CPU_CYCLES_PER_FRAME + 5;
 		return !bus.ppu->frameReadyFlag && cycles < UPPER_LIMIT_CYCLES;
 	};
 
