@@ -102,22 +102,41 @@ void EmulatorThread::run() {
 
 		// Check audio
 		bool muted = localKeyInput.muted || localKeyInput.paused;
-		if(muted) scaledAudioClock = 0;
+		if (muted) scaledAudioClock = 0;
 
-		runCycles();
+		// Check steps
+		uint8_t numSteps = localKeyInput.stepCount - lastStepCount;
+		lastStepCount = localKeyInput.stepCount;
+
+		// Run emulator
+		bool shouldOutputGameFrame;
+		bool shouldOutputDebugFrame;
+		if (!localKeyInput.paused) {
+			runUntilFrameReady();
+			shouldOutputGameFrame = true;
+			shouldOutputDebugFrame = localKeyInput.debugWindowEnabled;
+		}
+		else if (numSteps) {
+			runSteps(numSteps);
+			shouldOutputGameFrame = bus.ppu->frameReadyFlag;
+			shouldOutputDebugFrame = true;
+		}
+		else {
+			shouldOutputGameFrame = false;
+			shouldOutputDebugFrame = false;
+		}
 
 		if (!isRunning.load()) break;
 
-		// Output game frame
-		if (bus.ppu->frameReadyFlag) {
+		// Output frames
+		if (shouldOutputGameFrame) {
 			const PPU::Display& display = *(bus.ppu->finishedDisplay);
 			QImage image(reinterpret_cast<const uint8_t*>(&display), 256, 240, QImage::Format_ARGB32_Premultiplied);
 			emit frameReadySignal(image.copy());
 			bus.ppu->frameReadyFlag = false;
 		}
 
-		// Output debug window frame
-		if (localKeyInput.debugWindowEnabled) {
+		if (shouldOutputDebugFrame) {
 			std::unique_ptr<PPU::PatternTables> patternTablesTemp = bus.ppu->getPatternTables(localKeyInput.backgroundPallete, localKeyInput.spritePallete);
 			std::shared_ptr<PPU::PatternTables> patternTables(std::move(patternTablesTemp));
 
@@ -177,59 +196,54 @@ void EmulatorThread::run() {
 	}
 }
 
-void EmulatorThread::runCycles() {
-	int cycles = 0;
+bool EmulatorThread::executeCycle(bool debugEnabled, bool audioEnabled) {
+	uint16_t currentPC = bus.cpu->getPC();
 
-	// Check steps
-	uint8_t numSteps = localKeyInput.stepCount - lastStepCount;
-	lastStepCount = localKeyInput.stepCount;
+	bus.executeCycle();
 
-	auto executeCycle = [&](bool debugEnabled, bool audioEnabled) -> bool {
-		uint16_t currentPC = bus.cpu->getPC();
+	uint16_t nextPC = bus.cpu->getPC();
 
-		bus.executeCycle();
-		cycles++;
-
-		uint16_t nextPC = bus.cpu->getPC();
-
-		if (audioEnabled) {
-			while (scaledAudioClock >= INSTRUCTIONS_PER_SECOND) {
-				audioSamples.forcePush(bus.apu->getAudioSample());
-				if (!soundReady) {
-					soundReady = true;
-					emit soundReadySignal();
-				}
-
-				scaledAudioClock -= INSTRUCTIONS_PER_SECOND;
+	if (audioEnabled) {
+		while (scaledAudioClock >= INSTRUCTIONS_PER_SECOND) {
+			audioSamples.forcePush(bus.apu->getAudioSample());
+			if (!soundReady) {
+				soundReady = true;
+				emit soundReadySignal();
 			}
-			scaledAudioClock += AUDIO_SAMPLE_RATE;
-		}
 
-		if (nextPC != currentPC) {
-			if (debugEnabled) {
-				recentPCs.forcePush(currentPC);
-			}
-			return true;
+			scaledAudioClock -= INSTRUCTIONS_PER_SECOND;
 		}
-		return false;
-	};
-
-	auto loopCondition = [&]() -> bool {
-		static constexpr int UPPER_LIMIT_CYCLES = EXPECTED_CPU_CYCLES_PER_FRAME + 5;
-		return !bus.ppu->frameReadyFlag && cycles < UPPER_LIMIT_CYCLES;
-	};
-
-	if (!localKeyInput.paused) {
-		while (loopCondition()) {
-			executeCycle(localKeyInput.debugWindowEnabled, !localKeyInput.muted);
-		}
+		scaledAudioClock += AUDIO_SAMPLE_RATE;
 	}
-	else {
-		for (int i = 0; i < numSteps; i++) {
-			while (loopCondition()) {
-				bool isNewInstruction = executeCycle(true, false);
-				if (isNewInstruction) break;
-			}
+
+	if (nextPC != currentPC) {
+		if (debugEnabled) {
+			recentPCs.forcePush(currentPC);
+		}
+		return true;
+	}
+	return false;
+}
+
+void EmulatorThread::runUntilFrameReady() {
+	int cycles = 0;
+	static constexpr int CYCLE_LIMIT = EXPECTED_CPU_CYCLES_PER_FRAME + 5;
+
+	while (!bus.ppu->frameReadyFlag && cycles < CYCLE_LIMIT) {
+		executeCycle(localKeyInput.debugWindowEnabled, !localKeyInput.muted);
+		cycles++;
+	}
+}
+
+void EmulatorThread::runSteps(uint8_t numSteps) {
+	for (int i = 0; i < numSteps; i++) {
+		int cycles = 0;
+		static constexpr int CYCLE_LIMIT = 100000;
+
+		bool isNewInstruction = false;
+		while (!isNewInstruction && cycles < CYCLE_LIMIT) {
+			isNewInstruction = executeCycle(true, false);
+			cycles++;
 		}
 	}
 }

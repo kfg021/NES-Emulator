@@ -61,7 +61,10 @@ private:
 	uint8_t lastSaveCount;
 	uint8_t lastLoadCount;
 
-	void runCycles();
+	bool executeCycle(bool debugEnabled, bool audioEnabled);
+	void runUntilFrameReady();
+	void runSteps(uint8_t numSteps);
+
 	CircularBuffer<uint16_t, DebugWindowState::NUM_INSTS_ABOVE_AND_BELOW> recentPCs;
 	std::array<QString, DebugWindowState::NUM_INSTS_TOTAL> getInsts() const;
 
