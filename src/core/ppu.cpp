@@ -2,14 +2,6 @@
 
 #include "core/mapper/mapper4.hpp"
 
-// Screen colors taken from https://www.nesdev.org/wiki/PPU_palettes
-const std::array<uint32_t, PPU::NUM_SCREEN_COLORS> PPU::SCREEN_COLORS = {
-    0xFF626262, 0xFF001FB2, 0xFF2404C8, 0xFF5200B2, 0xFF730076, 0xFF800024, 0xFF730B00, 0xFF522800, 0xFF244400, 0xFF005700, 0xFF005C00, 0xFF005324, 0xFF003C76, 0xFF000000, 0xFF000000, 0xFF000000,
-    0xFFABABAB, 0xFF0D57FF, 0xFF4B30FF, 0xFF8A13FF, 0xFFBC08D6, 0xFFD21269, 0xFFC72E00, 0xFF9D5400, 0xFF607B00, 0xFF209800, 0xFF00A300, 0xFF009942, 0xFF007DB4, 0xFF000000, 0xFF000000, 0xFF000000,
-    0xFFFFFFFF, 0xFF53AEFF, 0xFF9085FF, 0xFFD365FF, 0xFFFF57FF, 0xFFFF5DCF, 0xFFFF7757, 0xFFFA9E00, 0xFFBDC700, 0xFF7AE700, 0xFF43F611, 0xFF26EF7E, 0xFF2CD5F6, 0xFF4E4E4E, 0xFF000000, 0xFF000000,
-    0xFFFFFFFF, 0xFFB6E1FF, 0xFFCED1FF, 0xFFE9C3FF, 0xFFFFBCFF, 0xFFFFBDF4, 0xFFFFC6C3, 0xFFFFD59A, 0xFFE9E681, 0xFFCEF481, 0xFFB6FB9A, 0xFFA9FAC3, 0xFFA9F0F4, 0xFFB8B8B8, 0xFF000000, 0xFF000000,
-};
-
 PPU::PPU(Cartridge& cartridge) : cartridge(cartridge) {
     workingDisplay = std::make_unique<Display>();
     finishedDisplay = std::make_unique<Display>();
@@ -632,29 +624,32 @@ void PPU::drawPixel() {
 
     // Modify the final color based on the PPU's emphasis bits
     if (mask.emphRed || mask.emphGreen || mask.emphBlue) {
-        // Color tint bits (https://www.nesdev.org/wiki/NTSC_video)
-        // Tests performed on NTSC NES show that emphasis does not affect the black colors in columns $E or $F, but it does affect all other columns, including the blacks and greys in column $D.
-        // The terminated measurements above suggest that resulting attenuated absolute voltage is on average 0.816328 times the un-attenuated absolute voltage.
-        // attenuated absolute = absolute * 0.816328
         uint8_t colorColumn = finalColorIndex & 0xF;
         if (colorColumn != 0xE && colorColumn != 0xF) {
             BitField<16, 8, uint32_t> red{ finalColor };
             BitField<8, 8, uint32_t>  green{ finalColor };
             BitField<0, 8, uint32_t>  blue{ finalColor };
 
-            static constexpr float ATTENUATION = 0.816328f;
+            uint8_t attenuationRed = 0;
+            uint8_t attenuationGreen = 0;
+            uint8_t attenuationBlue = 0;
+
             if (mask.emphRed) {
-                green = green * ATTENUATION;
-                blue = blue * ATTENUATION;
+                attenuationGreen++;
+                attenuationBlue++;
             }
             if (mask.emphGreen) {
-                red = red * ATTENUATION;
-                blue = blue * ATTENUATION;
+                attenuationRed++;
+                attenuationBlue++;
             }
             if (mask.emphBlue) {
-                red = red * ATTENUATION;
-                green = green * ATTENUATION;
+                attenuationRed++;
+                attenuationGreen++;
             }
+
+            red = ATTENUATION_TABLE[(attenuationRed << 8) | red];
+            green = ATTENUATION_TABLE[(attenuationGreen << 8) | green];
+            blue = ATTENUATION_TABLE[(attenuationBlue << 8) | blue];
         }
     }
 
