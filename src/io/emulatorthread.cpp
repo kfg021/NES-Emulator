@@ -100,6 +100,10 @@ void EmulatorThread::run() {
 		bus.setController(0, localKeyInput.controller1ButtonMask);
 		bus.setController(1, localKeyInput.controller2ButtonMask);
 
+		// Check audio
+		bool muted = localKeyInput.muted || localKeyInput.paused;
+		if(muted) scaledAudioClock = 0;
+
 		runCycles();
 
 		if (!isRunning.load()) break;
@@ -199,9 +203,6 @@ void EmulatorThread::runCycles() {
 				scaledAudioClock -= INSTRUCTIONS_PER_SECOND;
 			}
 			scaledAudioClock += AUDIO_SAMPLE_RATE;
-		}
-		else {
-			scaledAudioClock = 0;
 		}
 
 		if (nextPC != currentPC) {
