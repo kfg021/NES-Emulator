@@ -243,7 +243,7 @@ void EmulatorThread::runUntilFrameReady() {
 void EmulatorThread::runSteps(uint8_t numSteps) {
 	for (int i = 0; i < numSteps; i++) {
 		int cycles = 0;
-		static constexpr int CYCLE_LIMIT = 100000;
+		static constexpr int CYCLE_LIMIT = 100;
 
 		bool isNewInstruction = false;
 		while (!isNewInstruction && cycles < CYCLE_LIMIT) {
