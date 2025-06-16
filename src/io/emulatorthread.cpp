@@ -166,13 +166,13 @@ void EmulatorThread::run() {
 		// TODO: Also handle audio underflow
 		if (!localKeyInput.muted) {
 			size_t currentAudioQueueSize = audioSamples.size();
-			if (currentAudioQueueSize > AUDIO_QUEUE_UPPER_THRESHOLD_SAMPLES) {
-				// We have too much audio buffered, which means we are generating frames too quickly.
-				// Let audio catch up by adding a small delay to the next video frame target
+			if (currentAudioQueueSize > AUDIO_QUEUE_TARGET_FILL_SAMPLES) {
+				// We have too much audio buffered, which means we are generating audio samples faster than they can be played.
+				// Since audio sample generation speed is synchronized with frame output speed, delaying the next frame will also delay the audio sample generation.
 				int64_t excessAudioNs = ((currentAudioQueueSize - AUDIO_QUEUE_TARGET_FILL_SAMPLES) * static_cast<int64_t>(1e9)) / AUDIO_SAMPLE_RATE;
 				if (excessAudioNs > static_cast<int64_t>(1e6)) { // 1ms
-					// Delay next frame target by half of the excess
-					int64_t delayNs = excessAudioNs / 2;
+					// Delay next frame target by a portion of the excess
+					int64_t delayNs = excessAudioNs / 5;
 					nextFrameTargetNs += delayNs;
 				}
 			}

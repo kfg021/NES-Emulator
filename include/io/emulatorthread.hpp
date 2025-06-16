@@ -44,9 +44,8 @@ private:
 	static constexpr int EXPECTED_CPU_CYCLES_PER_FRAME = (262 * 341) / 3;
 	static constexpr int INSTRUCTIONS_PER_SECOND = EXPECTED_CPU_CYCLES_PER_FRAME * FPS;
 
-	// Audio pacing constants
+	// Audio pacing
 	static constexpr size_t AUDIO_QUEUE_TARGET_FILL_SAMPLES = AUDIO_SAMPLE_RATE / 20; // 50ms audio latency
-	static constexpr size_t AUDIO_QUEUE_UPPER_THRESHOLD_SAMPLES = AUDIO_QUEUE_TARGET_FILL_SAMPLES * 3 / 2;
 
 	Bus bus;
 	std::atomic<bool> isRunning;
