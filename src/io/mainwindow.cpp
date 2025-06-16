@@ -255,7 +255,7 @@ void MainWindow::keyReleaseEvent(QKeyEvent* event) {
 }
 
 void MainWindow::setControllerData(bool controller, Controller::Button button, bool value) {
-	uint8_t& controllerData = !controller ? localKeyInput.controller1ButtonMask : localKeyInput.controller1ButtonMask;
+	uint8_t& controllerData = !controller ? localKeyInput.controller1ButtonMask : localKeyInput.controller2ButtonMask;
 	uint8_t bitToChange = (1 << static_cast<int>(button));
 	if (value) {
 		controllerData |= bitToChange;
