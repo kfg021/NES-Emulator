@@ -1,9 +1,10 @@
 #include "io/emulatorthread.hpp"
 #include <cstdint>
 
-#include <QDebug>
 #include <QElapsedTimer>
 #include <QString>
+
+#include <iostream>
 
 EmulatorThread::EmulatorThread(
 	QObject* parent,
@@ -25,10 +26,21 @@ EmulatorThread::EmulatorThread(
 		qFatal("%s", status.message.c_str());
 	}
 
+	const Mapper::Config& config = bus.cartridge->mapper->config;
+	std::cerr << "ROM loaded successfully.\n";
+	std::cerr << "Mapper: " << static_cast<int>(config.id) << "\n";
+	std::cerr << "PRG ROM chunks: " << static_cast<int>(config.prgChunks) << "\n";
+	std::cerr << "CHR ROM chunks: " << static_cast<int>(config.chrChunks) << "\n";
+	std::cerr << "Initial mirroring: " << (config.initialMirrorMode == Mapper::MirrorMode::HORIZONTAL ? "Horizontal\n" : "Vertical\n");
+	std::cerr << "Battery backed PRG RAM: " << (config.hasBatteryBackedPrgRam ? "Yes\n" : "No\n");
+	std::cerr << "CHR RAM: " << (config.chrChunks == 0 ? "Yes\n" : "No\n");
+	std::cerr << "Alternative nametable layout: " << (config.alternativeNametableLayout ? "Yes\n" : "No\n");
+	std::cerr << std::endl;
+
 	if (saveFilePathOption.has_value()) {
 		QString saveFilePath = QString::fromStdString(saveFilePathOption.value());
 		SaveState::LoadStatus saveStatus = saveState.loadSaveState(saveFilePath);
-		qDebug().noquote() << saveStatus.message;
+		std::cerr << saveStatus.message << std::endl;
 	}
 
 	scaledAudioClock = 0;
@@ -83,7 +95,7 @@ void EmulatorThread::run() {
 		lastLoadCount = localKeyInput.loadCount;
 		if (numLoads >= 1) { // Only perform a max of one load each frame
 			SaveState::LoadStatus saveStatus = saveState.loadSaveState(localKeyInput.mostRecentSaveFilePath);
-			qDebug().noquote() << saveStatus.message;
+			std::cerr << saveStatus.message << std::endl;
 
 			if (saveStatus.code == SaveState::LoadStatus::Code::SUCCESS) {
 				recentPCs.erase();
@@ -94,7 +106,7 @@ void EmulatorThread::run() {
 		lastSaveCount = localKeyInput.saveCount;
 		if (numSaves >= 1) { // Only perform a max of one save each frame
 			SaveState::CreateStatus saveStatus = saveState.createSaveState(localKeyInput.mostRecentSaveFilePath);
-			qDebug().noquote() << saveStatus.message;
+			std::cerr << saveStatus.message << std::endl;
 		}
 
 		// Handle controller input

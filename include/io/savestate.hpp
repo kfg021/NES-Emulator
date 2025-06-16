@@ -5,6 +5,7 @@
 
 #include <array>
 #include <optional>
+#include <string>
 
 #include <QString>
 
@@ -21,7 +22,7 @@ public:
         };
 
         Code code;
-        QString message;
+        std::string message;
     };
 
     struct LoadStatus {
@@ -35,7 +36,7 @@ public:
         };
 
         Code code;
-        QString message;
+        std::string message;
     };
 
     CreateStatus createSaveState(const QString& filePath) const;

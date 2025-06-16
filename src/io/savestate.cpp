@@ -10,7 +10,6 @@
 #include <QDir>
 #include <QFile>
 #include <QIODevice>
-#include <QString>
 
 SaveState::SaveState(Bus& bus, const QString& romFilePath) :
     bus(bus),
@@ -41,7 +40,7 @@ std::optional<SaveState::RomHash> SaveState::createRomHash(const QString& romFil
 }
 
 SaveState::CreateStatus SaveState::createSaveState(const QString& saveFilePath) const {
-    static const QString ERROR_MESSAGE_START = "Failed to create save state: ";
+    static const std::string ERROR_MESSAGE_START = "Failed to create save state: ";
 
     if (!ROM_HASH.has_value()) {
         return {
@@ -87,7 +86,7 @@ SaveState::CreateStatus SaveState::createSaveState(const QString& saveFilePath) 
 }
 
 SaveState::LoadStatus SaveState::loadSaveState(const QString& filePath) {
-    static const QString ERROR_MESSAGE_START = "Failed to load save state: ";
+    static const std::string ERROR_MESSAGE_START = "Failed to load save state: ";
 
     struct Header {
         uint32_t formatID;
