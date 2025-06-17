@@ -32,8 +32,6 @@ public:
     };
 
     const Config config;
-
-    Mapper(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr);
     virtual ~Mapper() = default;
 
     virtual void reset() = 0;
@@ -98,6 +96,8 @@ private:
     static constexpr MemoryRange PRG_RAM_RANGE{ 0x6000, 0x7FFF };
 
 protected:
+    Mapper(const Config& config, const std::vector<uint8_t>& prg, const std::vector<uint8_t>& chr);
+
     const std::vector<uint8_t> prg;
     const std::vector<uint8_t> chr;
 
