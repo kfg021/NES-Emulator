@@ -2,7 +2,7 @@
 #define EMULATORTHREAD_HPP
 
 #include "core/bus.hpp"
-#include "io/guitypes.hpp"
+#include "io/iotypes.hpp"
 #include "io/savestate.hpp"
 
 #include <array>

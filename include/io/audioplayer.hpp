@@ -1,7 +1,7 @@
 #ifndef AUDIOPLAYER_HPP
 #define AUDIOPLAYER_HPP
 
-#include "io/guitypes.hpp"
+#include "io/iotypes.hpp"
 
 #include <cstdint>
 #include <mutex>

@@ -1,5 +1,5 @@
-#ifndef GUITYPES_HPP
-#define GUITYPES_HPP
+#ifndef IOTYPES_HPP
+#define IOTYPES_HPP
 
 #include "core/ppu.hpp"
 #include "io/threadsafeaudioqueue.hpp"
@@ -61,4 +61,4 @@ static constexpr int AUDIO_SAMPLE_RATE = 44100;
 static constexpr size_t AUDIO_QUEUE_MAX_CAPACITY = AUDIO_SAMPLE_RATE / 10; // Enough space to store 100ms of audio
 using AudioQueue = ThreadSafeAudioQueue<AUDIO_QUEUE_MAX_CAPACITY>;
 
-#endif // GUITYPES_HPP
+#endif // IOTYPES_HPP

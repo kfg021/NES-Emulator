@@ -30,7 +30,7 @@ set(HEADERS
     include/core/mapper/mapper66.hpp
     include/io/audioplayer.hpp
     include/io/emulatorthread.hpp
-    include/io/guitypes.hpp
+    include/io/iotypes.hpp
     include/io/mainwindow.hpp
     include/io/savestate.hpp
     include/io/threadsafeaudioqueue.hpp

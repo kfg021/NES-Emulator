@@ -4,7 +4,7 @@
 #include "core/bus.hpp"
 #include "io/audioplayer.hpp"
 #include "io/emulatorthread.hpp"
-#include "io/guitypes.hpp"
+#include "io/iotypes.hpp"
 
 #include <array>
 #include <memory>
