@@ -12,7 +12,7 @@ EmulatorThread::EmulatorThread(
 	const std::optional<std::string>& saveFilePathOption,
 	const KeyboardInput& sharedKeyInput,
 	std::mutex& keyInputMutex,
-	ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>& audioSamples
+	AudioQueue& audioSamples
 ) :
 	QThread(parent),
 	sharedKeyInput(sharedKeyInput),

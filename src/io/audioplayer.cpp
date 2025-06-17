@@ -1,6 +1,6 @@
 #include "io/audioplayer.hpp"
 
-AudioPlayer::AudioPlayer(QWidget* parent, const QAudioFormat& audioFormat, ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>* audioSamples)
+AudioPlayer::AudioPlayer(QWidget* parent, const QAudioFormat& audioFormat, AudioQueue& audioSamples)
     : QIODevice(parent),
     audioFormat(audioFormat),
     audioSamples(audioSamples) {
@@ -9,7 +9,7 @@ AudioPlayer::AudioPlayer(QWidget* parent, const QAudioFormat& audioFormat, Threa
 }
 
 int64_t AudioPlayer::readData(char* data, int64_t maxSize) {
-    return audioSamples->popManyIntoBuffer(data, maxSize);
+    return audioSamples.popManyIntoBuffer(data, maxSize);
 }
 
 int64_t AudioPlayer::writeData(const char* /*data*/, int64_t /*maxSize*/) {
@@ -17,5 +17,5 @@ int64_t AudioPlayer::writeData(const char* /*data*/, int64_t /*maxSize*/) {
 }
 
 int64_t AudioPlayer::bytesAvailable() const {
-    return audioSamples->size() * sizeof(float);
+    return audioSamples.size() * sizeof(float);
 }

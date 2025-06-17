@@ -4,7 +4,6 @@
 #include "core/bus.hpp"
 #include "io/guitypes.hpp"
 #include "io/savestate.hpp"
-#include "io/threadsafeaudioqueue.hpp"
 
 #include <array>
 #include <optional>
@@ -24,7 +23,7 @@ public:
 		const std::optional<std::string>& saveFilePath,
 		const KeyboardInput& sharedKeyInput,
 		std::mutex& keyInputMutex,
-		ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>& audioSamples
+		AudioQueue& audioSamples
 	);
 	~EmulatorThread() override;
 	void run() override;
@@ -68,7 +67,7 @@ private:
 	CircularBuffer<uint16_t, DebugWindowState::NUM_INSTS_ABOVE_AND_BELOW> recentPCs;
 	std::array<QString, DebugWindowState::NUM_INSTS_TOTAL> getInsts() const;
 
-	ThreadSafeAudioQueue<float, AUDIO_QUEUE_MAX_CAPACITY>& audioSamples;
+	AudioQueue& audioSamples;
 
 	int scaledAudioClock;
 

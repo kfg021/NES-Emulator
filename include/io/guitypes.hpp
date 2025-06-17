@@ -2,6 +2,7 @@
 #define GUITYPES_HPP
 
 #include "core/ppu.hpp"
+#include "io/threadsafeaudioqueue.hpp"
 
 #include <array>
 #include <memory>
@@ -56,6 +57,7 @@ struct DebugWindowState {
 Q_DECLARE_METATYPE(DebugWindowState)
 
 static constexpr int AUDIO_SAMPLE_RATE = 44100;
-static constexpr size_t AUDIO_QUEUE_MAX_CAPACITY = AUDIO_SAMPLE_RATE / 10; // Enough space to store 100ms of audio 
+static constexpr size_t AUDIO_QUEUE_MAX_CAPACITY = AUDIO_SAMPLE_RATE / 10; // Enough space to store 100ms of audio
+using AudioQueue = ThreadSafeAudioQueue<AUDIO_QUEUE_MAX_CAPACITY>;
 
 #endif // GUITYPES_HPP

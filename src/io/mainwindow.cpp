@@ -32,7 +32,7 @@ MainWindow::MainWindow(QWidget* parent, const std::string& romFilePath, const st
 	}
 	sharedKeyInput = localKeyInput;
 
-	audioPlayer = new AudioPlayer(this, audioFormat, &audioSamples);
+	audioPlayer = new AudioPlayer(this, audioFormat, audioSamples);
 	audioSink = nullptr;
 
 	debugWindowData = {};
