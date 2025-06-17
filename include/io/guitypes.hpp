@@ -31,6 +31,7 @@ struct KeyboardInput {
     // Overflow is possible but will only be an issue if a key is somehow pressed over 255 times in a single frame :)
     uint8_t resetCount;
     uint8_t stepCount;
+    uint8_t frameStepCount;
     uint8_t saveCount;
     uint8_t loadCount;
 

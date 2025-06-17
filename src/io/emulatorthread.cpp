@@ -49,6 +49,7 @@ EmulatorThread::EmulatorThread(
 	localKeyInput = {};
 	lastResetCount = 0;
 	lastStepCount = 0;
+	lastFrameStepCount = 0;
 	lastSaveCount = 0;
 	lastLoadCount = 0;
 	debugWindowOpenLastFrame = false;
@@ -93,12 +94,14 @@ void EmulatorThread::run() {
 		// Check load/save
 		uint8_t numLoads = localKeyInput.loadCount - lastLoadCount;
 		lastLoadCount = localKeyInput.loadCount;
+		bool loadedSaveStateThisFrame = false;
 		if (numLoads >= 1) { // Only perform a max of one load each frame
 			SaveState::LoadStatus saveStatus = saveState.loadSaveState(localKeyInput.mostRecentSaveFilePath);
 			std::cerr << saveStatus.message << std::endl;
 
 			if (saveStatus.code == SaveState::LoadStatus::Code::SUCCESS) {
 				recentPCs.erase();
+				loadedSaveStateThisFrame = true;
 			}
 		}
 
@@ -125,6 +128,10 @@ void EmulatorThread::run() {
 		uint8_t numSteps = localKeyInput.stepCount - lastStepCount;
 		lastStepCount = localKeyInput.stepCount;
 
+		// Check frame steps
+		uint8_t numFrameSteps = localKeyInput.frameStepCount - lastFrameStepCount;
+		lastFrameStepCount = localKeyInput.frameStepCount;
+
 		// Run emulator
 		bool shouldOutputGameFrame;
 		bool shouldOutputDebugFrame;
@@ -133,14 +140,29 @@ void EmulatorThread::run() {
 			shouldOutputGameFrame = true;
 			shouldOutputDebugFrame = localKeyInput.debugWindowEnabled;
 		}
-		else if (numSteps) {
-			runSteps(numSteps);
-			shouldOutputGameFrame = bus.ppu->frameReadyFlag;
-			shouldOutputDebugFrame = true;
-		}
 		else {
-			shouldOutputGameFrame = false;
-			shouldOutputDebugFrame = debugWindowOpenedThisFrame;
+			if (numFrameSteps) {
+				for (int i = 0; i < numFrameSteps; i++) {
+					runUntilFrameReady();
+				}
+				shouldOutputGameFrame = true;
+				shouldOutputDebugFrame = true;
+			}
+			else if (numSteps) {
+				runSteps(numSteps);
+				shouldOutputGameFrame = bus.ppu->frameReadyFlag;
+				shouldOutputDebugFrame = true;
+			}
+			else if (loadedSaveStateThisFrame) {
+				// If we just loaded a save state and the game is paused, show the first frame of the new state
+				runUntilFrameReady();
+				shouldOutputGameFrame = true;
+				shouldOutputDebugFrame = localKeyInput.debugWindowEnabled;
+			}
+			else {
+				shouldOutputGameFrame = false;
+				shouldOutputDebugFrame = debugWindowOpenedThisFrame;
+			}
 		}
 
 		if (!isRunning.load()) break;
@@ -176,7 +198,7 @@ void EmulatorThread::run() {
 
 		// Calculate extra sleep time needed due to audio overflow
 		// TODO: Also handle audio underflow
-		if (!localKeyInput.muted) {
+		if (!muted) {
 			size_t currentAudioQueueSize = audioSamples.size();
 			if (currentAudioQueueSize > AUDIO_QUEUE_TARGET_FILL_SAMPLES) {
 				// We have too much audio buffered, which means we are generating audio samples faster than they can be played.
@@ -213,14 +235,15 @@ void EmulatorThread::run() {
 	}
 }
 
-bool EmulatorThread::executeCycle(bool debugEnabled, bool audioEnabled) {
+bool EmulatorThread::executeCycle() {
 	uint16_t currentPC = bus.cpu->getPC();
 
 	bus.executeCycle();
 
 	uint16_t nextPC = bus.cpu->getPC();
 
-	if (audioEnabled) {
+	bool muted = localKeyInput.muted || localKeyInput.paused;
+	if (!muted) {
 		while (scaledAudioClock >= INSTRUCTIONS_PER_SECOND) {
 			audioSamples.forcePush(bus.apu->getAudioSample());
 			if (!soundReady) {
@@ -234,7 +257,7 @@ bool EmulatorThread::executeCycle(bool debugEnabled, bool audioEnabled) {
 	}
 
 	if (nextPC != currentPC) {
-		if (debugEnabled) {
+		if (localKeyInput.debugWindowEnabled) {
 			recentPCs.forcePush(currentPC);
 		}
 		return true;
@@ -247,7 +270,7 @@ void EmulatorThread::runUntilFrameReady() {
 	static constexpr int CYCLE_LIMIT = EXPECTED_CPU_CYCLES_PER_FRAME + 5;
 
 	while (!bus.ppu->frameReadyFlag && cycles < CYCLE_LIMIT) {
-		executeCycle(localKeyInput.debugWindowEnabled, !localKeyInput.muted);
+		executeCycle();
 		cycles++;
 	}
 }
@@ -259,7 +282,7 @@ void EmulatorThread::runSteps(uint8_t numSteps) {
 
 		bool isNewInstruction = false;
 		while (!isNewInstruction && cycles < CYCLE_LIMIT) {
-			isNewInstruction = executeCycle(true, false);
+			isNewInstruction = executeCycle();
 			cycles++;
 		}
 	}

@@ -198,6 +198,11 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 				localKeyInput.stepCount++;
 			}
 			break;
+		case FRAME_STEP_KEY:
+			if (localKeyInput.debugWindowEnabled && localKeyInput.paused) {
+				localKeyInput.frameStepCount++;
+			}
+			break;
 		case BACKGROUND_PALLETE_KEY:
 			if (localKeyInput.debugWindowEnabled) {
 				localKeyInput.backgroundPallete = (localKeyInput.backgroundPallete + 1) & 3;

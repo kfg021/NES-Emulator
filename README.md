@@ -167,8 +167,9 @@ The emulator window will show:
 - L: Load save state (opens file dialog to choose file)
 - K: Quick load save state (loads most recently saved/loaded file)
 
-#### Debug window controls (when open)
+#### Debug controls (when debug window open)
 - Space (If paused): Step to next instruction
+- V (If paused): Step to next frame
 - O: Cycle background palette
 - P: Cycle sprite palette
 
